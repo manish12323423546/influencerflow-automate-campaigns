@@ -46,30 +46,68 @@ const Influencers = () => {
   const [selectedInfluencer, setSelectedInfluencer] = useState<Influencer | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Simplified query to fetch all influencers first
+  // Query to fetch influencers - simplified to bypass potential RLS issues
   const { data: influencers = [], isLoading, error, refetch } = useQuery({
     queryKey: ['influencers'],
     queryFn: async () => {
-      console.log('Fetching all influencers...');
+      console.log('Starting influencer fetch...');
+      console.log('Current user:', user);
+      console.log('User authenticated:', !!user);
       
-      const { data, error } = await supabase
-        .from('influencers')
-        .select('*')
-        .order('roi_index', { ascending: false });
-      
-      console.log('Raw query result:', { data, error });
-      
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
+      try {
+        // First, let's try a simple count query to see if we can access the table at all
+        const { count, error: countError } = await supabase
+          .from('influencers')
+          .select('*', { count: 'exact', head: true });
+        
+        console.log('Count query result:', { count, countError });
+        
+        if (countError) {
+          console.error('Count query failed:', countError);
+          throw new Error(`Table access error: ${countError.message}`);
+        }
+        
+        // Now try to fetch the actual data
+        const { data, error } = await supabase
+          .from('influencers')
+          .select('*')
+          .order('roi_index', { ascending: false });
+        
+        console.log('Data query result:', { 
+          dataCount: data?.length || 0, 
+          error: error?.message || 'none',
+          hasData: !!data,
+          firstRecord: data?.[0] || 'none'
+        });
+        
+        if (error) {
+          console.error('Data fetch error:', error);
+          throw new Error(`Data fetch error: ${error.message}`);
+        }
+        
+        if (!data || data.length === 0) {
+          console.warn('No influencer data found in database');
+          // Let's check if we can insert test data (this will fail if RLS blocks it)
+          const { error: testError } = await supabase
+            .from('influencers')
+            .select('id')
+            .limit(1);
+          
+          if (testError) {
+            throw new Error(`RLS Policy Issue: ${testError.message}`);
+          }
+        }
+        
+        return (data || []) as Influencer[];
+      } catch (err) {
+        console.error('Complete fetch failed:', err);
+        throw err;
       }
-      
-      console.log('Successfully fetched influencers:', data?.length || 0);
-      return (data || []) as Influencer[];
     },
+    retry: 1,
+    refetchOnWindowFocus: false,
   });
 
-  // Filter influencers client-side
   const filteredInfluencers = influencers.filter(influencer => {
     // Search filter
     if (searchTerm) {
@@ -123,13 +161,14 @@ const Influencers = () => {
 
   useEffect(() => {
     if (!user) {
+      console.log('No user found, redirecting to login');
       navigate('/login');
     }
   }, [user, navigate]);
 
   useEffect(() => {
     if (error) {
-      console.error('Query error:', error);
+      console.error('Query error details:', error);
       toast({
         title: "Error loading influencers",
         description: error.message || "There was a problem loading the influencer data.",
@@ -139,8 +178,30 @@ const Influencers = () => {
   }, [error, toast]);
 
   // Add a manual refresh function for debugging
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     console.log('Manual refresh triggered');
+    console.log('Current auth state:', { user: !!user, userId: user?.id });
+    
+    // Test direct supabase connection
+    try {
+      const { data: testData, error: testError } = await supabase
+        .from('influencers')
+        .select('id, name')
+        .limit(5);
+      
+      console.log('Direct supabase test:', { testData, testError });
+      
+      if (testError) {
+        toast({
+          title: "Database Connection Issue",
+          description: `Direct query failed: ${testError.message}`,
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      console.error('Direct query error:', err);
+    }
+    
     refetch();
   };
 
@@ -194,11 +255,13 @@ const Influencers = () => {
 
   if (!user) return null;
 
-  console.log('Render state:', { 
+  console.log('Current render state:', { 
     isLoading, 
     totalInfluencers: influencers.length, 
     filteredCount: filteredInfluencers.length,
-    error: error?.message 
+    error: error?.message || 'none',
+    userAuthenticated: !!user,
+    userId: user?.id
   });
 
   return (
@@ -227,7 +290,7 @@ const Influencers = () => {
                 size="sm"
                 className="border-zinc-700 text-snow/70 hover:text-purple-500 hover:border-purple-500"
               >
-                Refresh
+                Refresh & Debug
               </Button>
               <Bell className="h-6 w-6 text-snow/70 hover:text-purple-500 cursor-pointer" />
               <Settings className="h-6 w-6 text-snow/70 hover:text-purple-500 cursor-pointer" />
@@ -252,15 +315,16 @@ const Influencers = () => {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Debug info */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mb-4 p-4 bg-zinc-800 rounded-lg text-snow text-sm">
-            <p>Debug: Total influencers: {influencers.length}</p>
-            <p>Debug: Filtered influencers: {filteredInfluencers.length}</p>
-            <p>Debug: Loading: {isLoading.toString()}</p>
-            <p>Debug: Error: {error?.message || 'None'}</p>
-          </div>
-        )}
+        {/* Enhanced Debug info */}
+        <div className="mb-4 p-4 bg-zinc-800 rounded-lg text-snow text-sm">
+          <p><strong>Debug Info:</strong></p>
+          <p>• User authenticated: {user ? 'Yes' : 'No'} (ID: {user?.id || 'none'})</p>
+          <p>• Total influencers in DB: {influencers.length}</p>
+          <p>• Filtered influencers: {filteredInfluencers.length}</p>
+          <p>• Loading state: {isLoading.toString()}</p>
+          <p>• Error: {error?.message || 'None'}</p>
+          <p>• Supabase client initialized: {!!supabase ? 'Yes' : 'No'}</p>
+        </div>
 
         {/* Filters and Search */}
         <div className="mb-6 space-y-4">
@@ -342,16 +406,38 @@ const Influencers = () => {
               </div>
             ) : error ? (
               <div className="p-8 text-center text-red-400">
-                Error loading influencers: {error.message}
-                <br />
+                <h3 className="text-lg font-semibold mb-2">Database Access Error</h3>
+                <p className="mb-4">Error: {error.message}</p>
+                <div className="text-sm text-left bg-red-500/10 border border-red-500/20 rounded p-4 mb-4">
+                  <p><strong>Possible issues:</strong></p>
+                  <ul className="list-disc list-inside mt-2 space-y-1">
+                    <li>RLS (Row Level Security) policies blocking access</li>
+                    <li>Authentication not properly configured</li>
+                    <li>Missing permissions for the influencers table</li>
+                    <li>Database connection issues</li>
+                  </ul>
+                </div>
                 <Button onClick={handleRefresh} className="mt-4" variant="outline">
-                  Try Again
+                  Try Again & Debug
                 </Button>
               </div>
             ) : filteredInfluencers.length === 0 ? (
               <div className="p-8 text-center text-snow/60">
                 {influencers.length === 0 
-                  ? "No influencers found in database. Please add some influencer data first."
+                  ? (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">No Data Found</h3>
+                      <p className="mb-4">No influencers found in database.</p>
+                      <div className="text-sm text-left bg-yellow-500/10 border border-yellow-500/20 rounded p-4">
+                        <p><strong>This could mean:</strong></p>
+                        <ul className="list-disc list-inside mt-2 space-y-1">
+                          <li>The mock data hasn't been inserted yet</li>
+                          <li>RLS policies are preventing data access</li>
+                          <li>You need to be logged in with the correct user</li>
+                        </ul>
+                      </div>
+                    </div>
+                  )
                   : "No influencers match your current filters. Try adjusting your search criteria."
                 }
               </div>
