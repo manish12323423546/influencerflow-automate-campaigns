@@ -1,0 +1,70 @@
+
+import { Button } from '@/components/ui/button';
+import { ArrowRight, Play } from 'lucide-react';
+
+const Hero = () => {
+  const scrollToDemo = () => {
+    // For now, we'll scroll to the lead magnet section
+    const leadMagnet = document.getElementById('lead-magnet');
+    leadMagnet?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  return (
+    <section className="min-h-screen flex items-center justify-center relative overflow-hidden">
+      <div className="container-custom text-center relative z-10">
+        <div className="animate-fade-in-up">
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-space font-bold mb-8 leading-tight">
+            Automate your creator campaigns from{' '}
+            <span className="text-coral">'discovery'</span> to{' '}
+            <span className="text-coral">'paid'</span>
+          </h1>
+          
+          <p className="text-xl md:text-2xl text-snow/80 mb-12 max-w-4xl mx-auto leading-relaxed">
+            Find the perfect influencers, negotiate fair rates, e-sign contracts, and pay in one place.
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16">
+            <Button 
+              onClick={scrollToDemo}
+              className="btn-coral group text-lg"
+            >
+              Book a Demo
+              <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+            </Button>
+            
+            <Button variant="outline" className="btn-outline text-lg group">
+              <Play className="mr-2 h-5 w-5" />
+              Watch Demo
+            </Button>
+          </div>
+        </div>
+
+        {/* Dashboard Preview */}
+        <div className="relative max-w-5xl mx-auto animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+          <div className="relative bg-gradient-to-br from-carbon via-zinc-900 to-carbon rounded-2xl border border-zinc-800 p-6 shadow-2xl">
+            <div className="bg-zinc-800 rounded-xl p-8 min-h-[400px] flex items-center justify-center">
+              <div className="text-center">
+                <div className="w-20 h-20 bg-coral/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Play className="h-8 w-8 text-coral" />
+                </div>
+                <p className="text-snow/60">Dashboard Preview Coming Soon</p>
+                <p className="text-sm text-snow/40 mt-2">Interactive demo will be embedded here</p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Glow effect */}
+          <div className="absolute inset-0 bg-gradient-to-r from-coral/20 via-transparent to-sunrise/20 rounded-2xl blur-xl -z-10"></div>
+        </div>
+      </div>
+
+      {/* Background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-coral/5 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-sunrise/5 rounded-full blur-3xl"></div>
+      </div>
+    </section>
+  );
+};
+
+export default Hero;
