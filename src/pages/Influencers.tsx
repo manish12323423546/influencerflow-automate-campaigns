@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -32,7 +31,7 @@ interface Influencer {
   roi_index: number;
   fake_follower_score: number;
   safety_scan_score: number;
-  risk_flags: string[];
+  risk_flags: string[] | null;
 }
 
 const Influencers = () => {
@@ -85,9 +84,9 @@ const Influencers = () => {
       
       if (riskFilter !== 'all') {
         if (riskFilter === 'clean') {
-          query = query.eq('risk_flags', '{}');
+          query = query.or('risk_flags.is.null,risk_flags.eq.{}');
         } else {
-          query = query.neq('risk_flags', '{}');
+          query = query.not('risk_flags', 'is', null).not('risk_flags', 'eq', '{}');
         }
       }
 
@@ -134,8 +133,8 @@ const Influencers = () => {
     return count.toString();
   };
 
-  const getRiskBadgeColor = (flags: string[]) => {
-    if (flags.length === 0) return 'bg-green-500/10 text-green-500';
+  const getRiskBadgeColor = (flags: string[] | null) => {
+    if (!flags || flags.length === 0) return 'bg-green-500/10 text-green-500';
     if (flags.some(flag => flag.includes('high-risk'))) return 'bg-red-500/10 text-red-500';
     return 'bg-yellow-500/10 text-yellow-500';
   };
@@ -311,7 +310,7 @@ const Influencers = () => {
                     <TableCell className="text-snow/80">{influencer.roi_index.toFixed(1)}</TableCell>
                     <TableCell>
                       <Badge className={getRiskBadgeColor(influencer.risk_flags)}>
-                        {influencer.risk_flags.length === 0 ? 'Clean' : `${influencer.risk_flags.length} Flag${influencer.risk_flags.length > 1 ? 's' : ''}`}
+                        {!influencer.risk_flags || influencer.risk_flags.length === 0 ? 'Clean' : `${influencer.risk_flags.length} Flag${influencer.risk_flags.length > 1 ? 's' : ''}`}
                       </Badge>
                     </TableCell>
                     <TableCell>
