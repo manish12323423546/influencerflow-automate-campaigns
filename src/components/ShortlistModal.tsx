@@ -6,8 +6,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Plus } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 
 interface Campaign {
   id: string;
@@ -25,6 +23,34 @@ interface ShortlistModalProps {
   influencerName: string;
 }
 
+// Mock campaigns data
+const mockCampaigns: Campaign[] = [
+  {
+    id: '1',
+    name: 'Tech Product Launch',
+    description: 'Launch campaign for our new tech product',
+    status: 'active',
+    brand: 'TechCorp',
+    created_at: '2024-01-15'
+  },
+  {
+    id: '2',
+    name: 'Fashion Summer Collection',
+    description: 'Promote our summer fashion collection',
+    status: 'draft',
+    brand: 'StyleBrand',
+    created_at: '2024-01-10'
+  },
+  {
+    id: '3',
+    name: 'Fitness App Promotion',
+    description: 'Increase app downloads and engagement',
+    status: 'completed',
+    brand: 'FitLife',
+    created_at: '2024-01-05'
+  }
+];
+
 export const ShortlistModal = ({
   open,
   onOpenChange,
@@ -35,27 +61,14 @@ export const ShortlistModal = ({
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [campaigns] = useState<Campaign[]>(mockCampaigns);
+  const [isLoading] = useState(false);
   
   const [newCampaignData, setNewCampaignData] = useState({
     name: '',
     description: '',
     budget: '',
     brand: '',
-  });
-
-  // Fetch user's campaigns
-  const { data: campaigns = [], isLoading } = useQuery({
-    queryKey: ['user-campaigns'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('campaigns')
-        .select('id, name, description, status, brand, created_at')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data as Campaign[];
-    },
-    enabled: open,
   });
 
   const handleCreateAndAdd = async () => {
@@ -70,34 +83,8 @@ export const ShortlistModal = ({
 
     setIsSubmitting(true);
 
-    try {
-      // Create new campaign
-      const { data: campaign, error: campaignError } = await supabase
-        .from('campaigns')
-        .insert({
-          name: newCampaignData.name,
-          description: newCampaignData.description || null,
-          budget: parseFloat(newCampaignData.budget) || 0,
-          brand: newCampaignData.brand || 'Brand Name',
-          status: 'draft',
-          user_id: '123456', // Mock user ID since we don't have authentication
-        })
-        .select()
-        .single();
-
-      if (campaignError) throw campaignError;
-
-      // Add influencer to campaign
-      const { error: influencerError } = await supabase
-        .from('campaign_influencers')
-        .insert({
-          campaign_id: campaign.id,
-          influencer_id: influencerId,
-          status: 'shortlisted',
-        });
-
-      if (influencerError) throw influencerError;
-
+    // Simulate API call delay
+    setTimeout(() => {
       toast({
         title: "Success!",
         description: `${influencerName} has been shortlisted in the new campaign "${newCampaignData.name}".`,
@@ -106,16 +93,8 @@ export const ShortlistModal = ({
       setNewCampaignData({ name: '', description: '', budget: '', brand: '' });
       setShowCreateForm(false);
       onOpenChange(false);
-    } catch (error) {
-      console.error('Error creating campaign and adding influencer:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create campaign and add influencer. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
       setIsSubmitting(false);
-    }
+    }, 1000);
   };
 
   const handleAddToExisting = async () => {
@@ -130,27 +109,8 @@ export const ShortlistModal = ({
 
     setIsSubmitting(true);
 
-    try {
-      const { error } = await supabase
-        .from('campaign_influencers')
-        .insert({
-          campaign_id: selectedCampaignId,
-          influencer_id: influencerId,
-          status: 'shortlisted',
-        });
-
-      if (error) {
-        if (error.code === '23505') { // Unique constraint violation
-          toast({
-            title: "Already added",
-            description: `${influencerName} is already in this campaign.`,
-            variant: "destructive",
-          });
-          return;
-        }
-        throw error;
-      }
-
+    // Simulate API call delay
+    setTimeout(() => {
       const selectedCampaign = campaigns.find(c => c.id === selectedCampaignId);
       toast({
         title: "Success!",
@@ -158,16 +118,8 @@ export const ShortlistModal = ({
       });
 
       onOpenChange(false);
-    } catch (error) {
-      console.error('Error adding influencer to campaign:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add influencer to campaign. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
       setIsSubmitting(false);
-    }
+    }, 1000);
   };
 
   const getStatusBadgeColor = (status: string) => {

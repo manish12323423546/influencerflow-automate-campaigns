@@ -1,6 +1,5 @@
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,8 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Save, Building, Globe, Mail, Phone, MapPin, Users } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface BrandProfile {
   id: string;
@@ -28,10 +25,10 @@ interface BrandProfile {
 }
 
 const BrandProfile = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [formData, setFormData] = useState({
     company_name: '',
@@ -52,41 +49,43 @@ const BrandProfile = () => {
     },
   });
 
-  // Fetch existing brand profile
-  const { data: brandProfile, isLoading } = useQuery({
-    queryKey: ['brand-profile', user?.id],
-    queryFn: async () => {
-      if (!user) throw new Error('No user found');
-      
-      const { data, error } = await supabase
-        .from('brand_profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-      
-      return data as BrandProfile | null;
-    },
-    enabled: !!user,
-  });
-
-  // Update form data when profile loads
+  // Simulate loading existing brand profile
   useEffect(() => {
-    if (brandProfile) {
+    // Mock brand profile data
+    const mockBrandProfile: BrandProfile = {
+      id: '1',
+      user_id: 'mock-user-123',
+      company_name: 'TechCorp Inc.',
+      company_description: 'A leading technology company specializing in innovative solutions.',
+      industry: 'technology',
+      company_size: '51-200',
+      headquarters_location: 'San Francisco, CA',
+      company_website: 'https://techcorp.com',
+      contact_email: 'contact@techcorp.com',
+      contact_phone: '+1 (555) 123-4567',
+      company_logo_url: '',
+      social_media_links: {
+        website: 'https://techcorp.com',
+        linkedin: 'https://linkedin.com/company/techcorp',
+        twitter: 'https://twitter.com/techcorp',
+        instagram: 'https://instagram.com/techcorp',
+        facebook: 'https://facebook.com/techcorp',
+      },
+    };
+
+    // Simulate API delay
+    setTimeout(() => {
       setFormData({
-        company_name: brandProfile.company_name || '',
-        company_description: brandProfile.company_description || '',
-        industry: brandProfile.industry || '',
-        company_size: brandProfile.company_size || '',
-        headquarters_location: brandProfile.headquarters_location || '',
-        company_website: brandProfile.company_website || '',
-        contact_email: brandProfile.contact_email || user?.email || '',
-        contact_phone: brandProfile.contact_phone || '',
-        company_logo_url: brandProfile.company_logo_url || '',
-        social_media_links: brandProfile.social_media_links || {
+        company_name: mockBrandProfile.company_name || '',
+        company_description: mockBrandProfile.company_description || '',
+        industry: mockBrandProfile.industry || '',
+        company_size: mockBrandProfile.company_size || '',
+        headquarters_location: mockBrandProfile.headquarters_location || '',
+        company_website: mockBrandProfile.company_website || '',
+        contact_email: mockBrandProfile.contact_email || 'user@example.com',
+        contact_phone: mockBrandProfile.contact_phone || '',
+        company_logo_url: mockBrandProfile.company_logo_url || '',
+        social_media_links: mockBrandProfile.social_media_links || {
           website: '',
           linkedin: '',
           twitter: '',
@@ -94,65 +93,9 @@ const BrandProfile = () => {
           facebook: '',
         },
       });
-    } else if (user) {
-      // Set default email from user
-      setFormData(prev => ({
-        ...prev,
-        contact_email: user.email || '',
-      }));
-    }
-  }, [brandProfile, user]);
-
-  // Save brand profile mutation
-  const saveBrandProfileMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
-      if (!user) throw new Error('No user found');
-      
-      const profileData = {
-        user_id: user.id,
-        ...data,
-        updated_at: new Date().toISOString(),
-      };
-
-      if (brandProfile) {
-        // Update existing profile
-        const { data: updatedData, error } = await supabase
-          .from('brand_profiles')
-          .update(profileData)
-          .eq('user_id', user.id)
-          .select()
-          .single();
-        
-        if (error) throw error;
-        return updatedData;
-      } else {
-        // Create new profile
-        const { data: newData, error } = await supabase
-          .from('brand_profiles')
-          .insert(profileData)
-          .select()
-          .single();
-        
-        if (error) throw error;
-        return newData;
-      }
-    },
-    onSuccess: () => {
-      toast({
-        title: "Profile saved successfully",
-        description: "Your brand profile has been updated.",
-      });
-      queryClient.invalidateQueries({ queryKey: ['brand-profile'] });
-    },
-    onError: (error) => {
-      console.error('Save profile error:', error);
-      toast({
-        title: "Error saving profile",
-        description: "There was a problem saving your profile. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+      setIsLoading(false);
+    }, 500);
+  }, []);
 
   const handleInputChange = (field: string, value: string) => {
     if (field.startsWith('social_')) {
@@ -171,13 +114,17 @@ const BrandProfile = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    saveBrandProfileMutation.mutate(formData);
-  };
+    setIsSaving(true);
 
-  if (!user) {
-    navigate('/login');
-    return null;
-  }
+    // Simulate save operation
+    setTimeout(() => {
+      toast({
+        title: "Profile saved successfully",
+        description: "Your brand profile has been updated.",
+      });
+      setIsSaving(false);
+    }, 1000);
+  };
 
   return (
     <div className="min-h-screen bg-carbon">
@@ -420,11 +367,11 @@ const BrandProfile = () => {
             <div className="flex justify-end">
               <Button
                 type="submit"
-                disabled={saveBrandProfileMutation.isPending}
+                disabled={isSaving}
                 className="bg-purple-500 hover:bg-purple-600"
               >
                 <Save className="h-4 w-4 mr-2" />
-                {saveBrandProfileMutation.isPending ? 'Saving...' : 'Save Profile'}
+                {isSaving ? 'Saving...' : 'Save Profile'}
               </Button>
             </div>
           </form>

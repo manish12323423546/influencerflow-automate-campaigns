@@ -1,6 +1,5 @@
 
 import { useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,11 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Save, Users, Target, DollarSign, Calendar, FileText, AlertCircle } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { InfluencerSearchModal } from '@/components/InfluencerSearchModal';
 
 const CreateCampaign = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -73,8 +70,6 @@ const CreateCampaign = () => {
   };
 
   const handleCreateCampaign = async () => {
-    if (!user) return;
-
     if (!validateForm()) {
       toast({
         title: "Please fix the errors",
@@ -86,60 +81,18 @@ const CreateCampaign = () => {
 
     setIsSubmitting(true);
 
-    try {
-      // Create campaign
-      const { data: campaign, error: campaignError } = await supabase
-        .from('campaigns')
-        .insert({
-          name: formData.name,
-          description: formData.description || null,
-          goals: formData.goals,
-          target_audience: formData.target_audience,
-          budget: parseFloat(formData.budget),
-          deliverables: formData.deliverables,
-          timeline: formData.timeline || null,
-          brand: formData.brand,
-          status: formData.status,
-          user_id: user.id,
-          influencer_count: selectedInfluencers.length,
-        })
-        .select()
-        .single();
-
-      if (campaignError) throw campaignError;
-
-      // Add selected influencers to campaign
-      if (selectedInfluencers.length > 0) {
-        const campaignInfluencers = selectedInfluencers.map(influencerId => ({
-          campaign_id: campaign.id,
-          influencer_id: influencerId,
-          status: 'shortlisted',
-          fee: 0,
-        }));
-
-        const { error: influencersError } = await supabase
-          .from('campaign_influencers')
-          .insert(campaignInfluencers);
-
-        if (influencersError) throw influencersError;
-      }
-
+    // Simulate API call delay
+    setTimeout(() => {
       toast({
         title: "Campaign created successfully",
         description: `${formData.name} has been created with ${selectedInfluencers.length} influencer(s).`,
       });
 
-      navigate(`/campaigns/${campaign.id}`);
-    } catch (error) {
-      console.error('Error creating campaign:', error);
-      toast({
-        title: "Error creating campaign",
-        description: "There was a problem creating your campaign. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
+      // Generate mock campaign ID and navigate
+      const mockCampaignId = Math.random().toString(36).substr(2, 9);
+      navigate(`/campaigns/${mockCampaignId}`);
       setIsSubmitting(false);
-    }
+    }, 1000);
   };
 
   const handleAddInfluencers = (influencerIds: string[]) => {
