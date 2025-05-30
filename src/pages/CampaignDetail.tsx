@@ -6,10 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Edit, Users } from 'lucide-react';
+import { ArrowLeft, Edit, Users, FileText, BarChart } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { ContractManager } from '@/components/contracts/ContractManager';
+import { PerformanceTracker } from '@/components/performance/PerformanceTracker';
 
 interface Campaign {
   id: string;
@@ -180,120 +183,157 @@ const CampaignDetail = () => {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Campaign Details */}
-          <div className="lg:col-span-2 space-y-6">
-            <Card className="bg-zinc-900 border-zinc-800">
-              <CardHeader>
-                <CardTitle className="text-snow">Campaign Overview</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {campaign.description && (
-                  <div>
-                    <h4 className="text-sm font-medium text-snow mb-2">Description</h4>
-                    <p className="text-snow/80">{campaign.description}</p>
-                  </div>
-                )}
-                
-                {campaign.goals && (
-                  <div>
-                    <h4 className="text-sm font-medium text-snow mb-2">Goals</h4>
-                    <p className="text-snow/80">{campaign.goals}</p>
-                  </div>
-                )}
-                
-                {campaign.target_audience && (
-                  <div>
-                    <h4 className="text-sm font-medium text-snow mb-2">Target Audience</h4>
-                    <p className="text-snow/80">{campaign.target_audience}</p>
-                  </div>
-                )}
-                
-                {campaign.deliverables && (
-                  <div>
-                    <h4 className="text-sm font-medium text-snow mb-2">Deliverables</h4>
-                    <p className="text-snow/80">{campaign.deliverables}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Main Content */}
+          <div className="lg:col-span-3">
+            <Tabs defaultValue="overview" className="space-y-6">
+              <TabsList className="bg-zinc-900 border-zinc-800">
+                <TabsTrigger value="overview" className="data-[state=active]:bg-purple-500">
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger value="influencers" className="data-[state=active]:bg-purple-500">
+                  <Users className="h-4 w-4 mr-2" />
+                  Influencers ({campaignInfluencers.length})
+                </TabsTrigger>
+                <TabsTrigger value="contracts" className="data-[state=active]:bg-purple-500">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Contracts
+                </TabsTrigger>
+                <TabsTrigger value="performance" className="data-[state=active]:bg-purple-500">
+                  <BarChart className="h-4 w-4 mr-2" />
+                  Performance
+                </TabsTrigger>
+              </TabsList>
 
-            {/* Influencers List */}
-            <Card className="bg-zinc-900 border-zinc-800">
-              <CardHeader>
-                <CardTitle className="text-snow flex items-center">
-                  <Users className="h-5 w-5 mr-2" />
-                  Selected Influencers ({campaignInfluencers.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {influencersLoading ? (
-                  <div className="text-center py-8 text-snow/60">Loading influencers...</div>
-                ) : campaignInfluencers.length === 0 ? (
-                  <div className="text-center py-8 text-snow/60">
-                    <p className="mb-4">No influencers added to this campaign yet.</p>
-                    <Button
-                      onClick={() => navigate('/influencers')}
-                      className="bg-purple-500 hover:bg-purple-600"
-                    >
-                      Browse Influencers
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {campaignInfluencers.map((campaignInfluencer) => (
-                      <div
-                        key={campaignInfluencer.id}
-                        className="flex items-center justify-between p-4 bg-zinc-800 rounded-lg"
-                      >
-                        <div className="flex items-center space-x-4">
-                          <Avatar className="h-12 w-12">
-                            <AvatarImage 
-                              src={campaignInfluencer.influencer.avatar_url || ''} 
-                              alt={campaignInfluencer.influencer.name} 
-                            />
-                            <AvatarFallback className="bg-purple-500 text-white">
-                              {campaignInfluencer.influencer.name.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          
-                          <div>
-                            <p className="font-medium text-snow">
-                              {campaignInfluencer.influencer.name}
-                            </p>
-                            <p className="text-sm text-snow/60">
-                              {campaignInfluencer.influencer.handle}
-                            </p>
-                            <div className="flex items-center space-x-2 mt-1">
-                              <Badge variant="outline" className="border-blue-500/30 text-blue-500 text-xs">
-                                {campaignInfluencer.influencer.industry}
-                              </Badge>
-                              <Badge variant="outline" className="border-purple-500/30 text-purple-500 text-xs">
-                                {campaignInfluencer.influencer.platform}
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="text-right">
-                          <Badge className={getStatusBadgeColor(campaignInfluencer.status)}>
-                            {campaignInfluencer.status}
-                          </Badge>
-                          <div className="text-sm text-snow/70 mt-1">
-                            {formatFollowers(campaignInfluencer.influencer.followers_count)} followers
-                          </div>
-                          {campaignInfluencer.fee > 0 && (
-                            <div className="text-sm text-snow/70">
-                              Fee: ${campaignInfluencer.fee.toLocaleString()}
-                            </div>
-                          )}
-                        </div>
+              <TabsContent value="overview">
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardHeader>
+                    <CardTitle className="text-snow">Campaign Overview</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {campaign.description && (
+                      <div>
+                        <h4 className="text-sm font-medium text-snow mb-2">Description</h4>
+                        <p className="text-snow/80">{campaign.description}</p>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                    )}
+                    
+                    {campaign.goals && (
+                      <div>
+                        <h4 className="text-sm font-medium text-snow mb-2">Goals</h4>
+                        <p className="text-snow/80">{campaign.goals}</p>
+                      </div>
+                    )}
+                    
+                    {campaign.target_audience && (
+                      <div>
+                        <h4 className="text-sm font-medium text-snow mb-2">Target Audience</h4>
+                        <p className="text-snow/80">{campaign.target_audience}</p>
+                      </div>
+                    )}
+                    
+                    {campaign.deliverables && (
+                      <div>
+                        <h4 className="text-sm font-medium text-snow mb-2">Deliverables</h4>
+                        <p className="text-snow/80">{campaign.deliverables}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="influencers">
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardHeader>
+                    <CardTitle className="text-snow flex items-center">
+                      <Users className="h-5 w-5 mr-2" />
+                      Selected Influencers ({campaignInfluencers.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {influencersLoading ? (
+                      <div className="text-center py-8 text-snow/60">Loading influencers...</div>
+                    ) : campaignInfluencers.length === 0 ? (
+                      <div className="text-center py-8 text-snow/60">
+                        <p className="mb-4">No influencers added to this campaign yet.</p>
+                        <Button
+                          onClick={() => navigate('/influencers')}
+                          className="bg-purple-500 hover:bg-purple-600"
+                        >
+                          Browse Influencers
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {campaignInfluencers.map((campaignInfluencer) => (
+                          <div
+                            key={campaignInfluencer.id}
+                            className="flex items-center justify-between p-4 bg-zinc-800 rounded-lg"
+                          >
+                            <div className="flex items-center space-x-4">
+                              <Avatar className="h-12 w-12">
+                                <AvatarImage 
+                                  src={campaignInfluencer.influencer.avatar_url || ''} 
+                                  alt={campaignInfluencer.influencer.name} 
+                                />
+                                <AvatarFallback className="bg-purple-500 text-white">
+                                  {campaignInfluencer.influencer.name.split(' ').map(n => n[0]).join('')}
+                                </AvatarFallback>
+                              </Avatar>
+                              
+                              <div>
+                                <p className="font-medium text-snow">
+                                  {campaignInfluencer.influencer.name}
+                                </p>
+                                <p className="text-sm text-snow/60">
+                                  {campaignInfluencer.influencer.handle}
+                                </p>
+                                <div className="flex items-center space-x-2 mt-1">
+                                  <Badge variant="outline" className="border-blue-500/30 text-blue-500 text-xs">
+                                    {campaignInfluencer.influencer.industry}
+                                  </Badge>
+                                  <Badge variant="outline" className="border-purple-500/30 text-purple-500 text-xs">
+                                    {campaignInfluencer.influencer.platform}
+                                  </Badge>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="text-right">
+                              <Badge className={getStatusBadgeColor(campaignInfluencer.status)}>
+                                {campaignInfluencer.status}
+                              </Badge>
+                              <div className="text-sm text-snow/70 mt-1">
+                                {formatFollowers(campaignInfluencer.influencer.followers_count)} followers
+                              </div>
+                              {campaignInfluencer.fee > 0 && (
+                                <div className="text-sm text-snow/70">
+                                  Fee: ${campaignInfluencer.fee.toLocaleString()}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="contracts">
+                <ContractManager 
+                  campaignId={campaign.id} 
+                  campaignInfluencers={campaignInfluencers}
+                />
+              </TabsContent>
+
+              <TabsContent value="performance">
+                <PerformanceTracker 
+                  campaignId={campaign.id} 
+                  campaignInfluencers={campaignInfluencers}
+                />
+              </TabsContent>
+            </Tabs>
           </div>
 
           {/* Sidebar */}

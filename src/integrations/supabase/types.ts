@@ -96,6 +96,60 @@ export type Database = {
         }
         Relationships: []
       }
+      contracts: {
+        Row: {
+          brand_user_id: string
+          campaign_id: string | null
+          contract_data: Json
+          created_at: string
+          id: string
+          influencer_id: string | null
+          pdf_url: string | null
+          signed_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          brand_user_id: string
+          campaign_id?: string | null
+          contract_data: Json
+          created_at?: string
+          id?: string
+          influencer_id?: string | null
+          pdf_url?: string | null
+          signed_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          brand_user_id?: string
+          campaign_id?: string | null
+          contract_data?: Json
+          created_at?: string
+          id?: string
+          influencer_id?: string | null
+          pdf_url?: string | null
+          signed_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_influencer_id_fkey"
+            columns: ["influencer_id"]
+            isOneToOne: false
+            referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       influencers: {
         Row: {
           audience_fit_score: number
@@ -155,6 +209,51 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      performance_reports: {
+        Row: {
+          campaign_id: string | null
+          created_at: string
+          id: string
+          influencer_id: string | null
+          report_data: Json
+          report_type: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          influencer_id?: string | null
+          report_data: Json
+          report_type?: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          influencer_id?: string | null
+          report_data?: Json
+          report_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_reports_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_reports_influencer_id_fkey"
+            columns: ["influencer_id"]
+            isOneToOne: false
+            referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       posts: {
         Row: {
