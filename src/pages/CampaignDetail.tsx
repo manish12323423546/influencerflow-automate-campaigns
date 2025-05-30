@@ -175,6 +175,7 @@ const CampaignDetail = () => {
               <Button
                 variant="outline"
                 size="sm"
+                onClick={() => navigate(`/campaigns/${id}/edit`)}
                 className="border-zinc-700 text-snow hover:bg-zinc-800"
               >
                 <Edit className="h-4 w-4 mr-2" />
