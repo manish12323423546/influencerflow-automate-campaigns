@@ -56,13 +56,18 @@ export type Database = {
           brand: string
           budget: number
           created_at: string
+          deliverables: string | null
+          description: string | null
           engagement_rate: number
+          goals: string | null
           id: string
           influencer_count: number
           name: string
           reach: number
           spent: number
           status: string
+          target_audience: string | null
+          timeline: string | null
           updated_at: string
           user_id: string
         }
@@ -70,13 +75,18 @@ export type Database = {
           brand: string
           budget?: number
           created_at?: string
+          deliverables?: string | null
+          description?: string | null
           engagement_rate?: number
+          goals?: string | null
           id?: string
           influencer_count?: number
           name: string
           reach?: number
           spent?: number
           status: string
+          target_audience?: string | null
+          timeline?: string | null
           updated_at?: string
           user_id: string
         }
@@ -84,13 +94,18 @@ export type Database = {
           brand?: string
           budget?: number
           created_at?: string
+          deliverables?: string | null
+          description?: string | null
           engagement_rate?: number
+          goals?: string | null
           id?: string
           influencer_count?: number
           name?: string
           reach?: number
           spent?: number
           status?: string
+          target_audience?: string | null
+          timeline?: string | null
           updated_at?: string
           user_id?: string
         }

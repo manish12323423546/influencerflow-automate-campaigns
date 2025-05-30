@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,7 @@ interface Campaign {
   name: string;
   description: string | null;
   status: string;
+  brand: string;
   created_at: string;
 }
 
@@ -41,6 +43,7 @@ export const ShortlistModal = ({
     name: '',
     description: '',
     budget: '',
+    brand: '',
   });
 
   // Fetch user's campaigns
@@ -51,7 +54,7 @@ export const ShortlistModal = ({
       
       const { data, error } = await supabase
         .from('campaigns')
-        .select('id, name, description, status, created_at')
+        .select('id, name, description, status, brand, created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       
@@ -81,6 +84,7 @@ export const ShortlistModal = ({
           name: newCampaignData.name,
           description: newCampaignData.description || null,
           budget: parseFloat(newCampaignData.budget) || 0,
+          brand: newCampaignData.brand || 'Brand Name',
           status: 'draft',
           user_id: user.id,
         })
@@ -105,7 +109,7 @@ export const ShortlistModal = ({
         description: `${influencerName} has been shortlisted in the new campaign "${newCampaignData.name}".`,
       });
 
-      setNewCampaignData({ name: '', description: '', budget: '' });
+      setNewCampaignData({ name: '', description: '', budget: '', brand: '' });
       setShowCreateForm(false);
       onOpenChange(false);
     } catch (error) {
@@ -225,6 +229,9 @@ export const ShortlistModal = ({
                             {campaign.description && (
                               <p className="text-sm text-snow/60 mt-1">{campaign.description}</p>
                             )}
+                            {campaign.brand && (
+                              <p className="text-xs text-snow/50 mt-1">Brand: {campaign.brand}</p>
+                            )}
                           </div>
                           <Badge className={getStatusBadgeColor(campaign.status)}>
                             {campaign.status}
@@ -283,6 +290,18 @@ export const ShortlistModal = ({
                       value={newCampaignData.name}
                       onChange={(e) => setNewCampaignData(prev => ({ ...prev, name: e.target.value }))}
                       placeholder="Enter campaign name"
+                      className="bg-zinc-800 border-zinc-700 text-snow"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-snow mb-2">
+                      Brand Name
+                    </label>
+                    <Input
+                      value={newCampaignData.brand}
+                      onChange={(e) => setNewCampaignData(prev => ({ ...prev, brand: e.target.value }))}
+                      placeholder="Enter brand name"
                       className="bg-zinc-800 border-zinc-700 text-snow"
                     />
                   </div>

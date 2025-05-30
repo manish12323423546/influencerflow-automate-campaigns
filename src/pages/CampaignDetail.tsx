@@ -24,7 +24,10 @@ interface Campaign {
   deliverables: string | null;
   timeline: string | null;
   status: string;
+  brand: string;
+  user_id: string;
   created_at: string;
+  updated_at: string;
 }
 
 interface CampaignInfluencer {
@@ -236,6 +239,13 @@ const CampaignDetail = () => {
                       <div>
                         <h4 className="text-sm font-medium text-snow mb-2">Deliverables</h4>
                         <p className="text-snow/80">{campaign.deliverables}</p>
+                      </div>
+                    )}
+
+                    {campaign.brand && (
+                      <div>
+                        <h4 className="text-sm font-medium text-snow mb-2">Brand</h4>
+                        <p className="text-snow/80">{campaign.brand}</p>
                       </div>
                     )}
                   </CardContent>

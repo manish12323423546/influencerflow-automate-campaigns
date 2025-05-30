@@ -27,6 +27,7 @@ const CreateCampaign = () => {
     budget: '',
     deliverables: '',
     timeline: '',
+    brand: '',
   });
 
   const handleInputChange = (field: string, value: string) => {
@@ -59,6 +60,7 @@ const CreateCampaign = () => {
           budget: parseFloat(formData.budget) || 0,
           deliverables: formData.deliverables || null,
           timeline: formData.timeline || null,
+          brand: formData.brand || 'Brand Name',
           status: 'draft',
           user_id: user.id,
         })
@@ -150,6 +152,18 @@ const CreateCampaign = () => {
                     value={formData.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
                     placeholder="Enter campaign name"
+                    className="bg-zinc-800 border-zinc-700 text-snow"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-snow mb-2">
+                    Brand Name
+                  </label>
+                  <Input
+                    value={formData.brand}
+                    onChange={(e) => handleInputChange('brand', e.target.value)}
+                    placeholder="Enter brand name"
                     className="bg-zinc-800 border-zinc-700 text-snow"
                   />
                 </div>
