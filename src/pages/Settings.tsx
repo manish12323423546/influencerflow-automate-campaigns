@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
@@ -6,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Save, Bell, Mail, Smartphone, Campaign, Users, FileText, BarChart3, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Save, Bell, Mail, Smartphone, Megaphone, Users, FileText, BarChart3, MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -196,14 +195,14 @@ const Settings = () => {
           <Card className="bg-zinc-900 border-zinc-800">
             <CardHeader>
               <CardTitle className="text-snow flex items-center">
-                <Campaign className="h-5 w-5 mr-2" />
+                <Megaphone className="h-5 w-5 mr-2" />
                 Campaign & Influencer Updates
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <Campaign className="h-5 w-5 text-snow/70" />
+                  <Megaphone className="h-5 w-5 text-snow/70" />
                   <div>
                     <p className="text-snow font-medium">Campaign Updates</p>
                     <p className="text-snow/60 text-sm">Get notified about campaign status changes</p>

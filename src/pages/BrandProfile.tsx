@@ -72,6 +72,7 @@ const BrandProfile = () => {
 
   useEffect(() => {
     if (profile) {
+      const socialLinks = profile.social_media_links || {};
       setFormData({
         company_name: profile.company_name || '',
         company_description: profile.company_description || '',
@@ -82,11 +83,11 @@ const BrandProfile = () => {
         headquarters_location: profile.headquarters_location || '',
         contact_email: profile.contact_email || '',
         contact_phone: profile.contact_phone || '',
-        social_media_links: profile.social_media_links || {
-          twitter: '',
-          linkedin: '',
-          instagram: '',
-          facebook: ''
+        social_media_links: {
+          twitter: socialLinks.twitter || '',
+          linkedin: socialLinks.linkedin || '',
+          instagram: socialLinks.instagram || '',
+          facebook: socialLinks.facebook || ''
         }
       });
     }
