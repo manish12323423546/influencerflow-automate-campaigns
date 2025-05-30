@@ -1,13 +1,10 @@
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Bell, Check, Trash2, RefreshCw } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 
 interface Notification {
@@ -27,85 +24,96 @@ interface NotificationCenterProps {
   onClose: () => void;
 }
 
-const NotificationCenter = ({ isOpen, onClose }: NotificationCenterProps) => {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+// Mock notifications data
+const mockNotifications: Notification[] = [
+  {
+    id: '1',
+    user_id: 'mock-user-123',
+    title: 'Campaign Update',
+    message: 'Your Tech Product Launch campaign has received 3 new influencer applications.',
+    type: 'info',
+    is_read: false,
+    related_campaign_id: '1',
+    created_at: '2024-01-20T10:30:00Z'
+  },
+  {
+    id: '2',
+    user_id: 'mock-user-123',
+    title: 'Payment Processed',
+    message: 'Payment of $2,500 has been processed for Fashion Summer Collection campaign.',
+    type: 'success',
+    is_read: false,
+    related_campaign_id: '2',
+    created_at: '2024-01-19T14:20:00Z'
+  },
+  {
+    id: '3',
+    user_id: 'mock-user-123',
+    title: 'Content Review Required',
+    message: 'New content submitted for Fitness App Promotion requires your approval.',
+    type: 'warning',
+    is_read: true,
+    related_campaign_id: '3',
+    created_at: '2024-01-18T09:15:00Z'
+  },
+  {
+    id: '4',
+    user_id: 'mock-user-123',
+    title: 'Campaign Completed',
+    message: 'Sustainable Beauty Line campaign has been successfully completed with excellent results.',
+    type: 'success',
+    is_read: true,
+    related_campaign_id: '4',
+    created_at: '2024-01-17T16:45:00Z'
+  }
+];
 
-  // Fetch notifications
-  const { data: notifications = [], isLoading, refetch } = useQuery({
-    queryKey: ['notifications', user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-      
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(50);
-      
-      if (error) throw error;
-      return data as Notification[];
-    },
-    enabled: !!user && isOpen,
-  });
+const NotificationCenter = ({ isOpen, onClose }: NotificationCenterProps) => {
+  const { toast } = useToast();
+  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Mark notification as read
-  const markAsReadMutation = useMutation({
-    mutationFn: async (notificationId: string) => {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('id', notificationId);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-    },
-  });
+  const markAsRead = (notificationId: string) => {
+    setNotifications(prev => 
+      prev.map(n => 
+        n.id === notificationId ? { ...n, is_read: true } : n
+      )
+    );
+  };
 
   // Delete notification
-  const deleteNotificationMutation = useMutation({
-    mutationFn: async (notificationId: string) => {
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', notificationId);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      toast({
-        title: "Notification deleted",
-        description: "The notification has been removed.",
-      });
-    },
-  });
+  const deleteNotification = (notificationId: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== notificationId));
+    toast({
+      title: "Notification deleted",
+      description: "The notification has been removed.",
+    });
+  };
 
   // Mark all as read
-  const markAllAsReadMutation = useMutation({
-    mutationFn: async () => {
-      if (!user) throw new Error('No user found');
-      
-      const { error } = await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('user_id', user.id)
-        .eq('is_read', false);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+  const markAllAsRead = () => {
+    setNotifications(prev => 
+      prev.map(n => ({ ...n, is_read: true }))
+    );
+    toast({
+      title: "All notifications marked as read",
+      description: "Your notifications have been updated.",
+    });
+  };
+
+  // Refresh notifications
+  const refreshNotifications = () => {
+    setIsLoading(true);
+    // Simulate loading
+    setTimeout(() => {
+      setIsLoading(false);
       toast({
-        title: "All notifications marked as read",
-        description: "Your notifications have been updated.",
+        title: "Notifications refreshed",
+        description: "Your notifications are up to date.",
       });
-    },
-  });
+    }, 1000);
+  };
 
   const getNotificationBadgeColor = (type: string) => {
     switch (type) {
@@ -149,20 +157,20 @@ const NotificationCenter = ({ isOpen, onClose }: NotificationCenterProps) => {
             </CardTitle>
             <div className="flex items-center space-x-2">
               <Button
-                onClick={() => refetch()}
+                onClick={refreshNotifications}
                 variant="ghost"
                 size="sm"
                 className="text-snow/70 hover:text-purple-500"
+                disabled={isLoading}
               >
-                <RefreshCw className="h-4 w-4" />
+                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
               </Button>
               {unreadCount > 0 && (
                 <Button
-                  onClick={() => markAllAsReadMutation.mutate()}
+                  onClick={markAllAsRead}
                   variant="ghost"
                   size="sm"
                   className="text-snow/70 hover:text-purple-500"
-                  disabled={markAllAsReadMutation.isPending}
                 >
                   <Check className="h-4 w-4 mr-1" />
                   Mark all read
@@ -228,21 +236,19 @@ const NotificationCenter = ({ isOpen, onClose }: NotificationCenterProps) => {
                       <div className="flex items-center space-x-1">
                         {!notification.is_read && (
                           <Button
-                            onClick={() => markAsReadMutation.mutate(notification.id)}
+                            onClick={() => markAsRead(notification.id)}
                             variant="ghost"
                             size="sm"
                             className="text-snow/50 hover:text-purple-500 h-8 w-8 p-0"
-                            disabled={markAsReadMutation.isPending}
                           >
                             <Check className="h-3 w-3" />
                           </Button>
                         )}
                         <Button
-                          onClick={() => deleteNotificationMutation.mutate(notification.id)}
+                          onClick={() => deleteNotification(notification.id)}
                           variant="ghost"
                           size="sm"
                           className="text-snow/50 hover:text-red-400 h-8 w-8 p-0"
-                          disabled={deleteNotificationMutation.isPending}
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>

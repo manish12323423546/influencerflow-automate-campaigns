@@ -1,6 +1,5 @@
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,12 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Plus, ArrowLeft, Bell, Settings, LogOut, Filter, Calendar, DollarSign } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
+import { Search, Plus, ArrowLeft, Bell, Filter, Calendar, DollarSign } from 'lucide-react';
 import { motion } from 'framer-motion';
 import NotificationCenter from '@/components/NotificationCenter';
-import { useNotifications } from '@/hooks/useNotifications';
 
 interface Campaign {
   id: string;
@@ -33,71 +29,100 @@ interface Campaign {
   influencer_count?: number;
 }
 
+// Mock campaigns data
+const mockCampaigns: Campaign[] = [
+  {
+    id: '1',
+    name: 'Tech Product Launch',
+    description: 'Launch campaign for our new tech product line with focus on early adopters',
+    goals: 'Increase brand awareness and drive pre-orders',
+    target_audience: 'Tech enthusiasts, ages 25-45',
+    budget: 15000,
+    deliverables: 'Instagram posts, YouTube reviews, blog articles',
+    timeline: '3 months',
+    status: 'active',
+    brand: 'TechCorp',
+    user_id: 'mock-user-123',
+    created_at: '2024-01-15T10:30:00Z',
+    updated_at: '2024-01-15T10:30:00Z',
+    influencer_count: 5
+  },
+  {
+    id: '2',
+    name: 'Fashion Summer Collection',
+    description: 'Promote our new summer fashion collection targeting young professionals',
+    goals: 'Drive sales and increase social media engagement',
+    target_audience: 'Fashion-conscious professionals, ages 22-35',
+    budget: 8000,
+    deliverables: 'Instagram stories, TikTok videos, outfit posts',
+    timeline: '2 months',
+    status: 'draft',
+    brand: 'StyleBrand',
+    user_id: 'mock-user-123',
+    created_at: '2024-01-10T14:20:00Z',
+    updated_at: '2024-01-10T14:20:00Z',
+    influencer_count: 3
+  },
+  {
+    id: '3',
+    name: 'Fitness App Promotion',
+    description: 'Increase app downloads and engagement through fitness influencer partnerships',
+    goals: 'Boost app downloads by 40% and increase user retention',
+    target_audience: 'Fitness enthusiasts, ages 18-40',
+    budget: 12000,
+    deliverables: 'Workout videos, app reviews, fitness challenges',
+    timeline: '6 weeks',
+    status: 'completed',
+    brand: 'FitLife',
+    user_id: 'mock-user-123',
+    created_at: '2024-01-05T09:15:00Z',
+    updated_at: '2024-01-05T09:15:00Z',
+    influencer_count: 7
+  },
+  {
+    id: '4',
+    name: 'Sustainable Beauty Line',
+    description: 'Launch eco-friendly beauty products with sustainability-focused creators',
+    goals: 'Build brand credibility and drive conscious consumer adoption',
+    target_audience: 'Eco-conscious consumers, ages 25-50',
+    budget: 20000,
+    deliverables: 'Product reviews, sustainability content, tutorials',
+    timeline: '4 months',
+    status: 'pending',
+    brand: 'GreenBeauty',
+    user_id: 'mock-user-123',
+    created_at: '2024-01-20T16:45:00Z',
+    updated_at: '2024-01-20T16:45:00Z',
+    influencer_count: 4
+  }
+];
+
 const Campaigns = () => {
-  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showNotifications, setShowNotifications] = useState(false);
-  const { unreadCount } = useNotifications();
+  const [campaigns, setCampaigns] = useState<Campaign[]>(mockCampaigns);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch campaigns data with proper filtering
-  const { data: campaigns = [], isLoading, refetch } = useQuery({
-    queryKey: ['campaigns', searchTerm, statusFilter],
-    queryFn: async () => {
-      let query = supabase
-        .from('campaigns')
-        .select(`
-          *,
-          campaign_influencers(count)
-        `)
-        .order('created_at', { ascending: false });
-
-      // Apply status filter
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
-      }
-
-      // Apply search filter
-      if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,brand.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
-      }
-
-      const { data, error } = await query;
-      
-      if (error) throw error;
-      
-      return data.map(campaign => ({
-        ...campaign,
-        influencer_count: campaign.campaign_influencers?.[0]?.count || 0
-      })) as Campaign[];
-    },
-    enabled: !!user,
-  });
-
-  useEffect(() => {
-    if (!user) {
-      navigate('/login');
-    }
-  }, [user, navigate]);
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      toast({
-        title: "Signed out successfully",
-        description: "You have been logged out of your account.",
-      });
-      navigate('/login');
-    } catch (error) {
-      toast({
-        title: "Error signing out",
-        description: "There was a problem signing you out. Please try again.",
-        variant: "destructive",
-      });
-    }
+  // Mock user data
+  const mockUser = {
+    id: 'mock-user-123',
+    email: 'brand@example.com'
   };
+
+  // Filter campaigns based on search and status
+  const filteredCampaigns = campaigns.filter(campaign => {
+    const matchesSearch = searchTerm === '' || 
+      campaign.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      campaign.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (campaign.description && campaign.description.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesStatus = statusFilter === 'all' || campaign.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
@@ -125,8 +150,6 @@ const Campaigns = () => {
   };
 
   const stats = getCampaignStats();
-
-  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-carbon">
@@ -156,35 +179,16 @@ const Campaigns = () => {
                   className="text-snow/70 hover:text-purple-500 relative"
                 >
                   <Bell className="h-6 w-6" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-purple-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {unreadCount > 9 ? '9+' : unreadCount}
-                    </span>
-                  )}
+                  <span className="absolute -top-1 -right-1 bg-purple-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    3
+                  </span>
                 </Button>
               </div>
-              <Button
-                onClick={() => navigate('/settings')}
-                variant="ghost"
-                size="sm"
-                className="text-snow/70 hover:text-purple-500"
-              >
-                <Settings className="h-6 w-6" />
-              </Button>
               <div className="flex items-center space-x-3">
                 <div className="text-right">
                   <p className="text-sm font-medium text-snow">Welcome back!</p>
-                  <p className="text-xs text-snow/60">{user.email}</p>
+                  <p className="text-xs text-snow/60">{mockUser.email}</p>
                 </div>
-                <Button
-                  onClick={handleSignOut}
-                  variant="outline"
-                  size="sm"
-                  className="border-zinc-700 text-snow/70 hover:text-purple-500 hover:border-purple-500"
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Sign Out
-                </Button>
               </div>
             </div>
           </div>
@@ -288,14 +292,6 @@ const Campaigns = () => {
                 <SelectItem value="draft">Draft</SelectItem>
               </SelectContent>
             </Select>
-
-            <Button
-              onClick={() => refetch()}
-              variant="outline"
-              className="border-zinc-700 text-snow hover:bg-zinc-800"
-            >
-              Refresh
-            </Button>
           </div>
           
           <Button
@@ -315,7 +311,7 @@ const Campaigns = () => {
           <CardContent className="p-0">
             {isLoading ? (
               <div className="p-8 text-center text-snow/60">Loading campaigns...</div>
-            ) : campaigns.length === 0 ? (
+            ) : filteredCampaigns.length === 0 ? (
               <div className="p-8 text-center text-snow/60">
                 <p className="mb-4">
                   {searchTerm || statusFilter !== 'all' 
@@ -345,7 +341,7 @@ const Campaigns = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {campaigns.map((campaign, index) => (
+                  {filteredCampaigns.map((campaign, index) => (
                     <motion.tr
                       key={campaign.id}
                       className="border-zinc-800 hover:bg-zinc-800/50"

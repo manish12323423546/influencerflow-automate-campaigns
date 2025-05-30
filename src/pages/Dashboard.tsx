@@ -7,8 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Plus, Users, TrendingUp, DollarSign, Target, Bell, Settings, Activity, Home, ArrowRight, Building } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { Search, Plus, Users, TrendingUp, DollarSign, Target, Bell, Activity, Home, ArrowRight, Building } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface Campaign {
@@ -23,7 +22,7 @@ interface Campaign {
   engagement_rate: number;
 }
 
-// Mock data since we don't have authentication
+// Mock data without authentication
 const mockCampaigns: Campaign[] = [
   {
     id: '1',
@@ -67,16 +66,7 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState<'campaigns' | 'influencers'>('campaigns');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [brandFilter, setBrandFilter] = useState<string>('all');
-
-  // Mock query for campaigns
-  const { data: campaigns = mockCampaigns, isLoading: campaignsLoading } = useQuery({
-    queryKey: ['campaigns'],
-    queryFn: async () => {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      return mockCampaigns;
-    },
-  });
+  const [campaigns] = useState<Campaign[]>(mockCampaigns);
 
   // Calculate KPI data from campaigns
   const kpiData = {
@@ -173,7 +163,6 @@ const Dashboard = () => {
             
             <div className="flex items-center space-x-4">
               <Bell className="h-6 w-6 text-snow/70 hover:text-purple-500 cursor-pointer" />
-              <Settings className="h-6 w-6 text-snow/70 hover:text-purple-500 cursor-pointer" onClick={() => navigate('/settings')} />
               
               {/* Navigation buttons to switch dashboards */}
               <Link to="/">
@@ -239,7 +228,7 @@ const Dashboard = () => {
               variant="outline"
               className="border-zinc-700 text-snow hover:bg-zinc-800 h-16 text-left justify-start"
             >
-              <Settings className="h-5 w-5 mr-3" />
+              <Building className="h-5 w-5 mr-3" />
               <div>
                 <p className="font-medium">Brand Profile</p>
                 <p className="text-sm opacity-60">Update your profile</p>

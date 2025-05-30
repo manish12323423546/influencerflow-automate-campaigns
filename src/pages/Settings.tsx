@@ -1,14 +1,11 @@
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Save, Bell, Mail, Smartphone, MessageSquare, TrendingUp } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface NotificationPreferences {
   id: string;
@@ -23,10 +20,14 @@ interface NotificationPreferences {
 }
 
 const Settings = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+
+  // Mock user data
+  const mockUser = {
+    id: 'mock-user-123',
+    email: 'brand@example.com'
+  };
 
   const [preferences, setPreferences] = useState({
     email_notifications: true,
@@ -38,105 +39,25 @@ const Settings = () => {
     marketing_emails: false,
   });
 
-  // Fetch notification preferences
-  const { data: notificationPrefs, isLoading } = useQuery({
-    queryKey: ['notification-preferences', user?.id],
-    queryFn: async () => {
-      if (!user) throw new Error('No user found');
-      
-      const { data, error } = await supabase
-        .from('notification_preferences')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-      
-      return data as NotificationPreferences | null;
-    },
-    enabled: !!user,
-  });
-
-  // Update preferences when data loads
-  useEffect(() => {
-    if (notificationPrefs) {
-      setPreferences({
-        email_notifications: notificationPrefs.email_notifications,
-        push_notifications: notificationPrefs.push_notifications,
-        campaign_updates: notificationPrefs.campaign_updates,
-        influencer_responses: notificationPrefs.influencer_responses,
-        contract_updates: notificationPrefs.contract_updates,
-        performance_reports: notificationPrefs.performance_reports,
-        marketing_emails: notificationPrefs.marketing_emails,
-      });
-    }
-  }, [notificationPrefs]);
-
-  // Save preferences mutation
-  const savePreferencesMutation = useMutation({
-    mutationFn: async (prefs: typeof preferences) => {
-      if (!user) throw new Error('No user found');
-      
-      const prefsData = {
-        user_id: user.id,
-        ...prefs,
-        updated_at: new Date().toISOString(),
-      };
-
-      if (notificationPrefs) {
-        // Update existing preferences
-        const { data, error } = await supabase
-          .from('notification_preferences')
-          .update(prefsData)
-          .eq('user_id', user.id)
-          .select()
-          .single();
-        
-        if (error) throw error;
-        return data;
-      } else {
-        // Create new preferences
-        const { data, error } = await supabase
-          .from('notification_preferences')
-          .insert(prefsData)
-          .select()
-          .single();
-        
-        if (error) throw error;
-        return data;
-      }
-    },
-    onSuccess: () => {
-      toast({
-        title: "Settings saved successfully",
-        description: "Your notification preferences have been updated.",
-      });
-      queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
-    },
-    onError: (error) => {
-      console.error('Save preferences error:', error);
-      toast({
-        title: "Error saving settings",
-        description: "There was a problem saving your settings. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handlePreferenceChange = (key: string, value: boolean) => {
     setPreferences(prev => ({ ...prev, [key]: value }));
   };
 
   const handleSave = () => {
-    savePreferencesMutation.mutate(preferences);
+    setIsSaving(true);
+    
+    // Simulate saving preferences
+    setTimeout(() => {
+      toast({
+        title: "Settings saved successfully",
+        description: "Your notification preferences have been updated.",
+      });
+      setIsSaving(false);
+    }, 1000);
   };
-
-  if (!user) {
-    navigate('/login');
-    return null;
-  }
 
   return (
     <div className="min-h-screen bg-carbon">
@@ -175,11 +96,11 @@ const Settings = () => {
               <CardContent className="space-y-4">
                 <div>
                   <p className="text-sm text-snow/70 mb-1">Email Address</p>
-                  <p className="text-snow">{user.email}</p>
+                  <p className="text-snow">{mockUser.email}</p>
                 </div>
                 <div>
                   <p className="text-sm text-snow/70 mb-1">User ID</p>
-                  <p className="text-snow/80 font-mono text-sm">{user.id}</p>
+                  <p className="text-snow/80 font-mono text-sm">{mockUser.id}</p>
                 </div>
                 <Button
                   onClick={() => navigate('/brand-profile')}
@@ -314,11 +235,11 @@ const Settings = () => {
                 <div className="pt-4 border-t border-zinc-800">
                   <Button
                     onClick={handleSave}
-                    disabled={savePreferencesMutation.isPending}
+                    disabled={isSaving}
                     className="bg-purple-500 hover:bg-purple-600"
                   >
                     <Save className="h-4 w-4 mr-2" />
-                    {savePreferencesMutation.isPending ? 'Saving...' : 'Save Preferences'}
+                    {isSaving ? 'Saving...' : 'Save Preferences'}
                   </Button>
                 </div>
               </CardContent>
