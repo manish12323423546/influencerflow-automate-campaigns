@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CreditCard, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
 declare global {
@@ -37,7 +36,6 @@ const RazorpayPayment = ({
   amount: defaultAmount,
   description 
 }: RazorpayPaymentProps) => {
-  const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [paymentData, setPaymentData] = useState({
@@ -57,15 +55,6 @@ const RazorpayPayment = ({
   };
 
   const handlePayment = async () => {
-    if (!user) {
-      toast({
-        title: "Error",
-        description: "Please log in to make a payment",
-        variant: "destructive"
-      });
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -75,13 +64,13 @@ const RazorpayPayment = ({
         throw new Error('Failed to load Razorpay SDK');
       }
 
-      // Create payment record first
+      // Create payment record first (without user authentication)
       const { data: payment, error: paymentError } = await supabase
         .from('payments')
         .insert({
           campaign_id: campaignId || null,
           influencer_id: influencerId || null,
-          brand_user_id: user.id,
+          brand_user_id: '00000000-0000-0000-0000-000000000000', // Default test user ID
           amount: parseFloat(paymentData.amount),
           currency: paymentData.currency,
           payment_type: paymentData.paymentType,
@@ -155,8 +144,8 @@ const RazorpayPayment = ({
           }
         },
         prefill: {
-          email: user.email || '',
-          contact: ''
+          email: 'test@example.com', // Default test email
+          contact: '9999999999' // Default test contact
         },
         theme: {
           color: '#8B5CF6'
