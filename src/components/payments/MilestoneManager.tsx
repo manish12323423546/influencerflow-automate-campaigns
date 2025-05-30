@@ -1,357 +1,408 @@
 
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle, Clock, DollarSign, Plus, Calendar } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Calendar, CheckCircle, Clock, Plus, DollarSign } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import RazorpayPayment from './RazorpayPayment';
 
 interface Milestone {
   id: string;
+  campaign_id: string;
+  influencer_id: string;
   milestone_name: string;
-  milestone_description: string | null;
+  milestone_description: string;
   amount: number;
-  due_date: string | null;
-  status: string;
-  campaign: {
-    name: string;
-  } | null;
-  influencer: {
-    name: string;
-  } | null;
+  due_date: string;
+  status: 'pending' | 'approved' | 'paid' | 'overdue';
+  approved_at: string | null;
+  campaigns?: { name: string };
+  influencers?: { name: string };
 }
 
 const MilestoneManager = () => {
-  const { user } = useAuth();
+  const [isAddingMilestone, setIsAddingMilestone] = useState(false);
+  const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedCampaign, setSelectedCampaign] = useState('');
-  const [selectedInfluencer, setSelectedInfluencer] = useState('');
-  const [milestoneForm, setMilestoneForm] = useState({
-    name: '',
-    description: '',
-    amount: '',
-    dueDate: ''
-  });
 
+  // Fetch milestones
   const { data: milestones, isLoading } = useQuery({
-    queryKey: ['milestones', user?.id],
+    queryKey: ['payment-milestones'],
     queryFn: async (): Promise<Milestone[]> => {
-      if (!user) throw new Error('User not authenticated');
-
       const { data, error } = await supabase
         .from('payment_milestones')
         .select(`
-          id,
-          milestone_name,
-          milestone_description,
-          amount,
-          due_date,
-          status,
-          campaigns:campaign_id (name),
-          influencers:influencer_id (name)
+          *,
+          campaigns(name),
+          influencers(name)
         `)
-        .order('due_date', { ascending: true });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-
-      return data.map(item => ({
-        ...item,
-        campaign: item.campaigns ? { name: item.campaigns.name } : null,
-        influencer: item.influencers ? { name: item.influencers.name } : null
-      }));
-    },
-    enabled: !!user
-  });
-
-  const { data: campaigns } = useQuery({
-    queryKey: ['campaigns', user?.id],
-    queryFn: async () => {
-      if (!user) throw new Error('User not authenticated');
-
-      const { data, error } = await supabase
-        .from('campaigns')
-        .select('id, name')
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user
-  });
-
-  const { data: influencers } = useQuery({
-    queryKey: ['influencers-list'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('influencers')
-        .select('id, name');
-
-      if (error) throw error;
-      return data;
+      return data || [];
     }
   });
 
-  const createMilestone = useMutation({
-    mutationFn: async (milestoneData: any) => {
-      if (!user) throw new Error('User not authenticated');
+  // Fetch campaigns for dropdown
+  const { data: campaigns } = useQuery({
+    queryKey: ['campaigns'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('campaigns')
+        .select('id, name')
+        .order('name');
 
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  // Fetch influencers for dropdown
+  const { data: influencers } = useQuery({
+    queryKey: ['influencers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('influencers')
+        .select('id, name')
+        .order('name');
+
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  // Create milestone mutation
+  const createMilestone = useMutation({
+    mutationFn: async (milestone: Omit<Milestone, 'id' | 'status' | 'approved_at' | 'campaigns' | 'influencers'>) => {
       const { data, error } = await supabase
         .from('payment_milestones')
-        .insert({
-          campaign_id: selectedCampaign,
-          influencer_id: selectedInfluencer,
-          milestone_name: milestoneData.name,
-          milestone_description: milestoneData.description,
-          amount: parseFloat(milestoneData.amount),
-          due_date: milestoneData.dueDate || null
-        });
+        .insert([milestone])
+        .select()
+        .single();
 
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['milestones'] });
+      queryClient.invalidateQueries({ queryKey: ['payment-milestones'] });
       toast({
-        title: "Milestone Created",
+        title: "Milestone created",
         description: "Payment milestone has been created successfully.",
       });
-      setMilestoneForm({ name: '', description: '', amount: '', dueDate: '' });
-      setSelectedCampaign('');
-      setSelectedInfluencer('');
+      setIsAddingMilestone(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to create milestone. Please try again.",
+        variant: "destructive",
+      });
     }
   });
 
+  // Approve milestone mutation
   const approveMilestone = useMutation({
     mutationFn: async (milestoneId: string) => {
-      if (!user) throw new Error('User not authenticated');
-
       const { data, error } = await supabase
         .from('payment_milestones')
         .update({
           status: 'approved',
-          approved_by: user.id,
           approved_at: new Date().toISOString()
         })
-        .eq('id', milestoneId);
+        .eq('id', milestoneId)
+        .select()
+        .single();
 
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['milestones'] });
+      queryClient.invalidateQueries({ queryKey: ['payment-milestones'] });
       toast({
-        title: "Milestone Approved",
+        title: "Milestone approved",
         description: "Payment milestone has been approved for payment.",
       });
     }
   });
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      pending: { label: 'Pending', variant: 'secondary' as const, icon: Clock },
-      approved: { label: 'Approved', variant: 'default' as const, icon: CheckCircle },
-      paid: { label: 'Paid', variant: 'success' as const, icon: DollarSign },
-      overdue: { label: 'Overdue', variant: 'destructive' as const, icon: Calendar }
-    };
-
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
-    const Icon = config.icon;
+  const handleCreateMilestone = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
     
-    return (
-      <Badge variant={config.variant} className="flex items-center gap-1">
-        <Icon className="h-3 w-3" />
-        {config.label}
-      </Badge>
-    );
+    createMilestone.mutate({
+      campaign_id: formData.get('campaign_id') as string,
+      influencer_id: formData.get('influencer_id') as string,
+      milestone_name: formData.get('milestone_name') as string,
+      milestone_description: formData.get('milestone_description') as string,
+      amount: Number(formData.get('amount')),
+      due_date: formData.get('due_date') as string,
+    });
+  };
+
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return 'default'; // Changed from 'success' to 'default'
+      case 'paid':
+        return 'default'; // Changed from 'success' to 'default'
+      case 'overdue':
+        return 'destructive';
+      default:
+        return 'secondary';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return 'text-green-600';
+      case 'paid':
+        return 'text-green-600';
+      case 'overdue':
+        return 'text-red-600';
+      default:
+        return 'text-yellow-600';
+    }
   };
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Payment Milestones</CardTitle>
-          <CardDescription>Manage payment milestones for campaigns</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="animate-pulse space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-16 bg-gray-200 rounded"></div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-snow">Payment Milestones</h2>
+        </div>
+        <div className="grid gap-4">
+          {[...Array(3)].map((_, i) => (
+            <Card key={i} className="bg-zinc-800/50 border-zinc-700">
+              <CardContent className="p-6">
+                <div className="animate-pulse space-y-3">
+                  <div className="h-4 bg-zinc-700 rounded w-3/4"></div>
+                  <div className="h-4 bg-zinc-700 rounded w-1/2"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Payment Milestones</CardTitle>
-            <CardDescription>Manage and approve payment milestones for campaigns</CardDescription>
-          </div>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Milestone
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create Payment Milestone</DialogTitle>
-                <DialogDescription>
-                  Set up a new payment milestone for a campaign.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="campaign">Campaign</Label>
-                  <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select campaign" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {campaigns?.map((campaign) => (
-                        <SelectItem key={campaign.id} value={campaign.id}>
-                          {campaign.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-snow">Payment Milestones</h2>
+          <p className="text-snow/60">Manage campaign payment milestones and approvals</p>
+        </div>
+        
+        <Dialog open={isAddingMilestone} onOpenChange={setIsAddingMilestone}>
+          <DialogTrigger asChild>
+            <Button className="bg-purple-600 hover:bg-purple-700">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Milestone
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="bg-zinc-900 border-zinc-700">
+            <DialogHeader>
+              <DialogTitle className="text-snow">Create Payment Milestone</DialogTitle>
+              <DialogDescription className="text-snow/60">
+                Set up a new payment milestone for campaign deliverables.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <form onSubmit={handleCreateMilestone} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="campaign_id" className="text-snow">Campaign</Label>
+                  <select
+                    name="campaign_id"
+                    required
+                    className="w-full mt-1 bg-zinc-800 border-zinc-700 text-snow rounded-md px-3 py-2"
+                  >
+                    <option value="">Select Campaign</option>
+                    {campaigns?.map((campaign) => (
+                      <option key={campaign.id} value={campaign.id}>
+                        {campaign.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="influencer">Influencer</Label>
-                  <Select value={selectedInfluencer} onValueChange={setSelectedInfluencer}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select influencer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {influencers?.map((influencer) => (
-                        <SelectItem key={influencer.id} value={influencer.id}>
-                          {influencer.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                
+                <div>
+                  <Label htmlFor="influencer_id" className="text-snow">Influencer</Label>
+                  <select
+                    name="influencer_id"
+                    required
+                    className="w-full mt-1 bg-zinc-800 border-zinc-700 text-snow rounded-md px-3 py-2"
+                  >
+                    <option value="">Select Influencer</option>
+                    {influencers?.map((influencer) => (
+                      <option key={influencer.id} value={influencer.id}>
+                        {influencer.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Milestone Name</Label>
+              </div>
+
+              <div>
+                <Label htmlFor="milestone_name" className="text-snow">Milestone Name</Label>
+                <Input
+                  name="milestone_name"
+                  placeholder="e.g., Content Creation Complete"
+                  required
+                  className="bg-zinc-800 border-zinc-700 text-snow"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="milestone_description" className="text-snow">Description</Label>
+                <Textarea
+                  name="milestone_description"
+                  placeholder="Describe what needs to be completed for this milestone"
+                  className="bg-zinc-800 border-zinc-700 text-snow"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="amount" className="text-snow">Amount (₹)</Label>
                   <Input
-                    id="name"
-                    value={milestoneForm.name}
-                    onChange={(e) => setMilestoneForm(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="e.g., Content Creation Complete"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={milestoneForm.description}
-                    onChange={(e) => setMilestoneForm(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Describe what needs to be completed for this milestone"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="amount">Amount (₹)</Label>
-                  <Input
-                    id="amount"
+                    name="amount"
                     type="number"
-                    value={milestoneForm.amount}
-                    onChange={(e) => setMilestoneForm(prev => ({ ...prev, amount: e.target.value }))}
+                    step="0.01"
+                    min="0"
                     placeholder="0.00"
+                    required
+                    className="bg-zinc-800 border-zinc-700 text-snow"
                   />
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="dueDate">Due Date (Optional)</Label>
+                
+                <div>
+                  <Label htmlFor="due_date" className="text-snow">Due Date</Label>
                   <Input
-                    id="dueDate"
+                    name="due_date"
                     type="date"
-                    value={milestoneForm.dueDate}
-                    onChange={(e) => setMilestoneForm(prev => ({ ...prev, dueDate: e.target.value }))}
+                    className="bg-zinc-800 border-zinc-700 text-snow"
                   />
                 </div>
               </div>
-              <DialogFooter>
-                <Button 
-                  onClick={() => createMilestone.mutate(milestoneForm)}
-                  disabled={!selectedCampaign || !selectedInfluencer || !milestoneForm.name || !milestoneForm.amount}
+
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsAddingMilestone(false)}
+                  className="border-zinc-700 text-snow hover:bg-zinc-800"
                 >
-                  Create Milestone
+                  Cancel
                 </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Milestone</TableHead>
-              <TableHead>Campaign/Influencer</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Due Date</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {milestones?.map((milestone) => (
-              <TableRow key={milestone.id}>
-                <TableCell>
-                  <div>
-                    <div className="font-medium">{milestone.milestone_name}</div>
-                    <div className="text-sm text-muted-foreground">{milestone.milestone_description}</div>
+                <Button
+                  type="submit"
+                  disabled={createMilestone.isPending}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  {createMilestone.isPending ? 'Creating...' : 'Create Milestone'}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="grid gap-4">
+        {milestones?.map((milestone) => (
+          <Card key={milestone.id} className="bg-zinc-800/50 border-zinc-700">
+            <CardContent className="p-6">
+              <div className="flex justify-between items-start">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-lg font-semibold text-snow">
+                      {milestone.milestone_name}
+                    </h3>
+                    <Badge variant={getStatusBadgeVariant(milestone.status)} className={getStatusColor(milestone.status)}>
+                      {milestone.status}
+                    </Badge>
                   </div>
-                </TableCell>
-                <TableCell>
-                  <div>
-                    <div className="font-medium">{milestone.campaign?.name || 'N/A'}</div>
-                    <div className="text-sm text-muted-foreground">{milestone.influencer?.name || 'N/A'}</div>
+                  
+                  <p className="text-snow/70">{milestone.milestone_description}</p>
+                  
+                  <div className="flex items-center gap-4 text-sm text-snow/60">
+                    <span>Campaign: {milestone.campaigns?.name || 'Unknown'}</span>
+                    <span>Influencer: {milestone.influencers?.name || 'Unknown'}</span>
+                    {milestone.due_date && (
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        Due: {new Date(milestone.due_date).toLocaleDateString()}
+                      </span>
+                    )}
                   </div>
-                </TableCell>
-                <TableCell>₹{Number(milestone.amount).toLocaleString()}</TableCell>
-                <TableCell>
-                  {milestone.due_date ? new Date(milestone.due_date).toLocaleDateString() : 'No due date'}
-                </TableCell>
-                <TableCell>{getStatusBadge(milestone.status)}</TableCell>
-                <TableCell>
-                  {milestone.status === 'pending' && (
-                    <Button
-                      size="sm"
-                      onClick={() => approveMilestone.mutate(milestone.id)}
-                      disabled={approveMilestone.isPending}
-                    >
-                      Approve
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-            {milestones?.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                  No milestones found. Create your first milestone to get started.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+                </div>
+
+                <div className="text-right space-y-2">
+                  <div className="text-2xl font-bold text-snow">
+                    ₹{milestone.amount.toLocaleString()}
+                  </div>
+                  
+                  <div className="space-x-2">
+                    {milestone.status === 'pending' && (
+                      <Button
+                        size="sm"
+                        onClick={() => approveMilestone.mutate(milestone.id)}
+                        disabled={approveMilestone.isPending}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Approve
+                      </Button>
+                    )}
+                    
+                    {milestone.status === 'approved' && (
+                      <RazorpayPayment
+                        amount={milestone.amount}
+                        description={`Payment for ${milestone.milestone_name}`}
+                        campaignId={milestone.campaign_id}
+                        influencerId={milestone.influencer_id}
+                        milestoneId={milestone.id}
+                        onSuccess={() => {
+                          queryClient.invalidateQueries({ queryKey: ['payment-milestones'] });
+                          toast({
+                            title: "Payment successful",
+                            description: "Milestone payment has been processed successfully.",
+                          });
+                        }}
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+
+        {milestones?.length === 0 && (
+          <Card className="bg-zinc-800/50 border-zinc-700">
+            <CardContent className="p-12 text-center">
+              <Clock className="h-12 w-12 text-zinc-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-snow mb-2">No milestones yet</h3>
+              <p className="text-snow/60 mb-4">Create your first payment milestone to get started.</p>
+              <Button onClick={() => setIsAddingMilestone(true)} className="bg-purple-600 hover:bg-purple-700">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Milestone
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
   );
 };
 

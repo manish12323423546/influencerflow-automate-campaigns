@@ -51,17 +51,6 @@ const Dashboard = () => {
     }
   ];
 
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h2 className="text-2xl font-semibold mb-2">Please log in</h2>
-          <p className="text-muted-foreground">You need to be logged in to access the dashboard.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 text-snow">
       <div className="container-custom py-8">
