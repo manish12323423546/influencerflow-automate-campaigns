@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -7,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { CheckCircle, ArrowLeft, Mail, Lock, Users, Building } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -16,6 +16,19 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user, userRole, loading } = useAuth();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!loading && user && userRole) {
+      console.log('User already authenticated, redirecting...', userRole);
+      if (userRole === 'creator') {
+        navigate('/creator-dashboard', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
+    }
+  }, [user, userRole, loading, navigate]);
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -46,12 +59,14 @@ const Login = () => {
     setIsLoading(true);
 
     try {
+      console.log('Attempting login for:', formData.email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
       });
 
       if (error) {
+        console.error('Login error:', error);
         toast({
           title: "Login failed",
           description: error.message,
@@ -60,12 +75,36 @@ const Login = () => {
         return;
       }
 
+      if (!data.user) {
+        toast({
+          title: "Login failed",
+          description: "No user data received.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('Login successful, fetching role...');
+      
       // Get user role to redirect appropriately
-      const { data: roleData } = await supabase
+      const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', data.user.id)
         .single();
+
+      if (roleError) {
+        console.error('Role fetch error:', roleError);
+        toast({
+          title: "Welcome back!",
+          description: "You have successfully logged in. Redirecting to dashboard...",
+        });
+        // Default to brand dashboard if role fetch fails
+        navigate('/dashboard', { replace: true });
+        return;
+      }
+
+      console.log('Role found:', roleData.role);
 
       toast({
         title: "Welcome back!",
@@ -74,11 +113,14 @@ const Login = () => {
 
       // Redirect based on role
       if (roleData?.role === 'creator') {
-        navigate('/creator-dashboard');
+        console.log('Redirecting to creator dashboard');
+        navigate('/creator-dashboard', { replace: true });
       } else {
-        navigate('/dashboard');
+        console.log('Redirecting to brand dashboard');
+        navigate('/dashboard', { replace: true });
       }
     } catch (error) {
+      console.error('Unexpected error:', error);
       toast({
         title: "Error",
         description: "Something went wrong. Please try again.",
@@ -92,6 +134,18 @@ const Login = () => {
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  // Show loading while checking auth state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-carbon flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-snow">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-carbon flex items-center justify-center p-4">
@@ -110,6 +164,7 @@ const Login = () => {
             <div className="grid md:grid-cols-2 min-h-[600px]">
               {/* Left Side - Branding */}
               <div className="bg-gradient-to-br from-carbon via-zinc-900 to-carbon p-12 flex flex-col justify-center">
+                
                 <div className="max-w-sm">
                   <h1 className="text-4xl font-space font-bold text-snow mb-4">
                     Influencer<span className="text-purple-500">Flow</span>
@@ -132,6 +187,7 @@ const Login = () => {
 
               {/* Right Side - Login Form */}
               <div className="p-12 flex flex-col justify-center">
+                
                 <div className="mb-8">
                   <h2 className="text-3xl font-space font-bold text-snow mb-2">
                     Welcome back
@@ -142,6 +198,7 @@ const Login = () => {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
+                  
                   <div>
                     <label htmlFor="email" className="block text-sm font-medium text-snow/80 mb-2">
                       Email address
@@ -194,6 +251,7 @@ const Login = () => {
                   </Button>
                 </form>
 
+                
                 <div className="mt-6 text-center">
                   <p className="text-sm text-snow/60">
                     Don't have an account?{' '}
