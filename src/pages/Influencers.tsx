@@ -234,9 +234,9 @@ const Influencers = () => {
                 </SelectTrigger>
                 <SelectContent className="bg-zinc-800 border-zinc-700">
                   <SelectItem value="all">All Sizes</SelectItem>
-                  <SelectItem value="micro">Micro (< 100K)</SelectItem>
+                  <SelectItem value="micro">Micro (&lt; 100K)</SelectItem>
                   <SelectItem value="mid">Mid (100K - 1M)</SelectItem>
-                  <SelectItem value="macro">Macro (> 1M)</SelectItem>
+                  <SelectItem value="macro">Macro (&gt; 1M)</SelectItem>
                 </SelectContent>
               </Select>
 
