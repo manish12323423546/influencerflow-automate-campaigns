@@ -9,6 +9,57 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      brand_profiles: {
+        Row: {
+          company_description: string | null
+          company_logo_url: string | null
+          company_name: string | null
+          company_size: string | null
+          company_website: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          headquarters_location: string | null
+          id: string
+          industry: string | null
+          social_media_links: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_description?: string | null
+          company_logo_url?: string | null
+          company_name?: string | null
+          company_size?: string | null
+          company_website?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          headquarters_location?: string | null
+          id?: string
+          industry?: string | null
+          social_media_links?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_description?: string | null
+          company_logo_url?: string | null
+          company_name?: string | null
+          company_size?: string | null
+          company_website?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          headquarters_location?: string | null
+          id?: string
+          industry?: string | null
+          social_media_links?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       campaign_influencers: {
         Row: {
           campaign_id: string | null
@@ -224,6 +275,99 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      notification_preferences: {
+        Row: {
+          campaign_updates: boolean | null
+          contract_updates: boolean | null
+          created_at: string
+          email_notifications: boolean | null
+          id: string
+          influencer_responses: boolean | null
+          marketing_emails: boolean | null
+          performance_reports: boolean | null
+          push_notifications: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          campaign_updates?: boolean | null
+          contract_updates?: boolean | null
+          created_at?: string
+          email_notifications?: boolean | null
+          id?: string
+          influencer_responses?: boolean | null
+          marketing_emails?: boolean | null
+          performance_reports?: boolean | null
+          push_notifications?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          campaign_updates?: boolean | null
+          contract_updates?: boolean | null
+          created_at?: string
+          email_notifications?: boolean | null
+          id?: string
+          influencer_responses?: boolean | null
+          marketing_emails?: boolean | null
+          performance_reports?: boolean | null
+          push_notifications?: boolean | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean | null
+          message: string
+          related_campaign_id: string | null
+          related_influencer_id: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message: string
+          related_campaign_id?: string | null
+          related_influencer_id?: string | null
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          related_campaign_id?: string | null
+          related_influencer_id?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_related_campaign_id_fkey"
+            columns: ["related_campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_related_influencer_id_fkey"
+            columns: ["related_influencer_id"]
+            isOneToOne: false
+            referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       performance_reports: {
         Row: {

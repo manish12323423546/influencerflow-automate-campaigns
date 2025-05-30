@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
@@ -12,6 +11,8 @@ import { Search, Plus, ArrowLeft, Bell, Settings, LogOut } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
+import NotificationCenter from '@/components/NotificationCenter';
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface Campaign {
   id: string;
@@ -35,6 +36,8 @@ const Campaigns = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
+  const [showNotifications, setShowNotifications] = useState(false);
+  const { unreadCount } = useNotifications();
 
   // Fetch campaigns data
   const { data: campaigns = [], isLoading } = useQuery({
@@ -121,8 +124,29 @@ const Campaigns = () => {
             </div>
             
             <div className="flex items-center space-x-4">
-              <Bell className="h-6 w-6 text-snow/70 hover:text-purple-500 cursor-pointer" />
-              <Settings className="h-6 w-6 text-snow/70 hover:text-purple-500 cursor-pointer" />
+              <div className="relative">
+                <Button
+                  onClick={() => setShowNotifications(true)}
+                  variant="ghost"
+                  size="sm"
+                  className="text-snow/70 hover:text-purple-500 relative"
+                >
+                  <Bell className="h-6 w-6" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-purple-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </Button>
+              </div>
+              <Button
+                onClick={() => navigate('/settings')}
+                variant="ghost"
+                size="sm"
+                className="text-snow/70 hover:text-purple-500"
+              >
+                <Settings className="h-6 w-6" />
+              </Button>
               <div className="flex items-center space-x-3">
                 <div className="text-right">
                   <p className="text-sm font-medium text-snow">Welcome back!</p>
@@ -238,6 +262,12 @@ const Campaigns = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Notification Center */}
+      <NotificationCenter
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+      />
     </div>
   );
 };

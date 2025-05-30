@@ -14,6 +14,8 @@ import InfluencerProfile from "./pages/InfluencerProfile";
 import Campaigns from "./pages/Campaigns";
 import CreateCampaign from "./pages/CreateCampaign";
 import CampaignDetail from "./pages/CampaignDetail";
+import BrandProfile from "./pages/BrandProfile";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +37,8 @@ const App = () => (
             <Route path="/campaigns" element={<Campaigns />} />
             <Route path="/campaigns/create" element={<CreateCampaign />} />
             <Route path="/campaigns/:id" element={<CampaignDetail />} />
+            <Route path="/brand-profile" element={<BrandProfile />} />
+            <Route path="/settings" element={<Settings />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
