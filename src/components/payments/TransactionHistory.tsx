@@ -13,8 +13,8 @@ interface Transaction {
   id: string;
   amount: number;
   currency: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed' | 'refunded';
-  payment_type: 'milestone' | 'full' | 'advance';
+  status: string; // Changed to string to match database
+  payment_type: string; // Changed to string to match database
   milestone_description: string;
   razorpay_payment_id?: string;
   razorpay_order_id?: string;
@@ -60,7 +60,7 @@ const TransactionHistory = () => {
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case 'completed':
-        return 'default'; // Changed from 'success' to 'default'
+        return 'default';
       case 'failed':
         return 'destructive';
       case 'processing':

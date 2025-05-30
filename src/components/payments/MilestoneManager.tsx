@@ -21,7 +21,7 @@ interface Milestone {
   milestone_description: string;
   amount: number;
   due_date: string;
-  status: 'pending' | 'approved' | 'paid' | 'overdue';
+  status: string; // Changed to string to match database
   approved_at: string | null;
   campaigns?: { name: string };
   influencers?: { name: string };
@@ -30,6 +30,7 @@ interface Milestone {
 const MilestoneManager = () => {
   const [isAddingMilestone, setIsAddingMilestone] = useState(false);
   const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -150,9 +151,9 @@ const MilestoneManager = () => {
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case 'approved':
-        return 'default'; // Changed from 'success' to 'default'
+        return 'default';
       case 'paid':
-        return 'default'; // Changed from 'success' to 'default'
+        return 'default';
       case 'overdue':
         return 'destructive';
       default:
@@ -366,20 +367,17 @@ const MilestoneManager = () => {
                     )}
                     
                     {milestone.status === 'approved' && (
-                      <RazorpayPayment
-                        amount={milestone.amount}
-                        description={`Payment for ${milestone.milestone_name}`}
-                        campaignId={milestone.campaign_id}
-                        influencerId={milestone.influencer_id}
-                        milestoneId={milestone.id}
-                        onSuccess={() => {
-                          queryClient.invalidateQueries({ queryKey: ['payment-milestones'] });
-                          toast({
-                            title: "Payment successful",
-                            description: "Milestone payment has been processed successfully.",
-                          });
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setSelectedMilestone(milestone);
+                          setPaymentDialogOpen(true);
                         }}
-                      />
+                        className="bg-purple-600 hover:bg-purple-700"
+                      >
+                        <DollarSign className="h-4 w-4 mr-1" />
+                        Pay Now
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -402,6 +400,30 @@ const MilestoneManager = () => {
           </Card>
         )}
       </div>
+
+      {selectedMilestone && (
+        <RazorpayPayment
+          isOpen={paymentDialogOpen}
+          onClose={() => {
+            setPaymentDialogOpen(false);
+            setSelectedMilestone(null);
+          }}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['payment-milestones'] });
+            toast({
+              title: "Payment successful",
+              description: "Milestone payment has been processed successfully.",
+            });
+            setPaymentDialogOpen(false);
+            setSelectedMilestone(null);
+          }}
+          amount={selectedMilestone.amount}
+          description={`Payment for ${selectedMilestone.milestone_name}`}
+          campaignId={selectedMilestone.campaign_id}
+          influencerId={selectedMilestone.influencer_id}
+          milestoneId={selectedMilestone.id}
+        />
+      )}
     </div>
   );
 };

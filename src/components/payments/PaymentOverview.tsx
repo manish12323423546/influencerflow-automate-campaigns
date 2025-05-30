@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { CreditCard, DollarSign, Receipt, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '@/hooks/useAuth';
 
 interface PaymentStats {
   totalSpent: number;
@@ -15,17 +14,12 @@ interface PaymentStats {
 }
 
 const PaymentOverview = () => {
-  const { user } = useAuth();
-
   const { data: paymentStats, isLoading } = useQuery({
-    queryKey: ['payment-stats', user?.id],
+    queryKey: ['payment-stats'],
     queryFn: async (): Promise<PaymentStats> => {
-      if (!user) throw new Error('User not authenticated');
-
       const { data: payments, error } = await supabase
         .from('payments')
-        .select('amount, status')
-        .eq('brand_user_id', user.id);
+        .select('amount, status');
 
       if (error) throw error;
 
@@ -43,18 +37,17 @@ const PaymentOverview = () => {
         completedPayments,
         overduePayments
       };
-    },
-    enabled: !!user
+    }
   });
 
   if (isLoading) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {[...Array(4)].map((_, i) => (
-          <Card key={i}>
+          <Card key={i} className="bg-zinc-800/50 border-zinc-700">
             <CardHeader className="animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-              <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+              <div className="h-4 bg-zinc-700 rounded w-3/4"></div>
+              <div className="h-8 bg-zinc-700 rounded w-1/2"></div>
             </CardHeader>
           </Card>
         ))}
@@ -96,14 +89,14 @@ const PaymentOverview = () => {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {stats.map((stat, index) => (
-        <Card key={index}>
+        <Card key={index} className="bg-zinc-800/50 border-zinc-700">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+            <CardTitle className="text-sm font-medium text-snow/80">{stat.title}</CardTitle>
             <stat.icon className={`h-4 w-4 ${stat.color}`} />
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${stat.color}`}>{stat.value}</div>
-            <p className="text-xs text-muted-foreground">{stat.description}</p>
+            <p className="text-xs text-snow/60">{stat.description}</p>
           </CardContent>
         </Card>
       ))}
