@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,12 +45,15 @@ const Login = () => {
     setIsLoading(true);
 
     try {
+      console.log('Attempting login for:', formData.email);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
       });
 
       if (error) {
+        console.error('Login error:', error);
         toast({
           title: "Login failed",
           description: error.message,
@@ -60,12 +62,25 @@ const Login = () => {
         return;
       }
 
+      if (!data.user) {
+        toast({
+          title: "Login failed",
+          description: "No user data returned.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('Login successful for user:', data.user.id);
+
       // Get user role to redirect appropriately
       const { data: roleData } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', data.user.id)
         .single();
+
+      console.log('User role:', roleData?.role);
 
       toast({
         title: "Welcome back!",
@@ -79,6 +94,7 @@ const Login = () => {
         navigate('/dashboard');
       }
     } catch (error) {
+      console.error('Login error:', error);
       toast({
         title: "Error",
         description: "Something went wrong. Please try again.",
