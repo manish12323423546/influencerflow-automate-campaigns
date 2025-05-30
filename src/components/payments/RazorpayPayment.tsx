@@ -26,6 +26,15 @@ interface RazorpayPaymentProps {
   description?: string;
 }
 
+// Generate a UUID v4
+const generateUUID = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
 const RazorpayPayment = ({ 
   isOpen, 
   onClose, 
@@ -64,13 +73,19 @@ const RazorpayPayment = ({
         throw new Error('Failed to load Razorpay SDK');
       }
 
+      // Convert string IDs to proper UUIDs or null for test payments
+      const testUserId = '00000000-0000-0000-0000-000000000000';
+      const paymentCampaignId = campaignId && campaignId !== '1' && campaignId !== '2' && campaignId !== '3' ? campaignId : null;
+      const paymentInfluencerId = influencerId && influencerId.includes('-') ? influencerId : null;
+      const paymentMilestoneId = milestoneId && milestoneId.includes('-') ? milestoneId : null;
+
       // Create payment record first (without user authentication)
       const { data: payment, error: paymentError } = await supabase
         .from('payments')
         .insert({
-          campaign_id: campaignId || null,
-          influencer_id: influencerId || null,
-          brand_user_id: '00000000-0000-0000-0000-000000000000', // Default test user ID
+          campaign_id: paymentCampaignId,
+          influencer_id: paymentInfluencerId,
+          brand_user_id: testUserId,
           amount: parseFloat(paymentData.amount),
           currency: paymentData.currency,
           payment_type: paymentData.paymentType,
@@ -87,9 +102,9 @@ const RazorpayPayment = ({
           amount: parseFloat(paymentData.amount),
           currency: paymentData.currency,
           receipt: `payment_${payment.id}`,
-          campaignId,
-          influencerId,
-          milestoneId
+          campaignId: paymentCampaignId,
+          influencerId: paymentInfluencerId,
+          milestoneId: paymentMilestoneId
         }
       });
 
@@ -118,9 +133,9 @@ const RazorpayPayment = ({
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
                 paymentData: {
-                  milestoneId,
-                  campaignId,
-                  influencerId
+                  milestoneId: paymentMilestoneId,
+                  campaignId: paymentCampaignId,
+                  influencerId: paymentInfluencerId
                 }
               }
             });
