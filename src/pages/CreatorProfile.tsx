@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -110,7 +109,12 @@ const CreatorProfile = () => {
       }
 
       if (data) {
-        setProfile(data);
+        setProfile({
+          ...data,
+          social_media_links: typeof data.social_media_links === 'object' && data.social_media_links !== null 
+            ? data.social_media_links as Record<string, string>
+            : {}
+        });
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
