@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { CheckCircle, ArrowLeft, User, Mail, Lock } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -16,6 +17,7 @@ const Signup = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -55,23 +57,48 @@ const Signup = () => {
     setIsLoading(true);
 
     try {
-      // Simulate signup process
-      // In real implementation: await supabase.auth.signUp({ email, password })
-      setTimeout(() => {
-        setIsLoading(false);
-        setIsSuccess(true);
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            name: formData.name,
+          }
+        }
+      });
+
+      if (error) {
         toast({
-          title: "Account created!",
-          description: "Welcome to InfluencerFlow. You're all set!",
+          title: "Signup failed",
+          description: error.message,
+          variant: "destructive",
         });
-      }, 1500);
+        return;
+      }
+
+      setIsSuccess(true);
+      toast({
+        title: "Account created!",
+        description: "Welcome to InfluencerFlow. You're all set!",
+      });
+
+      // If user is confirmed, redirect to home
+      if (data.user && !data.user.email_confirmed_at) {
+        toast({
+          title: "Check your email",
+          description: "Please check your email to confirm your account.",
+        });
+      } else {
+        setTimeout(() => navigate('/'), 2000);
+      }
     } catch (error) {
-      setIsLoading(false);
       toast({
         title: "Error",
         description: "Something went wrong. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -239,10 +266,7 @@ const Signup = () => {
                     </p>
 
                     <Button
-                      onClick={() => {
-                        // Navigate to dashboard or next step
-                        window.location.href = '/';
-                      }}
+                      onClick={() => navigate('/')}
                       className="btn-purple"
                     >
                       Get Started

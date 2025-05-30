@@ -1,16 +1,21 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, ArrowLeft, Mail } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { CheckCircle, ArrowLeft, Mail, Lock } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 const Login = () => {
-  const [email, setEmail] = useState('');
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
   const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -20,7 +25,7 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateEmail(email)) {
+    if (!validateEmail(formData.email)) {
       toast({
         title: "Invalid email",
         description: "Please enter a valid email address.",
@@ -29,27 +34,51 @@ const Login = () => {
       return;
     }
 
+    if (!formData.password) {
+      toast({
+        title: "Password required",
+        description: "Please enter your password.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // Simulate Supabase auth call
-      // In real implementation: await supabase.auth.signInWithOtp({ email })
-      setTimeout(() => {
-        setIsLoading(false);
-        setIsSuccess(true);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (error) {
         toast({
-          title: "Magic link sent!",
-          description: "Check your inbox for a secure login link.",
+          title: "Login failed",
+          description: error.message,
+          variant: "destructive",
         });
-      }, 1500);
+        return;
+      }
+
+      toast({
+        title: "Welcome back!",
+        description: "You have successfully logged in.",
+      });
+
+      navigate('/');
     } catch (error) {
-      setIsLoading(false);
       toast({
         title: "Error",
         description: "Something went wrong. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -84,106 +113,87 @@ const Login = () => {
 
               {/* Right Side - Login Form */}
               <div className="p-12 flex flex-col justify-center">
-                {!isSuccess ? (
-                  <>
-                    <div className="mb-8">
-                      <h2 className="text-3xl font-space font-bold text-snow mb-2">
-                        Welcome back
-                      </h2>
-                      <p className="text-snow/70">
-                        Enter your email to receive a secure login link
-                      </p>
+                <div className="mb-8">
+                  <h2 className="text-3xl font-space font-bold text-snow mb-2">
+                    Welcome back
+                  </h2>
+                  <p className="text-snow/70">
+                    Sign in to your account
+                  </p>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-medium text-snow/80 mb-2">
+                      Email address
+                    </label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-snow/50" />
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="you@company.com"
+                        value={formData.email}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        className="bg-zinc-800 border-zinc-700 text-snow placeholder:text-snow/50 focus:border-purple-500 h-12 pl-10"
+                        required
+                      />
                     </div>
-
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                      <div>
-                        <label htmlFor="email" className="block text-sm font-medium text-snow/80 mb-2">
-                          Email address
-                        </label>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-snow/50" />
-                          <Input
-                            id="email"
-                            type="email"
-                            placeholder="you@company.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="bg-zinc-800 border-zinc-700 text-snow placeholder:text-snow/50 focus:border-purple-500 h-12 pl-10"
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      <Button 
-                        type="submit" 
-                        disabled={isLoading}
-                        className="w-full btn-purple h-12 text-lg"
-                      >
-                        {isLoading ? (
-                          <>
-                            <div className="animate-spin w-5 h-5 border-2 border-carbon border-t-transparent rounded-full mr-3"></div>
-                            Sending magic link...
-                          </>
-                        ) : (
-                          'Send Magic Link'
-                        )}
-                      </Button>
-                    </form>
-
-                    <div className="mt-6 text-center">
-                      <p className="text-sm text-snow/60">
-                        Don't have an account?{' '}
-                        <Link to="/signup" className="text-purple-500 hover:text-purple-400 font-medium">
-                          Sign up free
-                        </Link>
-                      </p>
-                    </div>
-
-                    <p className="text-sm text-snow/60 mt-6 text-center">
-                      By continuing, you agree to our{' '}
-                      <a href="#terms" className="text-purple-500 hover:text-purple-400">
-                        Terms of Service
-                      </a>{' '}
-                      and{' '}
-                      <a href="#privacy" className="text-purple-500 hover:text-purple-400">
-                        Privacy Policy
-                      </a>
-                    </p>
-                  </>
-                ) : (
-                  <div className="text-center animate-fade-in-up">
-                    <div className="w-20 h-20 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
-                      <CheckCircle className="h-10 w-10 text-purple-500" />
-                    </div>
-                    
-                    <h2 className="text-3xl font-space font-bold text-snow mb-4">
-                      Check your inbox
-                    </h2>
-                    
-                    <p className="text-snow/80 mb-2">
-                      We've sent a secure login link to:
-                    </p>
-                    
-                    <p className="text-purple-500 font-semibold text-lg mb-6">
-                      {email}
-                    </p>
-                    
-                    <p className="text-sm text-snow/60">
-                      Click the link in your email to sign in safely. The link will expire in 15 minutes.
-                    </p>
-
-                    <Button
-                      onClick={() => {
-                        setIsSuccess(false);
-                        setEmail('');
-                      }}
-                      variant="outline"
-                      className="btn-outline mt-6"
-                    >
-                      Use different email
-                    </Button>
                   </div>
-                )}
+
+                  <div>
+                    <label htmlFor="password" className="block text-sm font-medium text-snow/80 mb-2">
+                      Password
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-snow/50" />
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="Enter your password"
+                        value={formData.password}
+                        onChange={(e) => handleInputChange('password', e.target.value)}
+                        className="bg-zinc-800 border-zinc-700 text-snow placeholder:text-snow/50 focus:border-purple-500 h-12 pl-10"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <Button 
+                    type="submit" 
+                    disabled={isLoading}
+                    className="w-full btn-purple h-12 text-lg"
+                  >
+                    {isLoading ? (
+                      <>
+                        <div className="animate-spin w-5 h-5 border-2 border-carbon border-t-transparent rounded-full mr-3"></div>
+                        Signing in...
+                      </>
+                    ) : (
+                      'Sign In'
+                    )}
+                  </Button>
+                </form>
+
+                <div className="mt-6 text-center">
+                  <p className="text-sm text-snow/60">
+                    Don't have an account?{' '}
+                    <Link to="/signup" className="text-purple-500 hover:text-purple-400 font-medium">
+                      Sign up free
+                    </Link>
+                  </p>
+                </div>
+
+                <p className="text-sm text-snow/60 mt-6 text-center">
+                  By continuing, you agree to our{' '}
+                  <a href="#terms" className="text-purple-500 hover:text-purple-400">
+                    Terms of Service
+                  </a>{' '}
+                  and{' '}
+                  <a href="#privacy" className="text-purple-500 hover:text-purple-400">
+                    Privacy Policy
+                  </a>
+                </p>
               </div>
             </div>
           </CardContent>
