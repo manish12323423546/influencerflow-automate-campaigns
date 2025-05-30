@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -79,18 +78,11 @@ const Signup = () => {
       setIsSuccess(true);
       toast({
         title: "Account created!",
-        description: "Welcome to InfluencerFlow. You're all set!",
+        description: "Please login with your credentials.",
       });
 
-      // If user is confirmed, redirect to home
-      if (data.user && !data.user.email_confirmed_at) {
-        toast({
-          title: "Check your email",
-          description: "Please check your email to confirm your account.",
-        });
-      } else {
-        setTimeout(() => navigate('/'), 2000);
-      }
+      // Redirect to login page after signup
+      setTimeout(() => navigate('/login'), 2000);
     } catch (error) {
       toast({
         title: "Error",
@@ -258,18 +250,18 @@ const Signup = () => {
                     </div>
                     
                     <h2 className="text-3xl font-space font-bold text-snow mb-4">
-                      Welcome to InfluencerFlow!
+                      Account Created Successfully!
                     </h2>
                     
                     <p className="text-snow/80 mb-6">
-                      Your account has been created successfully. You can now start automating your influencer campaigns.
+                      Your account has been created. Redirecting you to login...
                     </p>
 
                     <Button
-                      onClick={() => navigate('/')}
+                      onClick={() => navigate('/login')}
                       className="btn-purple"
                     >
-                      Get Started
+                      Go to Login
                     </Button>
                   </div>
                 )}
