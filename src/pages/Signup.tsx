@@ -1,17 +1,21 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, ArrowLeft, User, Mail, Lock } from 'lucide-react';
+import { CheckCircle, ArrowLeft, User, Mail, Lock, Building, Users } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+
+type UserRole = 'brand' | 'creator';
 
 const Signup = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
+    role: 'brand' as UserRole,
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -61,7 +65,8 @@ const Signup = () => {
         password: formData.password,
         options: {
           data: {
-            name: formData.name,
+            full_name: formData.name,
+            role: formData.role,
           }
         }
       });
@@ -81,8 +86,14 @@ const Signup = () => {
         description: "Welcome to InfluencerFlow! Redirecting to dashboard...",
       });
 
-      // Redirect to dashboard after signup
-      setTimeout(() => navigate('/dashboard'), 2000);
+      // Redirect based on role
+      setTimeout(() => {
+        if (formData.role === 'creator') {
+          navigate('/creator-dashboard');
+        } else {
+          navigate('/dashboard');
+        }
+      }, 2000);
     } catch (error) {
       toast({
         title: "Error",
@@ -153,6 +164,41 @@ const Signup = () => {
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-6">
+                      {/* Role Selection */}
+                      <div>
+                        <label className="block text-sm font-medium text-snow/80 mb-3">
+                          I am a...
+                        </label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => handleInputChange('role', 'brand')}
+                            className={`p-4 rounded-lg border-2 transition-colors ${
+                              formData.role === 'brand'
+                                ? 'border-purple-500 bg-purple-500/10'
+                                : 'border-zinc-700 bg-zinc-800'
+                            }`}
+                          >
+                            <Building className="h-6 w-6 mx-auto mb-2 text-purple-500" />
+                            <p className="text-snow font-medium">Brand</p>
+                            <p className="text-snow/60 text-xs">Manage campaigns</p>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleInputChange('role', 'creator')}
+                            className={`p-4 rounded-lg border-2 transition-colors ${
+                              formData.role === 'creator'
+                                ? 'border-purple-500 bg-purple-500/10'
+                                : 'border-zinc-700 bg-zinc-800'
+                            }`}
+                          >
+                            <Users className="h-6 w-6 mx-auto mb-2 text-purple-500" />
+                            <p className="text-snow font-medium">Creator</p>
+                            <p className="text-snow/60 text-xs">Join campaigns</p>
+                          </button>
+                        </div>
+                      </div>
+
                       <div>
                         <label htmlFor="name" className="block text-sm font-medium text-snow/80 mb-2">
                           Full Name
@@ -258,7 +304,13 @@ const Signup = () => {
                     </p>
 
                     <Button
-                      onClick={() => navigate('/dashboard')}
+                      onClick={() => {
+                        if (formData.role === 'creator') {
+                          navigate('/creator-dashboard');
+                        } else {
+                          navigate('/dashboard');
+                        }
+                      }}
                       className="btn-purple"
                     >
                       Go to Dashboard

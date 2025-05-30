@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, ArrowLeft, Mail, Lock } from 'lucide-react';
+import { CheckCircle, ArrowLeft, Mail, Lock, Users, Building } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -60,12 +60,24 @@ const Login = () => {
         return;
       }
 
+      // Get user role to redirect appropriately
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', data.user.id)
+        .single();
+
       toast({
         title: "Welcome back!",
         description: "You have successfully logged in.",
       });
 
-      navigate('/dashboard');
+      // Redirect based on role
+      if (roleData?.role === 'creator') {
+        navigate('/creator-dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -105,9 +117,16 @@ const Login = () => {
                   <p className="text-snow/80 text-lg leading-relaxed mb-8">
                     Automate creator campaigns
                   </p>
-                  <p className="text-snow/60">
-                    Join thousands of marketers who trust InfluencerFlow to scale their influencer campaigns efficiently.
-                  </p>
+                  <div className="space-y-4 text-snow/60">
+                    <div className="flex items-center">
+                      <Building className="h-5 w-5 text-purple-500 mr-3" />
+                      <span>Brand Campaign Management</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Users className="h-5 w-5 text-purple-500 mr-3" />
+                      <span>Creator Collaboration Hub</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -27,7 +26,7 @@ interface Campaign {
 }
 
 const Dashboard = () => {
-  const { user, signOut } = useAuth();
+  const { user, userRole, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
@@ -94,8 +93,10 @@ const Dashboard = () => {
   useEffect(() => {
     if (!user) {
       navigate('/login');
+    } else if (userRole === 'creator') {
+      navigate('/creator-dashboard');
     }
-  }, [user, navigate]);
+  }, [user, userRole, navigate]);
 
   // Quick action handlers
   const handleCreateCampaign = () => {
@@ -174,7 +175,7 @@ const Dashboard = () => {
     return `${sign}${value}%`;
   };
 
-  if (!user) return null;
+  if (!user || userRole !== 'brand') return null;
 
   return (
     <div className="min-h-screen bg-carbon">

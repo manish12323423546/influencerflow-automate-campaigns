@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
+import CreatorDashboard from "./pages/CreatorDashboard";
 import Influencers from "./pages/Influencers";
 import InfluencerProfile from "./pages/InfluencerProfile";
 import Campaigns from "./pages/Campaigns";
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/creator-dashboard" element={<CreatorDashboard />} />
             <Route path="/influencers" element={<Influencers />} />
             <Route path="/influencers/:id" element={<InfluencerProfile />} />
             <Route path="/campaigns" element={<Campaigns />} />
