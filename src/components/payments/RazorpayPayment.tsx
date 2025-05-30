@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -11,8 +10,41 @@ import { useToast } from '@/hooks/use-toast';
 
 declare global {
   interface Window {
-    Razorpay: any;
+    Razorpay: {
+      new (options: RazorpayOptions): {
+        open: () => void;
+      };
+    };
   }
+}
+
+interface RazorpayResponse {
+  razorpay_payment_id: string;
+  razorpay_order_id?: string;
+  razorpay_signature?: string;
+}
+
+interface RazorpayOptions {
+  key: string;
+  amount: number;
+  currency: string;
+  name: string;
+  description: string;
+  image?: string;
+  order_id?: string;
+  handler: (response: RazorpayResponse) => void;
+  prefill: {
+    name?: string;
+    email?: string;
+    contact?: string;
+  };
+  notes?: Record<string, string>;
+  theme: {
+    color: string;
+  };
+  modal?: {
+    ondismiss: () => void;
+  };
 }
 
 interface RazorpayPaymentProps {
@@ -25,15 +57,6 @@ interface RazorpayPaymentProps {
   amount?: number;
   description?: string;
 }
-
-// Generate a UUID v4
-const generateUUID = () => {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c == 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-};
 
 const RazorpayPayment = ({ 
   isOpen, 
@@ -54,7 +77,12 @@ const RazorpayPayment = ({
   });
 
   const loadRazorpayScript = () => {
-    return new Promise((resolve) => {
+    return new Promise<boolean>((resolve) => {
+      if (window.Razorpay) {
+        resolve(true);
+        return;
+      }
+      
       const script = document.createElement('script');
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
       script.onload = () => resolve(true);
@@ -73,13 +101,16 @@ const RazorpayPayment = ({
         throw new Error('Failed to load Razorpay SDK');
       }
 
-      // Convert string IDs to proper UUIDs or null for test payments
+      // For test mode, we'll directly initiate the payment without creating an order
+      // This works in test mode but for production, you'd need server-side order creation
+      const amountInPaise = Math.round(parseFloat(paymentData.amount) * 100);
+      
+      // Store payment info in database
       const testUserId = '00000000-0000-0000-0000-000000000000';
       const paymentCampaignId = campaignId && campaignId !== '1' && campaignId !== '2' && campaignId !== '3' ? campaignId : null;
       const paymentInfluencerId = influencerId && influencerId.includes('-') ? influencerId : null;
       const paymentMilestoneId = milestoneId && milestoneId.includes('-') ? milestoneId : null;
-
-      // Create payment record first (without user authentication)
+      
       const { data: payment, error: paymentError } = await supabase
         .from('payments')
         .insert({
@@ -89,58 +120,60 @@ const RazorpayPayment = ({
           amount: parseFloat(paymentData.amount),
           currency: paymentData.currency,
           payment_type: paymentData.paymentType,
-          milestone_description: description || null
+          milestone_description: description || null,
+          status: 'pending'
         })
         .select()
         .single();
 
-      if (paymentError) throw paymentError;
+      if (paymentError) {
+        console.error('Failed to create payment record:', paymentError);
+        throw new Error('Failed to create payment record');
+      }
 
-      // Create Razorpay order
-      const { data: orderData, error: orderError } = await supabase.functions.invoke('create-razorpay-order', {
-        body: {
-          amount: parseFloat(paymentData.amount),
-          currency: paymentData.currency,
-          receipt: `payment_${payment.id}`,
-          campaignId: paymentCampaignId,
-          influencerId: paymentInfluencerId,
-          milestoneId: paymentMilestoneId
-        }
-      });
-
-      if (orderError) throw orderError;
-
-      // Update payment with Razorpay order ID
-      await supabase
-        .from('payments')
-        .update({ razorpay_order_id: orderData.id })
-        .eq('id', payment.id);
-
-      // Initialize Razorpay payment
-      const options = {
-        key: 'rzp_test_iZbabM5Zru76Fd', // Your Razorpay Key ID
-        amount: orderData.amount,
-        currency: orderData.currency,
+      // Initialize basic Razorpay payment for test mode
+      const options: RazorpayOptions = {
+        key: 'rzp_test_iZbabM5Zru76Fd', // Your Razorpay Test Key ID
+        amount: amountInPaise,
+        currency: paymentData.currency,
         name: 'Creator Campaign Platform',
         description: description || 'Campaign Payment',
-        order_id: orderData.id,
-        handler: async (response: any) => {
+        image: 'https://your-logo-url.png', // Optional
+        prefill: {
+          name: 'Customer Name', // Optional
+          email: 'customer@example.com', // Optional
+          contact: '9999999999' // Optional
+        },
+        notes: {
+          payment_id: payment.id,
+          campaign_id: paymentCampaignId || '',
+          influencer_id: paymentInfluencerId || '',
+          milestone_id: paymentMilestoneId || ''
+        },
+        handler: async function(response) {
           try {
-            // Verify payment
-            const { error: verifyError } = await supabase.functions.invoke('verify-razorpay-payment', {
-              body: {
-                razorpay_order_id: response.razorpay_order_id,
+            console.log('Payment successful:', response);
+            
+            // Update payment record with Razorpay payment ID
+            await supabase
+              .from('payments')
+              .update({
+                status: 'completed',
                 razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                paymentData: {
-                  milestoneId: paymentMilestoneId,
-                  campaignId: paymentCampaignId,
-                  influencerId: paymentInfluencerId
-                }
-              }
-            });
+                paid_at: new Date().toISOString()
+              })
+              .eq('id', payment.id);
 
-            if (verifyError) throw verifyError;
+            // Update milestone if applicable
+            if (paymentMilestoneId) {
+              await supabase
+                .from('payment_milestones')
+                .update({
+                  status: 'paid',
+                  payment_id: payment.id
+                })
+                .eq('id', paymentMilestoneId);
+            }
 
             toast({
               title: "Payment Successful",
@@ -150,23 +183,19 @@ const RazorpayPayment = ({
             onSuccess();
             onClose();
           } catch (error) {
-            console.error('Payment verification failed:', error);
+            console.error('Payment record update failed:', error);
             toast({
               title: "Payment Verification Failed",
-              description: "Please contact support for assistance.",
+              description: error instanceof Error ? error.message : "Please contact support for assistance.",
               variant: "destructive"
             });
           }
-        },
-        prefill: {
-          email: 'test@example.com', // Default test email
-          contact: '9999999999' // Default test contact
         },
         theme: {
           color: '#8B5CF6'
         },
         modal: {
-          ondismiss: () => {
+          ondismiss: function() {
             setLoading(false);
           }
         }
@@ -179,7 +208,7 @@ const RazorpayPayment = ({
       console.error('Payment initiation failed:', error);
       toast({
         title: "Payment Failed",
-        description: "Failed to initiate payment. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to initiate payment. Please try again.",
         variant: "destructive"
       });
     } finally {
