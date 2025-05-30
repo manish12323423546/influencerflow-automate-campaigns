@@ -26,7 +26,7 @@ interface Campaign {
 }
 
 const Dashboard = () => {
-  const { user, userRole, loading, signOut } = useAuth();
+  const { user, userRole, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
@@ -37,40 +37,6 @@ const Dashboard = () => {
 
   // Use notifications hook
   const { notifications, unreadCount, createNotification } = useNotifications();
-
-  console.log('Dashboard render - Auth state:', { 
-    user: user?.email, 
-    userRole, 
-    loading,
-    userId: user?.id 
-  });
-
-  useEffect(() => {
-    console.log('Dashboard useEffect - checking auth state:', { 
-      user: user?.email, 
-      userRole, 
-      loading 
-    });
-
-    if (loading) {
-      console.log('Still loading auth state...');
-      return;
-    }
-
-    if (!user) {
-      console.log('No user found, redirecting to login');
-      navigate('/login');
-      return;
-    }
-
-    if (userRole === 'creator') {
-      console.log('User is creator, redirecting to creator dashboard');
-      navigate('/creator-dashboard');
-      return;
-    }
-
-    console.log('User authenticated as brand, staying on dashboard');
-  }, [user, userRole, loading, navigate]);
 
   // Fetch user's campaigns
   const { data: campaigns = [], isLoading: campaignsLoading } = useQuery({
@@ -124,6 +90,15 @@ const Dashboard = () => {
     enabled: !!user && campaigns.length > 0,
   });
 
+  useEffect(() => {
+    if (!user) {
+      navigate('/login');
+    } else if (userRole === 'creator') {
+      navigate('/creator-dashboard');
+    }
+  }, [user, userRole, navigate]);
+
+  // Quick action handlers
   const handleCreateCampaign = () => {
     navigate('/campaigns/create');
   };
@@ -153,7 +128,9 @@ const Dashboard = () => {
     }
   };
 
+  // Enhanced filtering logic
   const filteredCampaigns = campaigns.filter(campaign => {
+    // Search filter
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       if (!campaign.name.toLowerCase().includes(searchLower) && 
@@ -162,10 +139,12 @@ const Dashboard = () => {
       }
     }
     
+    // Status filter
     if (statusFilter !== 'all' && campaign.status !== statusFilter) {
       return false;
     }
     
+    // Brand filter
     if (brandFilter !== 'all' && campaign.brand !== brandFilter) {
       return false;
     }
@@ -173,6 +152,7 @@ const Dashboard = () => {
     return true;
   });
 
+  // Get unique brands for filter
   const uniqueBrands = [...new Set(campaigns.map(campaign => campaign.brand))];
 
   const getStatusColor = (status: string) => {
@@ -195,19 +175,7 @@ const Dashboard = () => {
     return `${sign}${value}%`;
   };
 
-  // Show loading state while auth is being determined
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-carbon flex items-center justify-center">
-        <div className="text-snow">Loading...</div>
-      </div>
-    );
-  }
-
-  // Don't render if user is not authenticated or is not a brand
-  if (!user || userRole !== 'brand') {
-    return null;
-  }
+  if (!user || userRole !== 'brand') return null;
 
   return (
     <div className="min-h-screen bg-carbon">
