@@ -78,11 +78,11 @@ const Signup = () => {
       setIsSuccess(true);
       toast({
         title: "Account created!",
-        description: "Please login with your credentials.",
+        description: "Welcome to InfluencerFlow! Redirecting to dashboard...",
       });
 
-      // Redirect to login page after signup
-      setTimeout(() => navigate('/login'), 2000);
+      // Redirect to dashboard after signup
+      setTimeout(() => navigate('/dashboard'), 2000);
     } catch (error) {
       toast({
         title: "Error",
@@ -250,18 +250,18 @@ const Signup = () => {
                     </div>
                     
                     <h2 className="text-3xl font-space font-bold text-snow mb-4">
-                      Account Created Successfully!
+                      Welcome to InfluencerFlow!
                     </h2>
                     
                     <p className="text-snow/80 mb-6">
-                      Your account has been created. Redirecting you to login...
+                      Your account has been created successfully. Taking you to your dashboard...
                     </p>
 
                     <Button
-                      onClick={() => navigate('/login')}
+                      onClick={() => navigate('/dashboard')}
                       className="btn-purple"
                     >
-                      Go to Login
+                      Go to Dashboard
                     </Button>
                   </div>
                 )}
