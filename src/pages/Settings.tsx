@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, Link } from 'react-router-dom';
@@ -5,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Save, Bell, Mail, Smartphone, Megaphone, Users, FileText, BarChart3, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Save, Bell, Mail, Smartphone, MessageSquare, TrendingUp } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -19,8 +20,6 @@ interface NotificationPreferences {
   contract_updates: boolean;
   performance_reports: boolean;
   marketing_emails: boolean;
-  created_at: string;
-  updated_at: string;
 }
 
 const Settings = () => {
@@ -40,87 +39,98 @@ const Settings = () => {
   });
 
   // Fetch notification preferences
-  const { data: userPreferences, isLoading } = useQuery({
+  const { data: notificationPrefs, isLoading } = useQuery({
     queryKey: ['notification-preferences', user?.id],
     queryFn: async () => {
-      if (!user) return null;
+      if (!user) throw new Error('No user found');
       
       const { data, error } = await supabase
         .from('notification_preferences')
         .select('*')
         .eq('user_id', user.id)
-        .maybeSingle();
+        .single();
       
-      if (error) throw error;
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+      
       return data as NotificationPreferences | null;
     },
     enabled: !!user,
   });
 
+  // Update preferences when data loads
   useEffect(() => {
-    if (userPreferences) {
+    if (notificationPrefs) {
       setPreferences({
-        email_notifications: userPreferences.email_notifications,
-        push_notifications: userPreferences.push_notifications,
-        campaign_updates: userPreferences.campaign_updates,
-        influencer_responses: userPreferences.influencer_responses,
-        contract_updates: userPreferences.contract_updates,
-        performance_reports: userPreferences.performance_reports,
-        marketing_emails: userPreferences.marketing_emails,
+        email_notifications: notificationPrefs.email_notifications,
+        push_notifications: notificationPrefs.push_notifications,
+        campaign_updates: notificationPrefs.campaign_updates,
+        influencer_responses: notificationPrefs.influencer_responses,
+        contract_updates: notificationPrefs.contract_updates,
+        performance_reports: notificationPrefs.performance_reports,
+        marketing_emails: notificationPrefs.marketing_emails,
       });
     }
-  }, [userPreferences]);
+  }, [notificationPrefs]);
 
-  const updatePreferencesMutation = useMutation({
-    mutationFn: async (data: typeof preferences) => {
+  // Save preferences mutation
+  const savePreferencesMutation = useMutation({
+    mutationFn: async (prefs: typeof preferences) => {
       if (!user) throw new Error('No user found');
-
-      const preferencesData = {
+      
+      const prefsData = {
         user_id: user.id,
-        ...data,
+        ...prefs,
+        updated_at: new Date().toISOString(),
       };
 
-      if (userPreferences) {
-        const { error } = await supabase
+      if (notificationPrefs) {
+        // Update existing preferences
+        const { data, error } = await supabase
           .from('notification_preferences')
-          .update(preferencesData)
-          .eq('user_id', user.id);
+          .update(prefsData)
+          .eq('user_id', user.id)
+          .select()
+          .single();
         
         if (error) throw error;
+        return data;
       } else {
-        const { error } = await supabase
+        // Create new preferences
+        const { data, error } = await supabase
           .from('notification_preferences')
-          .insert(preferencesData);
+          .insert(prefsData)
+          .select()
+          .single();
         
         if (error) throw error;
+        return data;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
       toast({
-        title: "Settings updated successfully",
-        description: "Your notification preferences have been saved.",
+        title: "Settings saved successfully",
+        description: "Your notification preferences have been updated.",
       });
+      queryClient.invalidateQueries({ queryKey: ['notification-preferences'] });
     },
     onError: (error) => {
-      console.error('Error updating preferences:', error);
+      console.error('Save preferences error:', error);
       toast({
-        title: "Error updating settings",
-        description: "There was a problem saving your preferences. Please try again.",
+        title: "Error saving settings",
+        description: "There was a problem saving your settings. Please try again.",
         variant: "destructive",
       });
     },
   });
 
-  const handlePreferenceChange = (key: keyof typeof preferences, value: boolean) => {
-    setPreferences(prev => ({
-      ...prev,
-      [key]: value
-    }));
+  const handlePreferenceChange = (key: string, value: boolean) => {
+    setPreferences(prev => ({ ...prev, [key]: value }));
   };
 
-  const handleSubmit = () => {
-    updatePreferencesMutation.mutate(preferences);
+  const handleSave = () => {
+    savePreferencesMutation.mutate(preferences);
   };
 
   if (!user) {
@@ -151,158 +161,195 @@ const Settings = () => {
       </header>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-6">
-          {/* General Notification Settings */}
-          <Card className="bg-zinc-900 border-zinc-800">
-            <CardHeader>
-              <CardTitle className="text-snow flex items-center">
-                <Bell className="h-5 w-5 mr-2" />
-                General Notifications
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <Mail className="h-5 w-5 text-snow/70" />
-                  <div>
-                    <p className="text-snow font-medium">Email Notifications</p>
-                    <p className="text-snow/60 text-sm">Receive notifications via email</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={preferences.email_notifications}
-                  onCheckedChange={(value) => handlePreferenceChange('email_notifications', value)}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <Smartphone className="h-5 w-5 text-snow/70" />
-                  <div>
-                    <p className="text-snow font-medium">Push Notifications</p>
-                    <p className="text-snow/60 text-sm">Receive push notifications in browser</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={preferences.push_notifications}
-                  onCheckedChange={(value) => handlePreferenceChange('push_notifications', value)}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Campaign & Influencer Notifications */}
-          <Card className="bg-zinc-900 border-zinc-800">
-            <CardHeader>
-              <CardTitle className="text-snow flex items-center">
-                <Megaphone className="h-5 w-5 mr-2" />
-                Campaign & Influencer Updates
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <Megaphone className="h-5 w-5 text-snow/70" />
-                  <div>
-                    <p className="text-snow font-medium">Campaign Updates</p>
-                    <p className="text-snow/60 text-sm">Get notified about campaign status changes</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={preferences.campaign_updates}
-                  onCheckedChange={(value) => handlePreferenceChange('campaign_updates', value)}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <Users className="h-5 w-5 text-snow/70" />
-                  <div>
-                    <p className="text-snow font-medium">Influencer Responses</p>
-                    <p className="text-snow/60 text-sm">Get notified when influencers respond to campaigns</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={preferences.influencer_responses}
-                  onCheckedChange={(value) => handlePreferenceChange('influencer_responses', value)}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <FileText className="h-5 w-5 text-snow/70" />
-                  <div>
-                    <p className="text-snow font-medium">Contract Updates</p>
-                    <p className="text-snow/60 text-sm">Get notified about contract changes and signatures</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={preferences.contract_updates}
-                  onCheckedChange={(value) => handlePreferenceChange('contract_updates', value)}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <BarChart3 className="h-5 w-5 text-snow/70" />
-                  <div>
-                    <p className="text-snow font-medium">Performance Reports</p>
-                    <p className="text-snow/60 text-sm">Get notified about campaign performance reports</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={preferences.performance_reports}
-                  onCheckedChange={(value) => handlePreferenceChange('performance_reports', value)}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Marketing & Promotional */}
-          <Card className="bg-zinc-900 border-zinc-800">
-            <CardHeader>
-              <CardTitle className="text-snow flex items-center">
-                <MessageSquare className="h-5 w-5 mr-2" />
-                Marketing & Promotional
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <MessageSquare className="h-5 w-5 text-snow/70" />
-                  <div>
-                    <p className="text-snow font-medium">Marketing Emails</p>
-                    <p className="text-snow/60 text-sm">Receive product updates and promotional content</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={preferences.marketing_emails}
-                  onCheckedChange={(value) => handlePreferenceChange('marketing_emails', value)}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Actions */}
-          <div className="flex justify-end space-x-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate('/brand-profile')}
-              className="border-zinc-700 text-snow hover:bg-zinc-800"
-            >
-              Brand Profile
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={updatePreferencesMutation.isPending || isLoading}
-              className="bg-purple-500 hover:bg-purple-600"
-            >
-              <Save className="h-4 w-4 mr-2" />
-              {updatePreferencesMutation.isPending ? 'Saving...' : 'Save Settings'}
-            </Button>
+        {isLoading ? (
+          <div className="text-center py-8">
+            <div className="text-snow">Loading settings...</div>
           </div>
-        </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Account Information */}
+            <Card className="bg-zinc-900 border-zinc-800">
+              <CardHeader>
+                <CardTitle className="text-snow">Account Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <p className="text-sm text-snow/70 mb-1">Email Address</p>
+                  <p className="text-snow">{user.email}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-snow/70 mb-1">User ID</p>
+                  <p className="text-snow/80 font-mono text-sm">{user.id}</p>
+                </div>
+                <Button
+                  onClick={() => navigate('/brand-profile')}
+                  variant="outline"
+                  className="border-zinc-700 text-snow hover:bg-zinc-800"
+                >
+                  Edit Brand Profile
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Notification Preferences */}
+            <Card className="bg-zinc-900 border-zinc-800">
+              <CardHeader>
+                <CardTitle className="text-snow flex items-center">
+                  <Bell className="h-5 w-5 mr-2 text-purple-500" />
+                  Notification Preferences
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Communication Methods */}
+                <div>
+                  <h3 className="text-snow font-medium mb-4">Communication Methods</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <Mail className="h-5 w-5 text-blue-500" />
+                        <div>
+                          <p className="text-snow font-medium">Email Notifications</p>
+                          <p className="text-snow/60 text-sm">Receive notifications via email</p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={preferences.email_notifications}
+                        onCheckedChange={(checked) => handlePreferenceChange('email_notifications', checked)}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <Smartphone className="h-5 w-5 text-green-500" />
+                        <div>
+                          <p className="text-snow font-medium">Push Notifications</p>
+                          <p className="text-snow/60 text-sm">Receive notifications on your device</p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={preferences.push_notifications}
+                        onCheckedChange={(checked) => handlePreferenceChange('push_notifications', checked)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notification Types */}
+                <div>
+                  <h3 className="text-snow font-medium mb-4">Notification Types</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <MessageSquare className="h-5 w-5 text-purple-500" />
+                        <div>
+                          <p className="text-snow font-medium">Campaign Updates</p>
+                          <p className="text-snow/60 text-sm">Status changes, milestones, and important updates</p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={preferences.campaign_updates}
+                        onCheckedChange={(checked) => handlePreferenceChange('campaign_updates', checked)}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <MessageSquare className="h-5 w-5 text-orange-500" />
+                        <div>
+                          <p className="text-snow font-medium">Influencer Responses</p>
+                          <p className="text-snow/60 text-sm">When influencers accept, decline, or respond to campaigns</p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={preferences.influencer_responses}
+                        onCheckedChange={(checked) => handlePreferenceChange('influencer_responses', checked)}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <MessageSquare className="h-5 w-5 text-blue-500" />
+                        <div>
+                          <p className="text-snow font-medium">Contract Updates</p>
+                          <p className="text-snow/60 text-sm">Contract signatures, changes, and approvals</p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={preferences.contract_updates}
+                        onCheckedChange={(checked) => handlePreferenceChange('contract_updates', checked)}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <TrendingUp className="h-5 w-5 text-green-500" />
+                        <div>
+                          <p className="text-snow font-medium">Performance Reports</p>
+                          <p className="text-snow/60 text-sm">Weekly and monthly campaign performance reports</p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={preferences.performance_reports}
+                        onCheckedChange={(checked) => handlePreferenceChange('performance_reports', checked)}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <Mail className="h-5 w-5 text-gray-500" />
+                        <div>
+                          <p className="text-snow font-medium">Marketing Emails</p>
+                          <p className="text-snow/60 text-sm">Product updates, tips, and promotional content</p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={preferences.marketing_emails}
+                        onCheckedChange={(checked) => handlePreferenceChange('marketing_emails', checked)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Save Button */}
+                <div className="pt-4 border-t border-zinc-800">
+                  <Button
+                    onClick={handleSave}
+                    disabled={savePreferencesMutation.isPending}
+                    className="bg-purple-500 hover:bg-purple-600"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    {savePreferencesMutation.isPending ? 'Saving...' : 'Save Preferences'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card className="bg-zinc-900 border-zinc-800">
+              <CardHeader>
+                <CardTitle className="text-snow">Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Button
+                    onClick={() => navigate('/campaigns')}
+                    variant="outline"
+                    className="border-zinc-700 text-snow hover:bg-zinc-800"
+                  >
+                    Manage Campaigns
+                  </Button>
+                  <Button
+                    onClick={() => navigate('/influencers')}
+                    variant="outline"
+                    className="border-zinc-700 text-snow hover:bg-zinc-800"
+                  >
+                    Discover Influencers
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );
