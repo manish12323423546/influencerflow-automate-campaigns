@@ -1,7 +1,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building, Home, ArrowRight, Briefcase, Trophy, FileText } from 'lucide-react';
+import { Building, Home, ArrowRight, Briefcase, Trophy, FileText, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import CampaignOpportunities from '@/components/CampaignOpportunities';
@@ -25,6 +25,12 @@ const CreatorDashboard = () => {
             </p>
           </div>
           <div className="flex gap-4">
+            <Link to="/creator-profile">
+              <Button variant="outline" className="btn-outline">
+                <User className="mr-2 h-4 w-4" />
+                Profile
+              </Button>
+            </Link>
             <Link to="/">
               <Button variant="outline" className="btn-outline">
                 <Home className="mr-2 h-4 w-4" />

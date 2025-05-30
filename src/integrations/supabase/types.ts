@@ -216,6 +216,63 @@ export type Database = {
           },
         ]
       }
+      creator_profiles: {
+        Row: {
+          bio: string | null
+          content_categories: string[] | null
+          created_at: string
+          experience_level: string | null
+          id: string
+          location: string | null
+          niche: string | null
+          portfolio_urls: string[] | null
+          preferred_language: string | null
+          profile_image_url: string | null
+          rate_per_post: number | null
+          rate_per_reel: number | null
+          rate_per_story: number | null
+          social_media_links: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bio?: string | null
+          content_categories?: string[] | null
+          created_at?: string
+          experience_level?: string | null
+          id?: string
+          location?: string | null
+          niche?: string | null
+          portfolio_urls?: string[] | null
+          preferred_language?: string | null
+          profile_image_url?: string | null
+          rate_per_post?: number | null
+          rate_per_reel?: number | null
+          rate_per_story?: number | null
+          social_media_links?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bio?: string | null
+          content_categories?: string[] | null
+          created_at?: string
+          experience_level?: string | null
+          id?: string
+          location?: string | null
+          niche?: string | null
+          portfolio_urls?: string[] | null
+          preferred_language?: string | null
+          profile_image_url?: string | null
+          rate_per_post?: number | null
+          rate_per_reel?: number | null
+          rate_per_story?: number | null
+          social_media_links?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       influencers: {
         Row: {
           audience_fit_score: number

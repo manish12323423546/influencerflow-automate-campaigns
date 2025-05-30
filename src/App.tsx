@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import CreatorDashboard from "./pages/CreatorDashboard";
+import CreatorProfile from "./pages/CreatorProfile";
 import Influencers from "./pages/Influencers";
 import InfluencerProfile from "./pages/InfluencerProfile";
 import Campaigns from "./pages/Campaigns";
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/creator-dashboard" element={<CreatorDashboard />} />
+          <Route path="/creator-profile" element={<CreatorProfile />} />
           <Route path="/influencers" element={<Influencers />} />
           <Route path="/influencers/:id" element={<InfluencerProfile />} />
           <Route path="/campaigns" element={<Campaigns />} />
