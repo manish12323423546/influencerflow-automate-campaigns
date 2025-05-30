@@ -9,7 +9,216 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      campaign_influencers: {
+        Row: {
+          campaign_id: string | null
+          created_at: string
+          fee: number
+          id: string
+          influencer_id: string | null
+          status: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          created_at?: string
+          fee?: number
+          id?: string
+          influencer_id?: string | null
+          status: string
+        }
+        Update: {
+          campaign_id?: string | null
+          created_at?: string
+          fee?: number
+          id?: string
+          influencer_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_influencers_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_influencers_influencer_id_fkey"
+            columns: ["influencer_id"]
+            isOneToOne: false
+            referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          brand: string
+          budget: number
+          created_at: string
+          engagement_rate: number
+          id: string
+          influencer_count: number
+          name: string
+          reach: number
+          spent: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          brand: string
+          budget?: number
+          created_at?: string
+          engagement_rate?: number
+          id?: string
+          influencer_count?: number
+          name: string
+          reach?: number
+          spent?: number
+          status: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          brand?: string
+          budget?: number
+          created_at?: string
+          engagement_rate?: number
+          id?: string
+          influencer_count?: number
+          name?: string
+          reach?: number
+          spent?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      influencers: {
+        Row: {
+          audience_fit_score: number
+          avatar_url: string | null
+          avg_cpe: number
+          created_at: string
+          engagement_rate: number
+          fake_follower_score: number
+          followers_count: number
+          handle: string
+          id: string
+          industry: string
+          language: string
+          name: string
+          platform: string
+          risk_flags: string[] | null
+          roi_index: number
+          safety_scan_score: number
+          updated_at: string
+        }
+        Insert: {
+          audience_fit_score?: number
+          avatar_url?: string | null
+          avg_cpe?: number
+          created_at?: string
+          engagement_rate?: number
+          fake_follower_score?: number
+          followers_count?: number
+          handle: string
+          id?: string
+          industry: string
+          language?: string
+          name: string
+          platform: string
+          risk_flags?: string[] | null
+          roi_index?: number
+          safety_scan_score?: number
+          updated_at?: string
+        }
+        Update: {
+          audience_fit_score?: number
+          avatar_url?: string | null
+          avg_cpe?: number
+          created_at?: string
+          engagement_rate?: number
+          fake_follower_score?: number
+          followers_count?: number
+          handle?: string
+          id?: string
+          industry?: string
+          language?: string
+          name?: string
+          platform?: string
+          risk_flags?: string[] | null
+          roi_index?: number
+          safety_scan_score?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      posts: {
+        Row: {
+          campaign_id: string | null
+          comments_count: number
+          content: string | null
+          created_at: string
+          engagement_rate: number
+          id: string
+          influencer_id: string | null
+          likes_count: number
+          platform_post_id: string
+          posted_at: string
+          shares_count: number
+          updated_at: string
+          views_count: number
+        }
+        Insert: {
+          campaign_id?: string | null
+          comments_count?: number
+          content?: string | null
+          created_at?: string
+          engagement_rate?: number
+          id?: string
+          influencer_id?: string | null
+          likes_count?: number
+          platform_post_id: string
+          posted_at?: string
+          shares_count?: number
+          updated_at?: string
+          views_count?: number
+        }
+        Update: {
+          campaign_id?: string | null
+          comments_count?: number
+          content?: string | null
+          created_at?: string
+          engagement_rate?: number
+          id?: string
+          influencer_id?: string | null
+          likes_count?: number
+          platform_post_id?: string
+          posted_at?: string
+          shares_count?: number
+          updated_at?: string
+          views_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posts_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_influencer_id_fkey"
+            columns: ["influencer_id"]
+            isOneToOne: false
+            referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

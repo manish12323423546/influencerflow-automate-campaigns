@@ -7,28 +7,20 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Plus, Users, TrendingUp, DollarSign, Target, Bell, Settings, LogOut } from 'lucide-react';
+import { Search, Plus, Users, TrendingUp, DollarSign, Target, Bell, Settings, LogOut, Activity, AlertTriangle, Clock, Flag } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 
 interface Campaign {
   id: string;
   name: string;
   brand: string;
-  status: 'Active' | 'Completed' | 'Draft' | 'Paused';
+  status: 'active' | 'completed' | 'draft' | 'paused';
   budget: number;
   spent: number;
-  influencers: number;
+  influencer_count: number;
   reach: number;
-  engagement: string;
-}
-
-interface Influencer {
-  id: string;
-  name: string;
-  platform: string;
-  followers: string;
-  engagement: string;
-  category: string;
-  status: 'Available' | 'Booked' | 'Under Review';
+  engagement_rate: number;
 }
 
 const Dashboard = () => {
@@ -38,72 +30,43 @@ const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'campaigns' | 'influencers'>('campaigns');
 
-  // Mock data - in a real app this would come from your API
-  const [campaigns] = useState<Campaign[]>([
-    {
-      id: '1',
-      name: 'Summer Fashion Campaign',
-      brand: 'StyleCo',
-      status: 'Active',
-      budget: 50000,
-      spent: 32000,
-      influencers: 8,
-      reach: 2500000,
-      engagement: '4.2%'
+  // Fetch user's campaigns
+  const { data: campaigns = [], isLoading: campaignsLoading } = useQuery({
+    queryKey: ['campaigns'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('campaigns')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data as Campaign[];
     },
-    {
-      id: '2',
-      name: 'Tech Product Launch',
-      brand: 'TechFlow',
-      status: 'Completed',
-      budget: 75000,
-      spent: 73500,
-      influencers: 12,
-      reach: 3200000,
-      engagement: '5.8%'
-    },
-    {
-      id: '3',
-      name: 'Fitness Challenge',
-      brand: 'FitLife',
-      status: 'Draft',
-      budget: 30000,
-      spent: 0,
-      influencers: 0,
-      reach: 0,
-      engagement: '0%'
-    }
-  ]);
+    enabled: !!user,
+  });
 
-  const [influencers] = useState<Influencer[]>([
-    {
-      id: '1',
-      name: 'Emma Rodriguez',
-      platform: 'Instagram',
-      followers: '125K',
-      engagement: '6.2%',
-      category: 'Fashion',
-      status: 'Available'
+  // Fetch aggregated KPI data
+  const { data: kpiData } = useQuery({
+    queryKey: ['kpi-data'],
+    queryFn: async () => {
+      // Mock KPI data - in a real app, this would come from aggregation queries
+      return {
+        avgCPE: 18.45,
+        avgCPEChange: 2.3,
+        topPostCTR: 4.8,
+        topPostCTRChange: -0.5,
+        influencerRetention: 87.2,
+        influencerRetentionChange: 5.1,
+        milestonesMissed: 3,
+        milestonesMissedChange: -2,
+        outstandingPayouts: 12450,
+        outstandingPayoutsChange: 1200,
+        flaggedPosts: 7,
+        flaggedPostsChange: -3,
+      };
     },
-    {
-      id: '2',
-      name: 'Jake Thompson',
-      platform: 'YouTube',
-      followers: '890K',
-      engagement: '4.8%',
-      category: 'Tech',
-      status: 'Booked'
-    },
-    {
-      id: '3',
-      name: 'Sarah Kim',
-      platform: 'TikTok',
-      followers: '2.1M',
-      engagement: '8.5%',
-      category: 'Lifestyle',
-      status: 'Under Review'
-    }
-  ]);
+    enabled: !!user,
+  });
 
   useEffect(() => {
     if (!user) {
@@ -133,28 +96,24 @@ const Dashboard = () => {
     campaign.brand.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredInfluencers = influencers.filter(influencer =>
-    influencer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    influencer.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    influencer.platform.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Active':
-      case 'Available':
+      case 'active':
         return 'text-green-500 bg-green-500/10';
-      case 'Completed':
-      case 'Booked':
+      case 'completed':
         return 'text-blue-500 bg-blue-500/10';
-      case 'Draft':
-      case 'Under Review':
+      case 'draft':
         return 'text-yellow-500 bg-yellow-500/10';
-      case 'Paused':
+      case 'paused':
         return 'text-red-500 bg-red-500/10';
       default:
         return 'text-gray-500 bg-gray-500/10';
     }
+  };
+
+  const formatDelta = (value: number) => {
+    const sign = value >= 0 ? '+' : '';
+    return `${sign}${value}%`;
   };
 
   if (!user) return null;
@@ -195,8 +154,8 @@ const Dashboard = () => {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Enhanced KPI Cards - 6 new tiles in responsive grid */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
           <Card className="bg-zinc-900 border-zinc-800">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-snow/80">Total Campaigns</CardTitle>
@@ -204,18 +163,73 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-snow">{campaigns.length}</div>
-              <p className="text-xs text-snow/60">+2 from last month</p>
+              <p className="text-xs text-neutral-400">+2 from last month</p>
             </CardContent>
           </Card>
 
           <Card className="bg-zinc-900 border-zinc-800">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-snow/80">Active Influencers</CardTitle>
+              <CardTitle className="text-sm font-medium text-snow/80">Avg CPE</CardTitle>
+              <DollarSign className="h-4 w-4 text-purple-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-snow">${kpiData?.avgCPE?.toFixed(2) || '0.00'}</div>
+              <p className="text-xs text-neutral-400">{formatDelta(kpiData?.avgCPEChange || 0)} vs prev month</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-zinc-900 border-zinc-800">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-snow/80">Top Post CTR</CardTitle>
+              <TrendingUp className="h-4 w-4 text-purple-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-snow">{kpiData?.topPostCTR?.toFixed(1) || '0.0'}%</div>
+              <p className="text-xs text-neutral-400">{formatDelta(kpiData?.topPostCTRChange || 0)} vs prev month</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-zinc-900 border-zinc-800">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-snow/80">Influencer Retention</CardTitle>
               <Users className="h-4 w-4 text-purple-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-snow">{influencers.length}</div>
-              <p className="text-xs text-snow/60">+5 from last month</p>
+              <div className="text-2xl font-bold text-snow">{kpiData?.influencerRetention?.toFixed(1) || '0.0'}%</div>
+              <p className="text-xs text-neutral-400">{formatDelta(kpiData?.influencerRetentionChange || 0)} vs prev month</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-zinc-900 border-zinc-800">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-snow/80">Milestones Missed</CardTitle>
+              <Clock className="h-4 w-4 text-purple-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-snow">{kpiData?.milestonesMissed || 0}</div>
+              <p className="text-xs text-neutral-400">{formatDelta(kpiData?.milestonesMissedChange || 0)} vs prev month</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-zinc-900 border-zinc-800">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-snow/80">Outstanding Payouts</CardTitle>
+              <Activity className="h-4 w-4 text-purple-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-snow">${(kpiData?.outstandingPayouts || 0).toLocaleString()}</div>
+              <p className="text-xs text-neutral-400">{formatDelta(kpiData?.outstandingPayoutsChange || 0)} vs prev month</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-zinc-900 border-zinc-800">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-snow/80">Flagged Posts</CardTitle>
+              <Flag className="h-4 w-4 text-purple-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-snow">{kpiData?.flaggedPosts || 0}</div>
+              <p className="text-xs text-neutral-400">{formatDelta(kpiData?.flaggedPostsChange || 0)} vs prev month</p>
             </CardContent>
           </Card>
 
@@ -226,18 +240,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-snow">5.7M</div>
-              <p className="text-xs text-snow/60">+12% from last month</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-zinc-900 border-zinc-800">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-snow/80">Revenue</CardTitle>
-              <DollarSign className="h-4 w-4 text-purple-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-snow">$125K</div>
-              <p className="text-xs text-snow/60">+8% from last month</p>
+              <p className="text-xs text-neutral-400">+12% vs prev month</p>
             </CardContent>
           </Card>
         </div>
@@ -256,7 +259,10 @@ const Dashboard = () => {
             <Button
               variant={activeTab === 'influencers' ? 'default' : 'ghost'}
               size="sm"
-              onClick={() => setActiveTab('influencers')}
+              onClick={() => {
+                setActiveTab('influencers');
+                navigate('/influencers');
+              }}
               className={activeTab === 'influencers' ? 'bg-purple-500 text-white' : 'text-snow/70 hover:text-snow'}
             >
               Influencers
@@ -280,72 +286,41 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Data Table */}
+        {/* Campaigns Table */}
         <Card className="bg-zinc-900 border-zinc-800">
           <CardContent className="p-0">
-            {activeTab === 'campaigns' ? (
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-zinc-800">
-                    <TableHead className="text-snow/80">Campaign</TableHead>
-                    <TableHead className="text-snow/80">Brand</TableHead>
-                    <TableHead className="text-snow/80">Status</TableHead>
-                    <TableHead className="text-snow/80">Budget</TableHead>
-                    <TableHead className="text-snow/80">Spent</TableHead>
-                    <TableHead className="text-snow/80">Influencers</TableHead>
-                    <TableHead className="text-snow/80">Reach</TableHead>
-                    <TableHead className="text-snow/80">Engagement</TableHead>
+            <Table>
+              <TableHeader>
+                <TableRow className="border-zinc-800">
+                  <TableHead className="text-snow/80">Campaign</TableHead>
+                  <TableHead className="text-snow/80">Brand</TableHead>
+                  <TableHead className="text-snow/80">Status</TableHead>
+                  <TableHead className="text-snow/80">Budget</TableHead>
+                  <TableHead className="text-snow/80">Spent</TableHead>
+                  <TableHead className="text-snow/80">Influencers</TableHead>
+                  <TableHead className="text-snow/80">Reach</TableHead>
+                  <TableHead className="text-snow/80">Engagement</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredCampaigns.map((campaign) => (
+                  <TableRow key={campaign.id} className="border-zinc-800 hover:bg-zinc-800/50">
+                    <TableCell className="font-medium text-snow">{campaign.name}</TableCell>
+                    <TableCell className="text-snow/80">{campaign.brand}</TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(campaign.status)}`}>
+                        {campaign.status}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-snow/80">${campaign.budget.toLocaleString()}</TableCell>
+                    <TableCell className="text-snow/80">${campaign.spent.toLocaleString()}</TableCell>
+                    <TableCell className="text-snow/80">{campaign.influencer_count}</TableCell>
+                    <TableCell className="text-snow/80">{campaign.reach.toLocaleString()}</TableCell>
+                    <TableCell className="text-snow/80">{campaign.engagement_rate.toFixed(1)}%</TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCampaigns.map((campaign) => (
-                    <TableRow key={campaign.id} className="border-zinc-800 hover:bg-zinc-800/50">
-                      <TableCell className="font-medium text-snow">{campaign.name}</TableCell>
-                      <TableCell className="text-snow/80">{campaign.brand}</TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(campaign.status)}`}>
-                          {campaign.status}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-snow/80">${campaign.budget.toLocaleString()}</TableCell>
-                      <TableCell className="text-snow/80">${campaign.spent.toLocaleString()}</TableCell>
-                      <TableCell className="text-snow/80">{campaign.influencers}</TableCell>
-                      <TableCell className="text-snow/80">{campaign.reach.toLocaleString()}</TableCell>
-                      <TableCell className="text-snow/80">{campaign.engagement}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-zinc-800">
-                    <TableHead className="text-snow/80">Name</TableHead>
-                    <TableHead className="text-snow/80">Platform</TableHead>
-                    <TableHead className="text-snow/80">Followers</TableHead>
-                    <TableHead className="text-snow/80">Engagement</TableHead>
-                    <TableHead className="text-snow/80">Category</TableHead>
-                    <TableHead className="text-snow/80">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredInfluencers.map((influencer) => (
-                    <TableRow key={influencer.id} className="border-zinc-800 hover:bg-zinc-800/50">
-                      <TableCell className="font-medium text-snow">{influencer.name}</TableCell>
-                      <TableCell className="text-snow/80">{influencer.platform}</TableCell>
-                      <TableCell className="text-snow/80">{influencer.followers}</TableCell>
-                      <TableCell className="text-snow/80">{influencer.engagement}</TableCell>
-                      <TableCell className="text-snow/80">{influencer.category}</TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(influencer.status)}`}>
-                          {influencer.status}
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       </div>
