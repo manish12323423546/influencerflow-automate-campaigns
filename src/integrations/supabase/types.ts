@@ -344,6 +344,78 @@ export type Database = {
           },
         ]
       }
+      invoices: {
+        Row: {
+          amount: number
+          brand_user_id: string
+          campaign_id: string | null
+          created_at: string
+          due_date: string | null
+          id: string
+          influencer_id: string | null
+          invoice_number: string
+          issued_at: string | null
+          notes: string | null
+          paid_at: string | null
+          pdf_url: string | null
+          status: string | null
+          tax_amount: number | null
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          brand_user_id: string
+          campaign_id?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          influencer_id?: string | null
+          invoice_number: string
+          issued_at?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          pdf_url?: string | null
+          status?: string | null
+          tax_amount?: number | null
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          brand_user_id?: string
+          campaign_id?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          influencer_id?: string | null
+          invoice_number?: string
+          issued_at?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          pdf_url?: string | null
+          status?: string | null
+          tax_amount?: number | null
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_influencer_id_fkey"
+            columns: ["influencer_id"]
+            isOneToOne: false
+            referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_preferences: {
         Row: {
           campaign_updates: boolean | null
@@ -431,6 +503,145 @@ export type Database = {
           {
             foreignKeyName: "notifications_related_influencer_id_fkey"
             columns: ["related_influencer_id"]
+            isOneToOne: false
+            referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_milestones: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          campaign_id: string
+          created_at: string
+          due_date: string | null
+          id: string
+          influencer_id: string
+          milestone_description: string | null
+          milestone_name: string
+          payment_id: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          campaign_id: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          influencer_id: string
+          milestone_description?: string | null
+          milestone_name: string
+          payment_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          campaign_id?: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          influencer_id?: string
+          milestone_description?: string | null
+          milestone_name?: string
+          payment_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_milestones_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_milestones_influencer_id_fkey"
+            columns: ["influencer_id"]
+            isOneToOne: false
+            referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_milestones_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          brand_user_id: string
+          campaign_id: string | null
+          created_at: string
+          currency: string | null
+          id: string
+          influencer_id: string | null
+          invoice_url: string | null
+          milestone_description: string | null
+          paid_at: string | null
+          payment_type: string | null
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          brand_user_id: string
+          campaign_id?: string | null
+          created_at?: string
+          currency?: string | null
+          id?: string
+          influencer_id?: string | null
+          invoice_url?: string | null
+          milestone_description?: string | null
+          paid_at?: string | null
+          payment_type?: string | null
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          brand_user_id?: string
+          campaign_id?: string | null
+          created_at?: string
+          currency?: string | null
+          id?: string
+          influencer_id?: string | null
+          invoice_url?: string | null
+          milestone_description?: string | null
+          paid_at?: string | null
+          payment_type?: string | null
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_influencer_id_fkey"
+            columns: ["influencer_id"]
             isOneToOne: false
             referencedRelation: "influencers"
             referencedColumns: ["id"]
@@ -613,6 +824,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_invoice_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
