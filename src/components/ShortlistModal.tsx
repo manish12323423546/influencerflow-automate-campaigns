@@ -80,6 +80,7 @@ export const ShortlistModal = ({
           budget: parseFloat(newCampaignData.budget) || 0,
           brand: newCampaignData.brand || 'Brand Name',
           status: 'draft',
+          user_id: '123456', // Mock user ID since we don't have authentication
         })
         .select()
         .single();
