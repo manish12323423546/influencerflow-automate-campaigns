@@ -48,15 +48,16 @@ const Influencers = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Fetch influencers data
-  const { data: influencers = [], isLoading } = useQuery({
+  const { data: influencers = [], isLoading, error } = useQuery({
     queryKey: ['influencers', searchTerm, industryFilter, languageFilter, audienceSizeFilter, riskFilter],
     queryFn: async () => {
+      console.log('Fetching influencers...');
+      
       let query = supabase
         .from('influencers')
-        .select('*')
-        .order('roi_index', { ascending: false });
+        .select('*');
 
-      // Apply filters
+      // Apply filters only if they're not 'all'
       if (searchTerm) {
         query = query.or(`handle.ilike.%${searchTerm}%,name.ilike.%${searchTerm}%`);
       }
@@ -91,14 +92,22 @@ const Influencers = () => {
         }
       }
 
+      // Order by ROI index descending
+      query = query.order('roi_index', { ascending: false });
+
       const { data, error } = await query;
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching influencers:', error);
+        throw error;
+      }
+      
+      console.log('Fetched influencers:', data);
       return data as Influencer[];
     },
   });
 
-  // Get unique filter values
+  // Get unique filter values from the fetched data
   const industries = [...new Set(influencers.map(inf => inf.industry))];
   const languages = [...new Set(influencers.map(inf => inf.language))];
 
@@ -107,6 +116,17 @@ const Influencers = () => {
       navigate('/login');
     }
   }, [user, navigate]);
+
+  useEffect(() => {
+    if (error) {
+      console.error('Query error:', error);
+      toast({
+        title: "Error loading influencers",
+        description: "There was a problem loading the influencer data.",
+        variant: "destructive",
+      });
+    }
+  }, [error, toast]);
 
   const handleSignOut = async () => {
     try {
@@ -268,83 +288,97 @@ const Influencers = () => {
         {/* Influencers Leaderboard */}
         <Card className="bg-zinc-900 border-zinc-800">
           <CardHeader>
-            <CardTitle className="text-snow">Influencer Leaderboard</CardTitle>
+            <CardTitle className="text-snow">
+              Influencer Leaderboard
+              {isLoading && <span className="text-sm font-normal text-snow/60 ml-2">(Loading...)</span>}
+              {!isLoading && <span className="text-sm font-normal text-snow/60 ml-2">({influencers.length} influencers)</span>}
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-zinc-800">
-                  <TableHead className="text-snow/80">Influencer</TableHead>
-                  <TableHead className="text-snow/80">Category</TableHead>
-                  <TableHead className="text-snow/80">Platform</TableHead>
-                  <TableHead className="text-snow/80">Followers</TableHead>
-                  <TableHead className="text-snow/80">Audience Fit</TableHead>
-                  <TableHead className="text-snow/80">Engagement</TableHead>
-                  <TableHead className="text-snow/80">Avg CPE</TableHead>
-                  <TableHead className="text-snow/80">ROI Index</TableHead>
-                  <TableHead className="text-snow/80">Risk Status</TableHead>
-                  <TableHead className="text-snow/80"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {influencers.map((influencer, index) => (
-                  <motion.tr
-                    key={influencer.id}
-                    className="border-zinc-800 cursor-pointer"
-                    whileHover={{ y: -2, backgroundColor: 'rgba(39, 39, 42, 0.5)' }}
-                    onClick={(event) => handleInfluencerRowClick(influencer, event)}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                  >
-                    <TableCell className="font-medium text-snow">
-                      <div className="flex items-center space-x-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={influencer.avatar_url || ''} alt={influencer.name} />
-                          <AvatarFallback className="bg-purple-500 text-white">
-                            {influencer.name.split(' ').map(n => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{influencer.name}</p>
-                          <p className="text-sm text-snow/60">{influencer.handle}</p>
+            {isLoading ? (
+              <div className="p-8 text-center text-snow/60">
+                Loading influencer data...
+              </div>
+            ) : influencers.length === 0 ? (
+              <div className="p-8 text-center text-snow/60">
+                No influencers found. Try adjusting your filters.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-zinc-800">
+                    <TableHead className="text-snow/80">Influencer</TableHead>
+                    <TableHead className="text-snow/80">Category</TableHead>
+                    <TableHead className="text-snow/80">Platform</TableHead>
+                    <TableHead className="text-snow/80">Followers</TableHead>
+                    <TableHead className="text-snow/80">Audience Fit</TableHead>
+                    <TableHead className="text-snow/80">Engagement</TableHead>
+                    <TableHead className="text-snow/80">Avg CPE</TableHead>
+                    <TableHead className="text-snow/80">ROI Index</TableHead>
+                    <TableHead className="text-snow/80">Risk Status</TableHead>
+                    <TableHead className="text-snow/80"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {influencers.map((influencer, index) => (
+                    <motion.tr
+                      key={influencer.id}
+                      className="border-zinc-800 cursor-pointer"
+                      whileHover={{ y: -2, backgroundColor: 'rgba(39, 39, 42, 0.5)' }}
+                      onClick={(event) => handleInfluencerRowClick(influencer, event)}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <TableCell className="font-medium text-snow">
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={influencer.avatar_url || ''} alt={influencer.name} />
+                            <AvatarFallback className="bg-purple-500 text-white">
+                              {influencer.name.split(' ').map(n => n[0]).join('')}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{influencer.name}</p>
+                            <p className="text-sm text-snow/60">{influencer.handle}</p>
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-snow/80">
-                      <Badge variant="outline" className="border-blue-500/30 text-blue-500">
-                        {influencer.industry}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-snow/80">
-                      <Badge variant="outline" className="border-purple-500/30 text-purple-500">
-                        {influencer.platform}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-snow/80">{formatFollowers(influencer.followers_count)}</TableCell>
-                    <TableCell className="text-snow/80">{influencer.audience_fit_score.toFixed(1)}/10</TableCell>
-                    <TableCell className="text-snow/80">{influencer.engagement_rate.toFixed(1)}%</TableCell>
-                    <TableCell className="text-snow/80">${influencer.avg_cpe.toFixed(2)}</TableCell>
-                    <TableCell className="text-snow/80">{influencer.roi_index.toFixed(1)}</TableCell>
-                    <TableCell>
-                      <Badge className={getRiskBadgeColor(influencer.risk_flags)}>
-                        {!influencer.risk_flags || influencer.risk_flags.length === 0 ? 'Clean' : `${influencer.risk_flags.length} Flag${influencer.risk_flags.length > 1 ? 's' : ''}`}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-snow/60 hover:text-snow"
-                        data-action-button
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </motion.tr>
-                ))}
-              </TableBody>
-            </Table>
+                      </TableCell>
+                      <TableCell className="text-snow/80">
+                        <Badge variant="outline" className="border-blue-500/30 text-blue-500">
+                          {influencer.industry}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-snow/80">
+                        <Badge variant="outline" className="border-purple-500/30 text-purple-500">
+                          {influencer.platform}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-snow/80">{formatFollowers(influencer.followers_count)}</TableCell>
+                      <TableCell className="text-snow/80">{influencer.audience_fit_score.toFixed(1)}/10</TableCell>
+                      <TableCell className="text-snow/80">{influencer.engagement_rate.toFixed(1)}%</TableCell>
+                      <TableCell className="text-snow/80">${influencer.avg_cpe.toFixed(2)}</TableCell>
+                      <TableCell className="text-snow/80">{influencer.roi_index.toFixed(1)}</TableCell>
+                      <TableCell>
+                        <Badge className={getRiskBadgeColor(influencer.risk_flags)}>
+                          {!influencer.risk_flags || influencer.risk_flags.length === 0 ? 'Clean' : `${influencer.risk_flags.length} Flag${influencer.risk_flags.length > 1 ? 's' : ''}`}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-snow/60 hover:text-snow"
+                          data-action-button
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </motion.tr>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>
