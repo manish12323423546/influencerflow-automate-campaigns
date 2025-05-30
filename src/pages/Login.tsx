@@ -1,9 +1,10 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, ArrowLeft, Mail, Lock, Users, Building } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, Users, Building } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 

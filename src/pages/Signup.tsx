@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -94,79 +95,23 @@ const Signup = () => {
 
       console.log('Auth signup successful, user ID:', authData.user.id);
 
-      // Wait a moment for the trigger to run, then manually create records if needed
-      setTimeout(async () => {
-        try {
-          // Check if profile exists
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', authData.user!.id)
-            .single();
+      // The database trigger should handle profile and role creation automatically
+      // If for some reason it doesn't, we'll handle it in the auth state change
+      
+      setIsSuccess(true);
+      toast({
+        title: "Account created!",
+        description: "Welcome to InfluencerFlow! Please check your email to verify your account.",
+      });
 
-          if (profileError && profileError.code === 'PGRST116') {
-            // Profile doesn't exist, create it
-            console.log('Creating profile manually');
-            const { error: insertProfileError } = await supabase
-              .from('profiles')
-              .insert({
-                id: authData.user!.id,
-                email: formData.email,
-                full_name: formData.name,
-              });
-            
-            if (insertProfileError) {
-              console.error('Error creating profile:', insertProfileError);
-            }
-          }
-
-          // Check if role exists
-          const { data: roleData, error: roleError } = await supabase
-            .from('user_roles')
-            .select('*')
-            .eq('user_id', authData.user!.id)
-            .single();
-
-          if (roleError && roleError.code === 'PGRST116') {
-            // Role doesn't exist, create it
-            console.log('Creating user role manually');
-            const { error: insertRoleError } = await supabase
-              .from('user_roles')
-              .insert({
-                user_id: authData.user!.id,
-                role: formData.role,
-              });
-            
-            if (insertRoleError) {
-              console.error('Error creating user role:', insertRoleError);
-            }
-          }
-
-          setIsSuccess(true);
-          toast({
-            title: "Account created!",
-            description: "Welcome to InfluencerFlow! You can now sign in.",
-          });
-
-          // Redirect based on role after a delay
-          setTimeout(() => {
-            if (formData.role === 'creator') {
-              navigate('/creator-dashboard');
-            } else {
-              navigate('/dashboard');
-            }
-          }, 2000);
-
-        } catch (error) {
-          console.error('Error in post-signup setup:', error);
-          setIsSuccess(true);
-          toast({
-            title: "Account created!",
-            description: "Welcome to InfluencerFlow! Please sign in to continue.",
-          });
-          setTimeout(() => navigate('/login'), 2000);
+      // Auto-redirect after showing success message
+      setTimeout(() => {
+        if (formData.role === 'creator') {
+          navigate('/creator-dashboard');
+        } else {
+          navigate('/dashboard');
         }
-      }, 1000);
+      }, 2000);
 
     } catch (error) {
       console.error('Signup error:', error);
@@ -274,7 +219,6 @@ const Signup = () => {
                         </div>
                       </div>
 
-                      
                       <div>
                         <label htmlFor="name" className="block text-sm font-medium text-snow/80 mb-2">
                           Full Name

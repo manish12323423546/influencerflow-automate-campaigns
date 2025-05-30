@@ -25,7 +25,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       console.log('Fetching user role for:', userId);
       
-      // First try to get from user_roles table
       const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
@@ -37,10 +36,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return roleData.role as UserRole;
       }
       
-      // If no role found, check metadata
+      // If no role found, try user metadata as fallback
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       if (currentUser?.user_metadata?.role) {
-        console.log('Found role in metadata:', currentUser.user_metadata.role);
+        console.log('Found role in metadata, inserting to database:', currentUser.user_metadata.role);
         
         // Try to insert into user_roles table
         const { error: insertError } = await supabase
@@ -55,7 +54,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
       
-      console.error('Error fetching user role:', roleError);
+      console.log('No role found, defaulting to brand');
       return 'brand'; // Default fallback
     } catch (error) {
       console.error('Error fetching user role:', error);
