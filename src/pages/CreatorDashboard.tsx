@@ -1,14 +1,15 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building, Home, ArrowRight, Briefcase, Trophy } from 'lucide-react';
+import { Building, Home, ArrowRight, Briefcase, Trophy, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import CampaignOpportunities from '@/components/CampaignOpportunities';
 import MyCampaigns from '@/components/MyCampaigns';
+import CreatorContracts from '@/components/CreatorContracts';
 
 const CreatorDashboard = () => {
-  const [activeSection, setActiveSection] = useState<'overview' | 'opportunities' | 'campaigns'>('overview');
+  const [activeSection, setActiveSection] = useState<'overview' | 'opportunities' | 'campaigns' | 'contracts'>('overview');
 
   return (
     <div className="min-h-screen bg-carbon p-8">
@@ -64,6 +65,14 @@ const CreatorDashboard = () => {
           >
             <Trophy className="mr-2 h-4 w-4" />
             My Campaigns
+          </Button>
+          <Button
+            onClick={() => setActiveSection('contracts')}
+            variant={activeSection === 'contracts' ? 'default' : 'outline'}
+            className={activeSection === 'contracts' ? 'bg-purple-500 hover:bg-purple-600' : 'border-zinc-700 text-snow hover:bg-zinc-800'}
+          >
+            <FileText className="mr-2 h-4 w-4" />
+            Contracts
           </Button>
         </div>
 
@@ -157,8 +166,10 @@ const CreatorDashboard = () => {
           </>
         ) : activeSection === 'opportunities' ? (
           <CampaignOpportunities />
-        ) : (
+        ) : activeSection === 'campaigns' ? (
           <MyCampaigns />
+        ) : (
+          <CreatorContracts />
         )}
       </div>
     </div>
