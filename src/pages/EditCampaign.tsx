@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,8 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Save } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface Campaign {
   id: string;
@@ -25,12 +22,25 @@ interface Campaign {
   brand: string;
 }
 
+// Mock campaign data
+const mockCampaign: Campaign = {
+  id: '1',
+  name: 'Tech Product Launch',
+  description: 'Launch campaign for new tech product',
+  goals: 'Increase brand awareness and drive sales',
+  target_audience: 'Tech enthusiasts aged 25-40',
+  budget: 50000,
+  deliverables: '5 posts, 2 reels, 1 story series',
+  timeline: '4 weeks',
+  status: 'active',
+  brand: 'TechCorp'
+};
+
 const EditCampaign = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const [isLoading, setIsLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -44,81 +54,39 @@ const EditCampaign = () => {
     brand: ''
   });
 
-  // Fetch campaign data
-  const { data: campaign, isLoading } = useQuery({
-    queryKey: ['campaign', id],
-    queryFn: async () => {
-      if (!id) throw new Error('No campaign ID provided');
-      
-      const { data, error } = await supabase
-        .from('campaigns')
-        .select('*')
-        .eq('id', id)
-        .single();
-      
-      if (error) throw error;
-      return data as Campaign;
-    },
-    enabled: !!id,
-  });
-
-  // Update form data when campaign loads
+  // Simulate loading campaign data
   useEffect(() => {
-    if (campaign) {
+    setIsLoading(true);
+    // Simulate API delay
+    setTimeout(() => {
       setFormData({
-        name: campaign.name || '',
-        description: campaign.description || '',
-        goals: campaign.goals || '',
-        target_audience: campaign.target_audience || '',
-        budget: campaign.budget || 0,
-        deliverables: campaign.deliverables || '',
-        timeline: campaign.timeline || '',
-        status: campaign.status || 'draft',
-        brand: campaign.brand || ''
+        name: mockCampaign.name || '',
+        description: mockCampaign.description || '',
+        goals: mockCampaign.goals || '',
+        target_audience: mockCampaign.target_audience || '',
+        budget: mockCampaign.budget || 0,
+        deliverables: mockCampaign.deliverables || '',
+        timeline: mockCampaign.timeline || '',
+        status: mockCampaign.status || 'draft',
+        brand: mockCampaign.brand || ''
       });
-    }
-  }, [campaign]);
+      setIsLoading(false);
+    }, 500);
+  }, [id]);
 
-  // Update campaign mutation
-  const updateCampaignMutation = useMutation({
-    mutationFn: async (updatedData: typeof formData) => {
-      if (!id) throw new Error('No campaign ID provided');
-      
-      const { data, error } = await supabase
-        .from('campaigns')
-        .update({
-          ...updatedData,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    // Simulate update
+    setTimeout(() => {
       toast({
         title: "Campaign updated successfully",
         description: "Your campaign has been saved.",
       });
-      queryClient.invalidateQueries({ queryKey: ['campaign', id] });
-      queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+      setIsLoading(false);
       navigate(`/campaigns/${id}`);
-    },
-    onError: (error) => {
-      toast({
-        title: "Error updating campaign",
-        description: "There was a problem saving your campaign. Please try again.",
-        variant: "destructive",
-      });
-      console.error('Update campaign error:', error);
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateCampaignMutation.mutate(formData);
+    }, 1000);
   };
 
   const handleInputChange = (field: string, value: string | number) => {
@@ -128,23 +96,10 @@ const EditCampaign = () => {
     }));
   };
 
-  if (!user) {
-    navigate('/login');
-    return null;
-  }
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-carbon flex items-center justify-center">
         <div className="text-snow">Loading campaign...</div>
-      </div>
-    );
-  }
-
-  if (!campaign) {
-    return (
-      <div className="min-h-screen bg-carbon flex items-center justify-center">
-        <div className="text-snow">Campaign not found</div>
       </div>
     );
   }
@@ -167,17 +122,17 @@ const EditCampaign = () => {
               </Button>
               <div>
                 <h1 className="text-lg font-semibold text-snow">Edit Campaign</h1>
-                <p className="text-sm text-snow/60">{campaign.name}</p>
+                <p className="text-sm text-snow/60">{mockCampaign.name}</p>
               </div>
             </div>
             
             <Button
               onClick={handleSubmit}
-              disabled={updateCampaignMutation.isPending}
+              disabled={isLoading}
               className="bg-purple-500 hover:bg-purple-600"
             >
               <Save className="h-4 w-4 mr-2" />
-              {updateCampaignMutation.isPending ? 'Saving...' : 'Save Changes'}
+              {isLoading ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
         </div>

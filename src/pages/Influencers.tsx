@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,8 +9,6 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Search, Filter, Users, TrendingUp, MessageCircle, Eye, Heart, ArrowUpDown } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
 
 interface InfluencerData {
   id: string;
@@ -31,9 +28,80 @@ interface InfluencerData {
   risk_flags: string[] | null;
 }
 
+// Mock influencers data
+const mockInfluencers: InfluencerData[] = [
+  {
+    id: '1',
+    handle: '@techinfluencer',
+    name: 'Tech Influencer',
+    avatar_url: '/placeholder.svg',
+    platform: 'instagram',
+    industry: 'Technology',
+    language: 'English',
+    followers_count: 125000,
+    engagement_rate: 4.8,
+    audience_fit_score: 92,
+    avg_cpe: 2.5,
+    roi_index: 3.2,
+    fake_follower_score: 95,
+    safety_scan_score: 98,
+    risk_flags: null
+  },
+  {
+    id: '2',
+    handle: '@fashionista',
+    name: 'Fashion Creator',
+    avatar_url: '/placeholder.svg',
+    platform: 'instagram',
+    industry: 'Fashion',
+    language: 'English',
+    followers_count: 89000,
+    engagement_rate: 6.2,
+    audience_fit_score: 88,
+    avg_cpe: 3.1,
+    roi_index: 2.8,
+    fake_follower_score: 92,
+    safety_scan_score: 95,
+    risk_flags: null
+  },
+  {
+    id: '3',
+    handle: '@fitnessguru',
+    name: 'Fitness Expert',
+    avatar_url: '/placeholder.svg',
+    platform: 'youtube',
+    industry: 'Fitness',
+    language: 'English',
+    followers_count: 250000,
+    engagement_rate: 5.5,
+    audience_fit_score: 90,
+    avg_cpe: 2.8,
+    roi_index: 3.5,
+    fake_follower_score: 97,
+    safety_scan_score: 99,
+    risk_flags: null
+  },
+  {
+    id: '4',
+    handle: '@beautyqueen',
+    name: 'Beauty Blogger',
+    avatar_url: '/placeholder.svg',
+    platform: 'tiktok',
+    industry: 'Beauty',
+    language: 'English',
+    followers_count: 180000,
+    engagement_rate: 7.1,
+    audience_fit_score: 85,
+    avg_cpe: 2.2,
+    roi_index: 4.1,
+    fake_follower_score: 94,
+    safety_scan_score: 96,
+    risk_flags: null
+  }
+];
+
 const Influencers = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const { toast } = useToast();
 
   // Filter states
@@ -46,27 +114,16 @@ const Influencers = () => {
   const [sortBy, setSortBy] = useState<string>('followers');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  // Fetch influencers data
-  const { data: influencers = [], isLoading, error } = useQuery({
-    queryKey: ['influencers'],
-    queryFn: async () => {
-      console.log('Fetching influencers...');
-      
-      const { data, error } = await supabase
-        .from('influencers')
-        .select('*')
-        .order('followers_count', { ascending: false });
-      
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
-      }
-      
-      console.log('Fetched influencers:', data);
-      return data as InfluencerData[];
-    },
-    enabled: !!user,
-  });
+  const [influencers, setInfluencers] = useState<InfluencerData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate loading
+    setTimeout(() => {
+      setInfluencers(mockInfluencers);
+      setIsLoading(false);
+    }, 500);
+  }, []);
 
   const formatFollowers = (count: number) => {
     if (count >= 1000000) {
@@ -210,16 +267,6 @@ const Influencers = () => {
         return 'bg-gray-500/10 text-gray-500';
     }
   };
-
-  if (!user) {
-    navigate('/login');
-    return null;
-  }
-
-  console.log('Debug: Total influencers:', influencers.length);
-  console.log('Debug: Filtered influencers:', filteredInfluencers.length);
-  console.log('Debug: Loading:', isLoading);
-  console.log('Debug: Error:', error?.message || 'None');
 
   return (
     <div className="min-h-screen bg-carbon">
@@ -373,21 +420,8 @@ const Influencers = () => {
           </div>
         )}
 
-        {/* Error State */}
-        {error && (
-          <div className="text-center py-8">
-            <p className="text-red-400 mb-4">Error loading influencers: {error.message}</p>
-            <Button 
-              onClick={() => window.location.reload()}
-              className="bg-purple-500 hover:bg-purple-600"
-            >
-              Refresh & Debug
-            </Button>
-          </div>
-        )}
-
         {/* Creator Cards Grid */}
-        {!isLoading && !error && (
+        {!isLoading && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredInfluencers.length === 0 ? (
               <div className="col-span-full text-center py-8 text-snow/60">

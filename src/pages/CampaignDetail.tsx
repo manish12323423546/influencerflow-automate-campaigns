@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,8 +8,6 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Edit, Users, FileText, BarChart } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
 import { ContractManager } from '@/components/contracts/ContractManager';
 import { PerformanceTracker } from '@/components/performance/PerformanceTracker';
 
@@ -46,60 +43,73 @@ interface CampaignInfluencer {
   };
 }
 
+// Mock campaign data
+const mockCampaign: Campaign = {
+  id: '1',
+  name: 'Tech Product Launch',
+  description: 'An exciting campaign to launch our latest tech product to the market.',
+  goals: 'Increase brand awareness, drive website traffic, and generate 1000+ leads',
+  target_audience: 'Tech enthusiasts, early adopters, professionals aged 25-45',
+  budget: 50000,
+  deliverables: '5 Instagram posts, 3 TikTok videos, 2 YouTube reviews, 10 Instagram stories',
+  timeline: '6 weeks (January 15 - February 28, 2024)',
+  status: 'active',
+  brand: 'TechCorp',
+  user_id: 'mock-user-123',
+  created_at: '2024-01-15T10:00:00Z',
+  updated_at: '2024-01-20T15:30:00Z'
+};
+
+// Mock campaign influencers
+const mockCampaignInfluencers: CampaignInfluencer[] = [
+  {
+    id: '1',
+    status: 'confirmed',
+    fee: 5000,
+    influencer: {
+      id: '1',
+      name: 'Tech Reviewer Pro',
+      handle: '@techreviewerpro',
+      avatar_url: '/placeholder.svg',
+      platform: 'youtube',
+      industry: 'Technology',
+      followers_count: 250000,
+      engagement_rate: 6.8
+    }
+  },
+  {
+    id: '2',
+    status: 'shortlisted',
+    fee: 3500,
+    influencer: {
+      id: '2',
+      name: 'Gadget Guru',
+      handle: '@gadgetguru',
+      avatar_url: '/placeholder.svg',
+      platform: 'instagram',
+      industry: 'Technology',
+      followers_count: 150000,
+      engagement_rate: 4.2
+    }
+  }
+];
+
 const CampaignDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
   const { toast } = useToast();
+  const [campaign, setCampaign] = useState<Campaign | null>(null);
+  const [campaignInfluencers, setCampaignInfluencers] = useState<CampaignInfluencer[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch campaign data
-  const { data: campaign, isLoading: campaignLoading } = useQuery({
-    queryKey: ['campaign', id],
-    queryFn: async () => {
-      if (!id) throw new Error('No campaign ID provided');
-      
-      const { data, error } = await supabase
-        .from('campaigns')
-        .select('*')
-        .eq('id', id)
-        .single();
-      
-      if (error) throw error;
-      return data as Campaign;
-    },
-    enabled: !!id,
-  });
-
-  // Fetch campaign influencers
-  const { data: campaignInfluencers = [], isLoading: influencersLoading } = useQuery({
-    queryKey: ['campaign-influencers', id],
-    queryFn: async () => {
-      if (!id) throw new Error('No campaign ID provided');
-      
-      const { data, error } = await supabase
-        .from('campaign_influencers')
-        .select(`
-          id,
-          status,
-          fee,
-          influencer:influencer_id (
-            id,
-            name,
-            handle,
-            avatar_url,
-            platform,
-            industry,
-            followers_count,
-            engagement_rate
-          )
-        `)
-        .eq('campaign_id', id);
-      
-      if (error) throw error;
-      return data as CampaignInfluencer[];
-    },
-    enabled: !!id,
-  });
+  useEffect(() => {
+    // Simulate loading
+    setTimeout(() => {
+      setCampaign(mockCampaign);
+      setCampaignInfluencers(mockCampaignInfluencers);
+      setIsLoading(false);
+    }, 500);
+  }, [id]);
 
   const formatFollowers = (count: number) => {
     if (count >= 1000000) {
@@ -127,12 +137,7 @@ const CampaignDetail = () => {
     }
   };
 
-  if (!user) {
-    navigate('/login');
-    return null;
-  }
-
-  if (campaignLoading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-carbon flex items-center justify-center">
         <div className="text-snow">Loading campaign...</div>
@@ -262,9 +267,7 @@ const CampaignDetail = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {influencersLoading ? (
-                      <div className="text-center py-8 text-snow/60">Loading influencers...</div>
-                    ) : campaignInfluencers.length === 0 ? (
+                    {campaignInfluencers.length === 0 ? (
                       <div className="text-center py-8 text-snow/60">
                         <p className="mb-4">No influencers added to this campaign yet.</p>
                         <Button
