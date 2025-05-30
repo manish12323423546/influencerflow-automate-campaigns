@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,9 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Plus } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Campaign {
   id: string;
@@ -33,7 +31,6 @@ export const ShortlistModal = ({
   influencerId,
   influencerName,
 }: ShortlistModalProps) => {
-  const { user } = useAuth();
   const { toast } = useToast();
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -50,22 +47,19 @@ export const ShortlistModal = ({
   const { data: campaigns = [], isLoading } = useQuery({
     queryKey: ['user-campaigns'],
     queryFn: async () => {
-      if (!user) return [];
-      
       const { data, error } = await supabase
         .from('campaigns')
         .select('id, name, description, status, brand, created_at')
-        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data as Campaign[];
     },
-    enabled: !!user && open,
+    enabled: open,
   });
 
   const handleCreateAndAdd = async () => {
-    if (!user || !newCampaignData.name.trim()) {
+    if (!newCampaignData.name.trim()) {
       toast({
         title: "Campaign name required",
         description: "Please enter a campaign name.",
@@ -86,7 +80,6 @@ export const ShortlistModal = ({
           budget: parseFloat(newCampaignData.budget) || 0,
           brand: newCampaignData.brand || 'Brand Name',
           status: 'draft',
-          user_id: user.id,
         })
         .select()
         .single();

@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, MoreHorizontal } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -13,7 +12,6 @@ import { DualAxisChart } from '@/components/influencer-profile/DualAxisChart';
 import { ContentGrid } from '@/components/influencer-profile/ContentGrid';
 import { HistoryDrawer } from '@/components/influencer-profile/HistoryDrawer';
 import { ShortlistModal } from '@/components/ShortlistModal';
-import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 
 interface InfluencerData {
@@ -34,36 +32,42 @@ interface InfluencerData {
   risk_flags: string[] | null;
 }
 
+// Mock influencer data
+const mockInfluencer: InfluencerData = {
+  id: '1',
+  handle: '@techinfluencer',
+  name: 'Tech Influencer',
+  avatar_url: '/placeholder.svg',
+  platform: 'instagram',
+  industry: 'Technology',
+  language: 'English',
+  followers_count: 125000,
+  engagement_rate: 4.8,
+  audience_fit_score: 92,
+  avg_cpe: 2.5,
+  roi_index: 3.2,
+  fake_follower_score: 95,
+  safety_scan_score: 98,
+  risk_flags: null
+};
+
 const InfluencerProfile = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [selectedPlatform, setSelectedPlatform] = useState<'instagram' | 'youtube'>('instagram');
   const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
   const [shortlistModalOpen, setShortlistModalOpen] = useState(false);
 
-  // Fetch influencer data
+  // Mock query for influencer data
   const { data: influencer, isLoading } = useQuery({
     queryKey: ['influencer', id],
     queryFn: async () => {
-      if (!id) throw new Error('No influencer ID provided');
-      
-      const { data, error } = await supabase
-        .from('influencers')
-        .select('*')
-        .eq('id', id)
-        .single();
-      
-      if (error) throw error;
-      return data as InfluencerData;
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return mockInfluencer;
     },
     enabled: !!id,
   });
-
-  if (!user) {
-    navigate('/login');
-    return null;
-  }
 
   if (isLoading) {
     return (

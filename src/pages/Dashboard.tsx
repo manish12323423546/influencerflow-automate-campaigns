@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Plus, Users, TrendingUp, DollarSign, Target, Bell, Settings, LogOut, Activity, AlertTriangle, Clock, Flag, Home, ArrowRight } from 'lucide-react';
+import { Search, Plus, Users, TrendingUp, DollarSign, Target, Bell, Settings, Activity, Home, ArrowRight, Building } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 
@@ -23,7 +23,7 @@ interface Campaign {
   engagement_rate: number;
 }
 
-// Mock data since we don't have Supabase
+// Mock data since we don't have authentication
 const mockCampaigns: Campaign[] = [
   {
     id: '1',
