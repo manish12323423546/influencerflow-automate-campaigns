@@ -9,6 +9,7 @@ import { Briefcase, DollarSign, Clock, MapPin, Eye, CheckCircle, XCircle, Messag
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 
 interface CampaignOffer {
   id: string;
@@ -81,6 +82,7 @@ const mockCampaignOffers: CampaignOffer[] = [
 
 const CampaignOpportunities = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [opportunities, setOpportunities] = useState<CampaignOffer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -178,6 +180,14 @@ const CampaignOpportunities = () => {
       });
       
       queryClient.invalidateQueries({ queryKey: ['campaign-opportunities'] });
+      queryClient.invalidateQueries({ queryKey: ['my-campaigns'] });
+      
+      // If accepted, navigate to campaign details after a brief delay
+      if (status === 'accepted') {
+        setTimeout(() => {
+          navigate(`/creator-campaigns/${offerId}`);
+        }, 1500);
+      }
     },
     onError: (error) => {
       toast({
@@ -371,6 +381,7 @@ const CampaignOpportunities = () => {
                   {opportunity.status === 'accepted' && (
                     <div className="pt-4">
                       <Button
+                        onClick={() => navigate(`/creator-campaigns/${opportunity.id}`)}
                         variant="outline"
                         className="w-full border-green-500 text-green-500 hover:bg-green-500/10"
                       >

@@ -1,13 +1,14 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building, Home, ArrowRight, Briefcase } from 'lucide-react';
+import { Building, Home, ArrowRight, Briefcase, Trophy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import CampaignOpportunities from '@/components/CampaignOpportunities';
+import MyCampaigns from '@/components/MyCampaigns';
 
 const CreatorDashboard = () => {
-  const [activeSection, setActiveSection] = useState<'overview' | 'opportunities'>('overview');
+  const [activeSection, setActiveSection] = useState<'overview' | 'opportunities' | 'campaigns'>('overview');
 
   return (
     <div className="min-h-screen bg-carbon p-8">
@@ -55,6 +56,14 @@ const CreatorDashboard = () => {
           >
             <Briefcase className="mr-2 h-4 w-4" />
             Campaign Opportunities
+          </Button>
+          <Button
+            onClick={() => setActiveSection('campaigns')}
+            variant={activeSection === 'campaigns' ? 'default' : 'outline'}
+            className={activeSection === 'campaigns' ? 'bg-purple-500 hover:bg-purple-600' : 'border-zinc-700 text-snow hover:bg-zinc-800'}
+          >
+            <Trophy className="mr-2 h-4 w-4" />
+            My Campaigns
           </Button>
         </div>
 
@@ -146,8 +155,10 @@ const CreatorDashboard = () => {
               </div>
             </div>
           </>
-        ) : (
+        ) : activeSection === 'opportunities' ? (
           <CampaignOpportunities />
+        ) : (
+          <MyCampaigns />
         )}
       </div>
     </div>
