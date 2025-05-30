@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -274,6 +275,7 @@ const Influencers = () => {
               <TableHeader>
                 <TableRow className="border-zinc-800">
                   <TableHead className="text-snow/80">Influencer</TableHead>
+                  <TableHead className="text-snow/80">Category</TableHead>
                   <TableHead className="text-snow/80">Platform</TableHead>
                   <TableHead className="text-snow/80">Followers</TableHead>
                   <TableHead className="text-snow/80">Audience Fit</TableHead>
@@ -308,6 +310,11 @@ const Influencers = () => {
                           <p className="text-sm text-snow/60">{influencer.handle}</p>
                         </div>
                       </div>
+                    </TableCell>
+                    <TableCell className="text-snow/80">
+                      <Badge variant="outline" className="border-blue-500/30 text-blue-500">
+                        {influencer.industry}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-snow/80">
                       <Badge variant="outline" className="border-purple-500/30 text-purple-500">
