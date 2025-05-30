@@ -12,6 +12,7 @@ import { GrowthChart } from '@/components/influencer-profile/GrowthChart';
 import { DualAxisChart } from '@/components/influencer-profile/DualAxisChart';
 import { ContentGrid } from '@/components/influencer-profile/ContentGrid';
 import { HistoryDrawer } from '@/components/influencer-profile/HistoryDrawer';
+import { ShortlistModal } from '@/components/ShortlistModal';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 
@@ -39,6 +40,7 @@ const InfluencerProfile = () => {
   const { user } = useAuth();
   const [selectedPlatform, setSelectedPlatform] = useState<'instagram' | 'youtube'>('instagram');
   const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
+  const [shortlistModalOpen, setShortlistModalOpen] = useState(false);
 
   // Fetch influencer data
   const { data: influencer, isLoading } = useQuery({
@@ -79,18 +81,17 @@ const InfluencerProfile = () => {
     );
   }
 
-  const handleInviteToCampaign = () => {
-    // TODO: Open SelectCampaignModal
-    console.log('Invite to campaign');
+  const handleShortlistCreator = () => {
+    setShortlistModalOpen(true);
   };
 
-  const handlePayInvoice = () => {
-    // TODO: Launch RazorpayCheckout
-    console.log('Pay invoice');
+  const handleInitiateOutreach = () => {
+    // TODO: Open outreach modal or redirect to outreach page
+    console.log('Initiate outreach');
   };
 
-  const handleOpenNegotiation = () => {
-    navigate(`/negotiations?creator=${influencer.id}`);
+  const handlePreviousCollaborations = () => {
+    setHistoryDrawerOpen(true);
   };
 
   return (
@@ -180,31 +181,24 @@ const InfluencerProfile = () => {
               <h3 className="text-lg font-semibold text-snow mb-4">Quick Actions</h3>
               <div className="space-y-3">
                 <Button 
-                  onClick={handleInviteToCampaign}
+                  onClick={handleShortlistCreator}
                   className="w-full bg-purple-500 hover:bg-purple-600"
                 >
-                  Invite to Campaign
+                  Shortlist Creator
                 </Button>
                 <Button 
-                  onClick={handlePayInvoice}
+                  onClick={handleInitiateOutreach}
                   variant="outline"
                   className="w-full border-zinc-700 text-snow hover:bg-zinc-800"
                 >
-                  Pay Outstanding Invoice
+                  Initiate Outreach
                 </Button>
                 <Button 
-                  onClick={handleOpenNegotiation}
+                  onClick={handlePreviousCollaborations}
                   variant="outline"
                   className="w-full border-zinc-700 text-snow hover:bg-zinc-800"
                 >
-                  Open Negotiation Chat
-                </Button>
-                <Button 
-                  onClick={() => setHistoryDrawerOpen(true)}
-                  variant="outline"
-                  className="w-full border-zinc-700 text-snow hover:bg-zinc-800"
-                >
-                  View History
+                  Previous Collaborations
                 </Button>
               </div>
             </div>
@@ -226,6 +220,14 @@ const InfluencerProfile = () => {
         open={historyDrawerOpen}
         onOpenChange={setHistoryDrawerOpen}
         influencerId={influencer.id}
+      />
+
+      {/* Shortlist Modal */}
+      <ShortlistModal
+        open={shortlistModalOpen}
+        onOpenChange={setShortlistModalOpen}
+        influencerId={influencer.id}
+        influencerName={influencer.name}
       />
     </div>
   );
