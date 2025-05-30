@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -47,67 +46,78 @@ const Influencers = () => {
   const [selectedInfluencer, setSelectedInfluencer] = useState<Influencer | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Fetch influencers data
-  const { data: influencers = [], isLoading, error } = useQuery({
-    queryKey: ['influencers', searchTerm, industryFilter, languageFilter, audienceSizeFilter, riskFilter],
+  // Simplified query to fetch all influencers first
+  const { data: influencers = [], isLoading, error, refetch } = useQuery({
+    queryKey: ['influencers'],
     queryFn: async () => {
-      console.log('Fetching influencers...');
+      console.log('Fetching all influencers...');
       
-      let query = supabase
+      const { data, error } = await supabase
         .from('influencers')
-        .select('*');
-
-      // Apply filters only if they're not 'all'
-      if (searchTerm) {
-        query = query.or(`handle.ilike.%${searchTerm}%,name.ilike.%${searchTerm}%`);
-      }
+        .select('*')
+        .order('roi_index', { ascending: false });
       
-      if (industryFilter !== 'all') {
-        query = query.eq('industry', industryFilter);
-      }
-      
-      if (languageFilter !== 'all') {
-        query = query.eq('language', languageFilter);
-      }
-      
-      if (audienceSizeFilter !== 'all') {
-        switch (audienceSizeFilter) {
-          case 'micro':
-            query = query.lt('followers_count', 100000);
-            break;
-          case 'mid':
-            query = query.gte('followers_count', 100000).lt('followers_count', 1000000);
-            break;
-          case 'macro':
-            query = query.gte('followers_count', 1000000);
-            break;
-        }
-      }
-      
-      if (riskFilter !== 'all') {
-        if (riskFilter === 'clean') {
-          query = query.or('risk_flags.is.null,risk_flags.eq.{}');
-        } else {
-          query = query.not('risk_flags', 'is', null).not('risk_flags', 'eq', '{}');
-        }
-      }
-
-      // Order by ROI index descending
-      query = query.order('roi_index', { ascending: false });
-
-      const { data, error } = await query;
+      console.log('Raw query result:', { data, error });
       
       if (error) {
-        console.error('Error fetching influencers:', error);
+        console.error('Supabase error:', error);
         throw error;
       }
       
-      console.log('Fetched influencers:', data);
-      return data as Influencer[];
+      console.log('Successfully fetched influencers:', data?.length || 0);
+      return (data || []) as Influencer[];
     },
   });
 
-  // Get unique filter values from the fetched data
+  // Filter influencers client-side
+  const filteredInfluencers = influencers.filter(influencer => {
+    // Search filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      if (!influencer.handle.toLowerCase().includes(searchLower) && 
+          !influencer.name.toLowerCase().includes(searchLower)) {
+        return false;
+      }
+    }
+    
+    // Industry filter
+    if (industryFilter !== 'all' && influencer.industry !== industryFilter) {
+      return false;
+    }
+    
+    // Language filter
+    if (languageFilter !== 'all' && influencer.language !== languageFilter) {
+      return false;
+    }
+    
+    // Audience size filter
+    if (audienceSizeFilter !== 'all') {
+      switch (audienceSizeFilter) {
+        case 'micro':
+          if (influencer.followers_count >= 100000) return false;
+          break;
+        case 'mid':
+          if (influencer.followers_count < 100000 || influencer.followers_count >= 1000000) return false;
+          break;
+        case 'macro':
+          if (influencer.followers_count < 1000000) return false;
+          break;
+      }
+    }
+    
+    // Risk filter
+    if (riskFilter !== 'all') {
+      if (riskFilter === 'clean') {
+        if (influencer.risk_flags && influencer.risk_flags.length > 0) return false;
+      } else {
+        if (!influencer.risk_flags || influencer.risk_flags.length === 0) return false;
+      }
+    }
+    
+    return true;
+  });
+
+  // Get unique filter values from all influencers
   const industries = [...new Set(influencers.map(inf => inf.industry))];
   const languages = [...new Set(influencers.map(inf => inf.language))];
 
@@ -122,11 +132,17 @@ const Influencers = () => {
       console.error('Query error:', error);
       toast({
         title: "Error loading influencers",
-        description: "There was a problem loading the influencer data.",
+        description: error.message || "There was a problem loading the influencer data.",
         variant: "destructive",
       });
     }
   }, [error, toast]);
+
+  // Add a manual refresh function for debugging
+  const handleRefresh = () => {
+    console.log('Manual refresh triggered');
+    refetch();
+  };
 
   const handleSignOut = async () => {
     try {
@@ -178,6 +194,13 @@ const Influencers = () => {
 
   if (!user) return null;
 
+  console.log('Render state:', { 
+    isLoading, 
+    totalInfluencers: influencers.length, 
+    filteredCount: filteredInfluencers.length,
+    error: error?.message 
+  });
+
   return (
     <div className="min-h-screen bg-carbon">
       {/* Header */}
@@ -198,6 +221,14 @@ const Influencers = () => {
             </div>
             
             <div className="flex items-center space-x-4">
+              <Button
+                onClick={handleRefresh}
+                variant="outline"
+                size="sm"
+                className="border-zinc-700 text-snow/70 hover:text-purple-500 hover:border-purple-500"
+              >
+                Refresh
+              </Button>
               <Bell className="h-6 w-6 text-snow/70 hover:text-purple-500 cursor-pointer" />
               <Settings className="h-6 w-6 text-snow/70 hover:text-purple-500 cursor-pointer" />
               <div className="flex items-center space-x-3">
@@ -221,6 +252,16 @@ const Influencers = () => {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Debug info */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mb-4 p-4 bg-zinc-800 rounded-lg text-snow text-sm">
+            <p>Debug: Total influencers: {influencers.length}</p>
+            <p>Debug: Filtered influencers: {filteredInfluencers.length}</p>
+            <p>Debug: Loading: {isLoading.toString()}</p>
+            <p>Debug: Error: {error?.message || 'None'}</p>
+          </div>
+        )}
+
         {/* Filters and Search */}
         <div className="mb-6 space-y-4">
           <div className="flex flex-col lg:flex-row gap-4">
@@ -291,7 +332,7 @@ const Influencers = () => {
             <CardTitle className="text-snow">
               Influencer Leaderboard
               {isLoading && <span className="text-sm font-normal text-snow/60 ml-2">(Loading...)</span>}
-              {!isLoading && <span className="text-sm font-normal text-snow/60 ml-2">({influencers.length} influencers)</span>}
+              {!isLoading && <span className="text-sm font-normal text-snow/60 ml-2">({filteredInfluencers.length} influencers)</span>}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -299,9 +340,20 @@ const Influencers = () => {
               <div className="p-8 text-center text-snow/60">
                 Loading influencer data...
               </div>
-            ) : influencers.length === 0 ? (
+            ) : error ? (
+              <div className="p-8 text-center text-red-400">
+                Error loading influencers: {error.message}
+                <br />
+                <Button onClick={handleRefresh} className="mt-4" variant="outline">
+                  Try Again
+                </Button>
+              </div>
+            ) : filteredInfluencers.length === 0 ? (
               <div className="p-8 text-center text-snow/60">
-                No influencers found. Try adjusting your filters.
+                {influencers.length === 0 
+                  ? "No influencers found in database. Please add some influencer data first."
+                  : "No influencers match your current filters. Try adjusting your search criteria."
+                }
               </div>
             ) : (
               <Table>
@@ -320,7 +372,7 @@ const Influencers = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {influencers.map((influencer, index) => (
+                  {filteredInfluencers.map((influencer, index) => (
                     <motion.tr
                       key={influencer.id}
                       className="border-zinc-800 cursor-pointer"
