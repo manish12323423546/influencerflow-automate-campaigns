@@ -60,10 +60,7 @@ const Signup = () => {
     setIsLoading(true);
 
     try {
-      console.log('Starting signup process for:', formData.email, 'as', formData.role);
-      
-      // Sign up the user with metadata
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
@@ -74,37 +71,22 @@ const Signup = () => {
         }
       });
 
-      if (authError) {
-        console.error('Auth signup error:', authError);
+      if (error) {
         toast({
           title: "Signup failed",
-          description: authError.message,
+          description: error.message,
           variant: "destructive",
         });
         return;
       }
 
-      if (!authData.user) {
-        toast({
-          title: "Signup failed",
-          description: "No user data returned from signup.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      console.log('Auth signup successful, user ID:', authData.user.id);
-
-      // The database trigger should handle profile and role creation automatically
-      // If for some reason it doesn't, we'll handle it in the auth state change
-      
       setIsSuccess(true);
       toast({
         title: "Account created!",
-        description: "Welcome to InfluencerFlow! Please check your email to verify your account.",
+        description: "Welcome to InfluencerFlow! Redirecting to dashboard...",
       });
 
-      // Auto-redirect after showing success message
+      // Redirect based on role
       setTimeout(() => {
         if (formData.role === 'creator') {
           navigate('/creator-dashboard');
@@ -112,9 +94,7 @@ const Signup = () => {
           navigate('/dashboard');
         }
       }, 2000);
-
     } catch (error) {
-      console.error('Signup error:', error);
       toast({
         title: "Error",
         description: "Something went wrong. Please try again.",

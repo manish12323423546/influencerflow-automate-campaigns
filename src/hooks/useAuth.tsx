@@ -23,43 +23,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchUserRole = async (userId: string) => {
     try {
-      console.log('Fetching user role for:', userId);
-      
-      // First try to get from user_roles table
-      const { data: roleData, error: roleError } = await supabase
+      const { data, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
         .single();
       
-      if (roleData && !roleError) {
-        console.log('Found role in user_roles:', roleData.role);
-        return roleData.role as UserRole;
+      if (error) {
+        console.error('Error fetching user role:', error);
+        return null;
       }
       
-      // If no role found, check metadata
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (currentUser?.user_metadata?.role) {
-        console.log('Found role in metadata:', currentUser.user_metadata.role);
-        
-        // Try to insert into user_roles table
-        const { error: insertError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: userId,
-            role: currentUser.user_metadata.role
-          });
-        
-        if (!insertError) {
-          return currentUser.user_metadata.role as UserRole;
-        }
-      }
-      
-      console.error('Error fetching user role:', roleError);
-      return 'brand'; // Default fallback
+      return data.role as UserRole;
     } catch (error) {
       console.error('Error fetching user role:', error);
-      return 'brand'; // Default fallback
+      return null;
     }
   };
 
