@@ -1,13 +1,18 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, ArrowLeft, Mail } from 'lucide-react';
+import { CheckCircle, ArrowLeft, User, Mail, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const Login = () => {
-  const [email, setEmail] = useState('');
+const Signup = () => {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const { toast } = useToast();
@@ -20,7 +25,16 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateEmail(email)) {
+    if (!formData.name.trim()) {
+      toast({
+        title: "Name required",
+        description: "Please enter your full name.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!validateEmail(formData.email)) {
       toast({
         title: "Invalid email",
         description: "Please enter a valid email address.",
@@ -29,17 +43,26 @@ const Login = () => {
       return;
     }
 
+    if (formData.password.length < 6) {
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 6 characters long.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // Simulate Supabase auth call
-      // In real implementation: await supabase.auth.signInWithOtp({ email })
+      // Simulate signup process
+      // In real implementation: await supabase.auth.signUp({ email, password })
       setTimeout(() => {
         setIsLoading(false);
         setIsSuccess(true);
         toast({
-          title: "Magic link sent!",
-          description: "Check your inbox for a secure login link.",
+          title: "Account created!",
+          description: "Welcome to InfluencerFlow. You're all set!",
         });
       }, 1500);
     } catch (error) {
@@ -50,6 +73,10 @@ const Login = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -66,7 +93,7 @@ const Login = () => {
 
         <Card className="bg-zinc-900 border-zinc-800 shadow-2xl overflow-hidden animate-scale-in">
           <CardContent className="p-0">
-            <div className="grid md:grid-cols-2 min-h-[600px]">
+            <div className="grid md:grid-cols-2 min-h-[700px]">
               {/* Left Side - Branding */}
               <div className="bg-gradient-to-br from-carbon via-zinc-900 to-carbon p-12 flex flex-col justify-center">
                 <div className="max-w-sm">
@@ -76,26 +103,55 @@ const Login = () => {
                   <p className="text-snow/80 text-lg leading-relaxed mb-8">
                     Automate creator campaigns
                   </p>
-                  <p className="text-snow/60">
-                    Join thousands of marketers who trust InfluencerFlow to scale their influencer campaigns efficiently.
-                  </p>
+                  <div className="space-y-4 text-snow/60">
+                    <div className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-purple-500 mr-3" />
+                      <span>AI-powered influencer discovery</span>
+                    </div>
+                    <div className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-purple-500 mr-3" />
+                      <span>Automated contract management</span>
+                    </div>
+                    <div className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-purple-500 mr-3" />
+                      <span>Real-time campaign analytics</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Right Side - Login Form */}
+              {/* Right Side - Signup Form */}
               <div className="p-12 flex flex-col justify-center">
                 {!isSuccess ? (
                   <>
                     <div className="mb-8">
                       <h2 className="text-3xl font-space font-bold text-snow mb-2">
-                        Welcome back
+                        Create your account
                       </h2>
                       <p className="text-snow/70">
-                        Enter your email to receive a secure login link
+                        Start automating your influencer campaigns today
                       </p>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-6">
+                      <div>
+                        <label htmlFor="name" className="block text-sm font-medium text-snow/80 mb-2">
+                          Full Name
+                        </label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-snow/50" />
+                          <Input
+                            id="name"
+                            type="text"
+                            placeholder="John Doe"
+                            value={formData.name}
+                            onChange={(e) => handleInputChange('name', e.target.value)}
+                            className="bg-zinc-800 border-zinc-700 text-snow placeholder:text-snow/50 focus:border-purple-500 h-12 pl-10"
+                            required
+                          />
+                        </div>
+                      </div>
+
                       <div>
                         <label htmlFor="email" className="block text-sm font-medium text-snow/80 mb-2">
                           Email address
@@ -106,8 +162,26 @@ const Login = () => {
                             id="email"
                             type="email"
                             placeholder="you@company.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            value={formData.email}
+                            onChange={(e) => handleInputChange('email', e.target.value)}
+                            className="bg-zinc-800 border-zinc-700 text-snow placeholder:text-snow/50 focus:border-purple-500 h-12 pl-10"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label htmlFor="password" className="block text-sm font-medium text-snow/80 mb-2">
+                          Password
+                        </label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-snow/50" />
+                          <Input
+                            id="password"
+                            type="password"
+                            placeholder="Create a secure password"
+                            value={formData.password}
+                            onChange={(e) => handleInputChange('password', e.target.value)}
                             className="bg-zinc-800 border-zinc-700 text-snow placeholder:text-snow/50 focus:border-purple-500 h-12 pl-10"
                             required
                           />
@@ -122,25 +196,25 @@ const Login = () => {
                         {isLoading ? (
                           <>
                             <div className="animate-spin w-5 h-5 border-2 border-carbon border-t-transparent rounded-full mr-3"></div>
-                            Sending magic link...
+                            Creating account...
                           </>
                         ) : (
-                          'Send Magic Link'
+                          'Create Account'
                         )}
                       </Button>
                     </form>
 
                     <div className="mt-6 text-center">
                       <p className="text-sm text-snow/60">
-                        Don't have an account?{' '}
-                        <Link to="/signup" className="text-purple-500 hover:text-purple-400 font-medium">
-                          Sign up free
+                        Already have an account?{' '}
+                        <Link to="/login" className="text-purple-500 hover:text-purple-400 font-medium">
+                          Sign in
                         </Link>
                       </p>
                     </div>
 
                     <p className="text-sm text-snow/60 mt-6 text-center">
-                      By continuing, you agree to our{' '}
+                      By creating an account, you agree to our{' '}
                       <a href="#terms" className="text-purple-500 hover:text-purple-400">
                         Terms of Service
                       </a>{' '}
@@ -157,30 +231,21 @@ const Login = () => {
                     </div>
                     
                     <h2 className="text-3xl font-space font-bold text-snow mb-4">
-                      Check your inbox
+                      Welcome to InfluencerFlow!
                     </h2>
                     
-                    <p className="text-snow/80 mb-2">
-                      We've sent a secure login link to:
-                    </p>
-                    
-                    <p className="text-purple-500 font-semibold text-lg mb-6">
-                      {email}
-                    </p>
-                    
-                    <p className="text-sm text-snow/60">
-                      Click the link in your email to sign in safely. The link will expire in 15 minutes.
+                    <p className="text-snow/80 mb-6">
+                      Your account has been created successfully. You can now start automating your influencer campaigns.
                     </p>
 
                     <Button
                       onClick={() => {
-                        setIsSuccess(false);
-                        setEmail('');
+                        // Navigate to dashboard or next step
+                        window.location.href = '/';
                       }}
-                      variant="outline"
-                      className="btn-outline mt-6"
+                      className="btn-purple"
                     >
-                      Use different email
+                      Get Started
                     </Button>
                   </div>
                 )}
@@ -193,4 +258,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Signup;
