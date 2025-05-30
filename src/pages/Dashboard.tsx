@@ -1,49 +1,5 @@
 
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-
 const Dashboard = () => {
-  const { user, userRole, loading } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    console.log('Dashboard - Auth state:', { user: !!user, userRole, loading });
-    
-    if (!loading) {
-      if (!user) {
-        console.log('No user, redirecting to login');
-        navigate('/login', { replace: true });
-        return;
-      }
-
-      if (userRole === 'creator') {
-        console.log('Creator detected, redirecting to creator dashboard');
-        navigate('/creator-dashboard', { replace: true });
-        return;
-      }
-
-      if (!userRole) {
-        console.log('No role found, staying on dashboard');
-      }
-    }
-  }, [user, userRole, loading, navigate]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-carbon flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-snow">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null; // Will redirect to login
-  }
-
   return (
     <div className="min-h-screen bg-carbon p-8">
       <div className="max-w-7xl mx-auto">
@@ -52,17 +8,69 @@ const Dashboard = () => {
             Brand Dashboard
           </h1>
           <p className="text-snow/70">
-            Welcome back! Manage your influencer campaigns.
+            Welcome! Manage your influencer campaigns and discover creators.
           </p>
         </div>
         
-        <div className="text-center py-20">
-          <h2 className="text-2xl font-semibold text-snow mb-4">
-            Welcome to your Brand Dashboard
-          </h2>
-          <p className="text-snow/70">
-            Your brand dashboard is ready! Start creating campaigns and managing influencers.
-          </p>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+            <h3 className="text-snow/70 text-sm font-medium mb-2">Active Campaigns</h3>
+            <p className="text-3xl font-bold text-snow">12</p>
+            <p className="text-purple-500 text-sm mt-1">+2 this month</p>
+          </div>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+            <h3 className="text-snow/70 text-sm font-medium mb-2">Total Spend</h3>
+            <p className="text-3xl font-bold text-snow">$45,200</p>
+            <p className="text-green-500 text-sm mt-1">+18% vs last month</p>
+          </div>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+            <h3 className="text-snow/70 text-sm font-medium mb-2">Influencers</h3>
+            <p className="text-3xl font-bold text-snow">28</p>
+            <p className="text-blue-500 text-sm mt-1">8 new this month</p>
+          </div>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+            <h3 className="text-snow/70 text-sm font-medium mb-2">Avg. Engagement</h3>
+            <p className="text-3xl font-bold text-snow">4.8%</p>
+            <p className="text-green-500 text-sm mt-1">+0.3% improvement</p>
+          </div>
+        </div>
+
+        {/* Recent Campaigns */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
+          <h2 className="text-xl font-semibold text-snow mb-4">Recent Campaigns</h2>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-zinc-800 rounded-lg">
+              <div>
+                <h3 className="text-snow font-medium">Tech Product Launch</h3>
+                <p className="text-snow/60 text-sm">TechCorp • Active • 5 influencers</p>
+              </div>
+              <div className="text-right">
+                <p className="text-snow font-medium">$15,000</p>
+                <p className="text-green-500 text-sm">4.2% engagement</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between p-4 bg-zinc-800 rounded-lg">
+              <div>
+                <h3 className="text-snow font-medium">Fashion Summer Collection</h3>
+                <p className="text-snow/60 text-sm">StyleBrand • Pending • 3 influencers</p>
+              </div>
+              <div className="text-right">
+                <p className="text-snow font-medium">$8,000</p>
+                <p className="text-purple-500 text-sm">Pending approval</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between p-4 bg-zinc-800 rounded-lg">
+              <div>
+                <h3 className="text-snow font-medium">Fitness App Promotion</h3>
+                <p className="text-snow/60 text-sm">FitLife • Completed • 2 influencers</p>
+              </div>
+              <div className="text-right">
+                <p className="text-snow font-medium">$12,000</p>
+                <p className="text-green-500 text-sm">5.1% engagement</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

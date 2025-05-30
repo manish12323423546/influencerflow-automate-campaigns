@@ -1,6 +1,6 @@
 
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Play } from 'lucide-react';
+import { ArrowRight, Building, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Hero = () => {
@@ -19,17 +19,21 @@ const Hero = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16">
-            <Link to="/signup">
-              <Button className="btn-purple group text-lg">
-                Sign Up Free
-                <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+            <Link to="/dashboard">
+              <Button className="btn-purple group text-lg h-14 px-8">
+                <Building className="mr-3 h-6 w-6" />
+                Brand Dashboard
+                <ArrowRight className="ml-3 h-5 w-5 transition-transform group-hover:translate-x-1" />
               </Button>
             </Link>
             
-            <Button variant="outline" className="btn-outline text-lg group">
-              <Play className="mr-2 h-5 w-5" />
-              Watch Demo
-            </Button>
+            <Link to="/creator-dashboard">
+              <Button variant="outline" className="btn-outline text-lg group h-14 px-8">
+                <Users className="mr-3 h-6 w-6" />
+                Creator Dashboard
+                <ArrowRight className="ml-3 h-5 w-5 transition-transform group-hover:translate-x-1" />
+              </Button>
+            </Link>
           </div>
         </div>
 
@@ -39,10 +43,10 @@ const Hero = () => {
             <div className="bg-zinc-800 rounded-xl p-8 min-h-[400px] flex items-center justify-center">
               <div className="text-center">
                 <div className="w-20 h-20 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Play className="h-8 w-8 text-purple-500" />
+                  <Building className="h-8 w-8 text-purple-500" />
                 </div>
-                <p className="text-snow/60">Dashboard Preview Coming Soon</p>
-                <p className="text-sm text-snow/40 mt-2">Interactive demo will be embedded here</p>
+                <p className="text-snow/60">Dashboard Preview</p>
+                <p className="text-sm text-snow/40 mt-2">Choose your role above to get started</p>
               </div>
             </div>
           </div>
