@@ -140,8 +140,19 @@ const Influencers = () => {
   };
 
   const handleInfluencerClick = (influencer: Influencer) => {
-    setSelectedInfluencer(influencer);
-    setDrawerOpen(true);
+    navigate(`/influencers/${influencer.id}`);
+  };
+
+  const handleInfluencerRowClick = (influencer: Influencer, event: React.MouseEvent) => {
+    // Prevent navigation if clicking on the more actions button
+    if ((event.target as HTMLElement).closest('[data-action-button]')) {
+      event.stopPropagation();
+      setSelectedInfluencer(influencer);
+      setDrawerOpen(true);
+      return;
+    }
+    
+    handleInfluencerClick(influencer);
   };
 
   if (!user) return null;
@@ -279,7 +290,7 @@ const Influencers = () => {
                     key={influencer.id}
                     className="border-zinc-800 cursor-pointer"
                     whileHover={{ y: -2, backgroundColor: 'rgba(39, 39, 42, 0.5)' }}
-                    onClick={() => handleInfluencerClick(influencer)}
+                    onClick={(event) => handleInfluencerRowClick(influencer, event)}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
@@ -314,7 +325,12 @@ const Influencers = () => {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm" className="text-snow/60 hover:text-snow">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-snow/60 hover:text-snow"
+                        data-action-button
+                      >
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </TableCell>
