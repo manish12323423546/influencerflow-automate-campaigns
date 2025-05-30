@@ -1,15 +1,37 @@
 
+import { Button } from '@/components/ui/button';
+import { Building, Home, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+
 const CreatorDashboard = () => {
   return (
     <div className="min-h-screen bg-carbon p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-4xl font-space font-bold text-snow mb-2">
-            Creator Dashboard
-          </h1>
-          <p className="text-snow/70">
-            Welcome! Track your campaigns, earnings, and performance metrics.
-          </p>
+        {/* Navigation Header */}
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-4xl font-space font-bold text-snow mb-2">
+              Creator Dashboard
+            </h1>
+            <p className="text-snow/70">
+              Welcome! Track your campaigns, earnings, and performance metrics.
+            </p>
+          </div>
+          <div className="flex gap-4">
+            <Link to="/">
+              <Button variant="outline" className="btn-outline">
+                <Home className="mr-2 h-4 w-4" />
+                Home
+              </Button>
+            </Link>
+            <Link to="/dashboard">
+              <Button className="btn-purple">
+                <Building className="mr-2 h-4 w-4" />
+                Switch to Brand
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
         </div>
         
         {/* Stats Cards */}

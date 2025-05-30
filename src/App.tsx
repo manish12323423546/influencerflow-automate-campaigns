@@ -37,7 +37,6 @@ const App = () => (
           <Route path="/campaigns/:id/edit" element={<EditCampaign />} />
           <Route path="/brand-profile" element={<BrandProfile />} />
           <Route path="/settings" element={<Settings />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
