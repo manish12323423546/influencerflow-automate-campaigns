@@ -26,7 +26,7 @@ interface CreatorCampaign {
     name: string;
     description: string;
     deadline: string;
-    status: 'pending' | 'in_progress' | 'completed' | 'approved';
+    status: 'pending' | 'in_progress' | 'completed' | 'approved' | 'pending_review';
     type: 'post' | 'reel' | 'story' | 'video';
   }>;
   platform: string;
