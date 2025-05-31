@@ -196,9 +196,19 @@ const PaymentsManager = () => {
 
       {/* Tabs for Payments and Transactions */}
       <Tabs defaultValue="payments" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
-          <TabsTrigger value="payments">Pending Payments</TabsTrigger>
-          <TabsTrigger value="transactions">Transaction History</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 lg:w-[400px] bg-zinc-800 border border-zinc-700">
+          <TabsTrigger 
+            value="payments"
+            className="data-[state=active]:bg-coral data-[state=active]:text-white text-snow/80 hover:text-snow transition-colors"
+          >
+            Pending Payments
+          </TabsTrigger>
+          <TabsTrigger 
+            value="transactions"
+            className="data-[state=active]:bg-coral data-[state=active]:text-white text-snow/80 hover:text-snow transition-colors"
+          >
+            Transaction History
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="payments">

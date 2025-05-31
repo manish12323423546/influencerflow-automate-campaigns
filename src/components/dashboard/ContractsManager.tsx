@@ -1,11 +1,11 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { FileText, DollarSign, Users, Clock } from 'lucide-react';
+import { FileText, DollarSign, Users, Clock, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { NewContractModal } from '@/components/NewContractModal';
 
 interface Contract {
   id: string;
@@ -52,6 +52,7 @@ const mockContracts: Contract[] = [
 const ContractsManager = () => {
   const { toast } = useToast();
   const [contracts, setContracts] = useState<Contract[]>(mockContracts);
+  const [newContractModalOpen, setNewContractModalOpen] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -114,6 +115,11 @@ const ContractsManager = () => {
     totalBudget: contracts.reduce((sum, c) => sum + c.budget, 0)
   };
 
+  const handleCreateNewContract = (chatId: string, contractData: any) => {
+    // Add logic to create new contract
+    console.log('Creating contract for chat:', chatId, contractData);
+  };
+
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
@@ -172,7 +178,16 @@ const ContractsManager = () => {
       {/* Contracts Table */}
       <Card className="bg-zinc-800/50 border-zinc-700">
         <CardHeader>
-          <CardTitle className="text-snow">Contract Management</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-snow">Contract Management</CardTitle>
+            <Button
+              onClick={() => setNewContractModalOpen(true)}
+              className="bg-coral hover:bg-coral/90 text-white"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Create New Contract
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
@@ -220,7 +235,7 @@ const ContractsManager = () => {
                           onClick={() => handleCreateContract(contract.id)}
                           variant="ghost"
                           size="sm"
-                          className="text-snow/70 hover:text-coral"
+                          className="text-snow/70 hover:text-coral hover:bg-coral/10"
                         >
                           Create Contract
                         </Button>
@@ -230,7 +245,7 @@ const ContractsManager = () => {
                           onClick={() => handleMoveToPayments(contract)}
                           variant="ghost"
                           size="sm"
-                          className="text-snow/70 hover:text-green-500"
+                          className="text-snow/70 hover:text-green-500 hover:bg-green-500/10"
                         >
                           Move to Payments
                         </Button>
@@ -238,7 +253,7 @@ const ContractsManager = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-snow/70 hover:text-coral"
+                        className="text-snow/70 hover:text-coral hover:bg-coral/10"
                       >
                         View Details
                       </Button>
@@ -250,6 +265,12 @@ const ContractsManager = () => {
           </Table>
         </CardContent>
       </Card>
+
+      <NewContractModal
+        open={newContractModalOpen}
+        onOpenChange={setNewContractModalOpen}
+        onCreateContract={handleCreateNewContract}
+      />
     </div>
   );
 };
