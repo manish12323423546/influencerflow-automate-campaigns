@@ -89,6 +89,20 @@
   .container-custom {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
+
+  /* Updated gradient text for homepage sections */
+  .gradient-text {
+    @apply bg-gradient-to-r from-coral to-orange-400 bg-clip-text text-transparent;
+  }
+
+  /* Updated button styles for homepage */
+  .primary-button {
+    @apply bg-coral hover:bg-coral/90 text-white font-semibold px-8 py-4 rounded-xl transition-all duration-300 transform hover:scale-105;
+  }
+
+  .secondary-button {
+    @apply border-2 border-coral text-coral hover:bg-coral hover:text-white font-semibold px-8 py-4 rounded-xl transition-all duration-300;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
