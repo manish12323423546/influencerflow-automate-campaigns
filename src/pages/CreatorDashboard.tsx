@@ -26,19 +26,19 @@ const CreatorDashboard = () => {
           </div>
           <div className="flex gap-4">
             <Link to="/creator-profile">
-              <Button variant="outline" className="btn-outline">
+              <Button variant="outline" className="border-coral text-coral hover:bg-coral hover:text-white">
                 <User className="mr-2 h-4 w-4" />
                 Profile
               </Button>
             </Link>
             <Link to="/">
-              <Button variant="outline" className="btn-outline">
+              <Button variant="outline" className="border-coral text-coral hover:bg-coral hover:text-white">
                 <Home className="mr-2 h-4 w-4" />
                 Home
               </Button>
             </Link>
             <Link to="/dashboard">
-              <Button className="btn-purple">
+              <Button className="bg-coral hover:bg-coral/90 text-white">
                 <Building className="mr-2 h-4 w-4" />
                 Switch to Brand
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -52,14 +52,14 @@ const CreatorDashboard = () => {
           <Button
             onClick={() => setActiveSection('overview')}
             variant={activeSection === 'overview' ? 'default' : 'outline'}
-            className={activeSection === 'overview' ? 'bg-purple-500 hover:bg-purple-600' : 'border-zinc-700 text-snow hover:bg-zinc-800'}
+            className={activeSection === 'overview' ? 'bg-coral hover:bg-coral/90' : 'border-zinc-700 text-snow hover:bg-zinc-800'}
           >
             Dashboard Overview
           </Button>
           <Button
             onClick={() => setActiveSection('opportunities')}
             variant={activeSection === 'opportunities' ? 'default' : 'outline'}
-            className={activeSection === 'opportunities' ? 'bg-purple-500 hover:bg-purple-600' : 'border-zinc-700 text-snow hover:bg-zinc-800'}
+            className={activeSection === 'opportunities' ? 'bg-coral hover:bg-coral/90' : 'border-zinc-700 text-snow hover:bg-zinc-800'}
           >
             <Briefcase className="mr-2 h-4 w-4" />
             Campaign Opportunities
@@ -67,7 +67,7 @@ const CreatorDashboard = () => {
           <Button
             onClick={() => setActiveSection('campaigns')}
             variant={activeSection === 'campaigns' ? 'default' : 'outline'}
-            className={activeSection === 'campaigns' ? 'bg-purple-500 hover:bg-purple-600' : 'border-zinc-700 text-snow hover:bg-zinc-800'}
+            className={activeSection === 'campaigns' ? 'bg-coral hover:bg-coral/90' : 'border-zinc-700 text-snow hover:bg-zinc-800'}
           >
             <Trophy className="mr-2 h-4 w-4" />
             My Campaigns
@@ -75,7 +75,7 @@ const CreatorDashboard = () => {
           <Button
             onClick={() => setActiveSection('contracts')}
             variant={activeSection === 'contracts' ? 'default' : 'outline'}
-            className={activeSection === 'contracts' ? 'bg-purple-500 hover:bg-purple-600' : 'border-zinc-700 text-snow hover:bg-zinc-800'}
+            className={activeSection === 'contracts' ? 'bg-coral hover:bg-coral/90' : 'border-zinc-700 text-snow hover:bg-zinc-800'}
           >
             <FileText className="mr-2 h-4 w-4" />
             Contracts
@@ -89,7 +89,7 @@ const CreatorDashboard = () => {
               <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
                 <h3 className="text-snow/70 text-sm font-medium mb-2">Active Campaigns</h3>
                 <p className="text-3xl font-bold text-snow">3</p>
-                <p className="text-purple-500 text-sm mt-1">2 pending approval</p>
+                <p className="text-coral text-sm mt-1">2 pending approval</p>
               </div>
               <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
                 <h3 className="text-snow/70 text-sm font-medium mb-2">Total Earnings</h3>

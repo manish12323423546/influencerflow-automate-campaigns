@@ -115,7 +115,7 @@ const EditCampaign = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate(`/campaigns/${id}`)}
-                className="text-snow/70 hover:text-purple-500"
+                className="text-snow/70 hover:text-coral"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Campaign
@@ -129,7 +129,7 @@ const EditCampaign = () => {
             <Button
               onClick={handleSubmit}
               disabled={isLoading}
-              className="bg-purple-500 hover:bg-purple-600"
+              className="bg-coral hover:bg-coral/90 text-white"
             >
               <Save className="h-4 w-4 mr-2" />
               {isLoading ? 'Saving...' : 'Save Changes'}

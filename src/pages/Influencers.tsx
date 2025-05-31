@@ -276,7 +276,7 @@ const Influencers = () => {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
               <h1 className="text-2xl font-space font-bold text-snow">
-                Creator<span className="text-purple-500">Discovery</span>
+                Creator<span className="text-coral">Discovery</span>
               </h1>
             </div>
             <div className="flex items-center space-x-4">
@@ -434,7 +434,7 @@ const Influencers = () => {
                 return (
                   <Card 
                     key={influencer.id}
-                    className="bg-zinc-900 border-zinc-800 hover:border-purple-500 transition-colors cursor-pointer group"
+                    className="bg-zinc-900 border-zinc-800 hover:border-coral transition-colors cursor-pointer group"
                     onClick={() => handleInfluencerClick(influencer.id)}
                   >
                     <CardContent className="p-6">
@@ -497,7 +497,7 @@ const Influencers = () => {
                         <Badge variant="outline" className="border-blue-500/30 text-blue-500 text-xs">
                           {influencer.industry}
                         </Badge>
-                        <Badge variant="outline" className="border-purple-500/30 text-purple-500 text-xs">
+                        <Badge variant="outline" className="border-coral/30 text-coral text-xs">
                           {influencer.platform}
                         </Badge>
                         <Badge className={`${getRiskBadgeColor(riskLevel)} text-xs`}>
@@ -510,7 +510,7 @@ const Influencers = () => {
                         <Button
                           size="sm"
                           onClick={(e) => handleShortlist(influencer.id, influencer.name, e)}
-                          className="flex-1 bg-purple-500 hover:bg-purple-600 text-xs"
+                          className="flex-1 bg-coral hover:bg-coral/90 text-white text-xs"
                         >
                           Shortlist
                         </Button>

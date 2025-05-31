@@ -14,7 +14,7 @@
     --popover: 11 11 12;
     --popover-foreground: 247 247 247;
 
-    --primary: 139 92 246; /* Purple #8B5CF6 */
+    --primary: 255 98 67; /* Orange #FF6243 */
     --primary-foreground: 11 11 12;
 
     --secondary: 30 30 32;
@@ -23,7 +23,7 @@
     --muted: 30 30 32;
     --muted-foreground: 163 163 163;
 
-    --accent: 139 92 246;
+    --accent: 255 98 67;
     --accent-foreground: 11 11 12;
 
     --destructive: 220 38 38;
@@ -31,18 +31,18 @@
 
     --border: 39 39 42;
     --input: 39 39 42;
-    --ring: 139 92 246;
+    --ring: 255 98 67;
 
     --radius: 0.75rem;
 
     --sidebar-background: 11 11 12;
     --sidebar-foreground: 247 247 247;
-    --sidebar-primary: 139 92 246;
+    --sidebar-primary: 255 98 67;
     --sidebar-primary-foreground: 11 11 12;
     --sidebar-accent: 30 30 32;
     --sidebar-accent-foreground: 247 247 247;
     --sidebar-border: 39 39 42;
-    --sidebar-ring: 139 92 246;
+    --sidebar-ring: 255 98 67;
   }
 }
 
@@ -66,16 +66,16 @@
 }
 
 @layer components {
-  .btn-purple {
-    @apply bg-purple-500 hover:bg-purple-600 text-white font-semibold px-8 py-4 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg;
+  .btn-orange {
+    @apply bg-coral hover:bg-coral/90 text-white font-semibold px-8 py-4 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg;
   }
 
   .btn-outline {
-    @apply border-2 border-purple-500 text-purple-500 hover:bg-purple-500 hover:text-white font-semibold px-8 py-4 rounded-xl transition-all duration-300;
+    @apply border-2 border-coral text-coral hover:bg-coral hover:text-white font-semibold px-8 py-4 rounded-xl transition-all duration-300;
   }
 
   .gradient-border {
-    @apply relative before:absolute before:inset-0 before:p-[2px] before:bg-gradient-to-r before:from-purple-500 before:to-blue-500 before:rounded-xl;
+    @apply relative before:absolute before:inset-0 before:p-[2px] before:bg-gradient-to-r before:from-coral before:to-orange-400 before:rounded-xl;
   }
 
   .gradient-border > * {

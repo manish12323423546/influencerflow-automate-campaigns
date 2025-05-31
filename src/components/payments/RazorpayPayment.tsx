@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -277,7 +278,7 @@ const RazorpayPayment = ({
           <Button 
             onClick={handlePayment} 
             disabled={loading || !paymentData.amount}
-            className="bg-purple-600 hover:bg-purple-700"
+            className="bg-coral hover:bg-coral/90 text-white"
           >
             {loading ? (
               <>

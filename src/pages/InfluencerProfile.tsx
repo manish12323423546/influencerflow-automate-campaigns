@@ -109,7 +109,7 @@ const InfluencerProfile = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate('/influencers')}
-                className="text-snow/70 hover:text-purple-500"
+                className="text-snow/70 hover:text-coral"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back
@@ -186,7 +186,7 @@ const InfluencerProfile = () => {
               <div className="space-y-3">
                 <Button 
                   onClick={handleShortlistCreator}
-                  className="w-full bg-purple-500 hover:bg-purple-600"
+                  className="w-full bg-coral hover:bg-coral/90 text-white"
                 >
                   Shortlist Creator
                 </Button>
