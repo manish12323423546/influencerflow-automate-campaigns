@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Filter, Users, TrendingUp, MessageCircle, Eye, Heart, ArrowUpDown } from 'lucide-react';
+import { Search, Filter, Users, TrendingUp, MessageCircle, Eye, Heart, ArrowUpDown, Phone } from 'lucide-react';
+import { conversationalAIService } from '@/services/conversationalAI';
 
 interface InfluencerData {
   id: string;
@@ -116,6 +116,7 @@ const Influencers = () => {
 
   const [influencers, setInfluencers] = useState<InfluencerData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCallInProgress, setIsCallInProgress] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     // Simulate loading
@@ -244,6 +245,65 @@ const Influencers = () => {
       title: "Outreach initiated",
       description: `Outreach message sent to ${influencerName}.`,
     });
+  };
+
+  const handlePhoneCall = async (influencerId: string, influencerName: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    try {
+      setIsCallInProgress(prev => ({ ...prev, [influencerId]: true }));
+      toast({
+        title: "Initiating call",
+        description: `Starting a call with ${influencerName}...`,
+      });
+
+      // In a real implementation, you would get this data from your backend
+      const campaignData = {
+        campaign_id: 'campaign_001',
+        campaign_name: 'Product Launch Campaign',
+        brand_name: 'Your Brand',
+        brief: 'We are looking to collaborate on our new product launch',
+        deliverables: ['Social Media Post', 'Story']
+      };
+
+      // In a real implementation, you would get the phone number from your backend
+      const phoneNumber = '+1234567890'; // This should come from your backend
+      
+      const response = await conversationalAIService.initiateOutboundCall(phoneNumber, campaignData);
+      
+      if (response.success) {
+        toast({
+          title: "Call initiated",
+          description: `Connected with ${influencerName}`,
+        });
+
+        // Poll for call status
+        const statusCheckInterval = setInterval(async () => {
+          try {
+            const statusResponse = await conversationalAIService.getCallStatus(response.call_id);
+            if (statusResponse.status === 'completed' || statusResponse.status === 'failed') {
+              clearInterval(statusCheckInterval);
+              setIsCallInProgress(prev => ({ ...prev, [influencerId]: false }));
+              
+              toast({
+                title: statusResponse.status === 'completed' ? "Call completed" : "Call failed",
+                description: `Call with ${influencerName} has ${statusResponse.status}`,
+              });
+            }
+          } catch (error) {
+            console.error('Error checking call status:', error);
+          }
+        }, 5000); // Check every 5 seconds
+      }
+    } catch (error) {
+      console.error('Error initiating call:', error);
+      toast({
+        title: "Call failed",
+        description: "Unable to initiate the call. Please try again.",
+        variant: "destructive",
+      });
+      setIsCallInProgress(prev => ({ ...prev, [influencerId]: false }));
+    }
   };
 
   const toggleSort = (field: string) => {
@@ -512,6 +572,7 @@ const Influencers = () => {
                           onClick={(e) => handleShortlist(influencer.id, influencer.name, e)}
                           className="flex-1 bg-coral hover:bg-coral/90 text-white text-xs"
                         >
+                          <Heart className="h-3 w-3 mr-1" />
                           Shortlist
                         </Button>
                         <Button
@@ -522,6 +583,20 @@ const Influencers = () => {
                         >
                           <MessageCircle className="h-3 w-3 mr-1" />
                           Outreach
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => handlePhoneCall(influencer.id, influencer.name, e)}
+                          disabled={isCallInProgress[influencer.id]}
+                          className={`flex-1 ${
+                            isCallInProgress[influencer.id]
+                              ? 'bg-green-500 border-green-500 text-white'
+                              : 'border-zinc-700 text-snow hover:bg-zinc-800'
+                          } text-xs`}
+                        >
+                          <Phone className="h-3 w-3 mr-1" />
+                          {isCallInProgress[influencer.id] ? 'Calling...' : 'Call'}
                         </Button>
                       </div>
                     </CardContent>

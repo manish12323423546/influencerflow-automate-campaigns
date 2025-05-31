@@ -1,11 +1,10 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   Users, TrendingUp, DollarSign, Target, Bell, Activity, Settings, Plus,
-  BarChart3, MessageSquare, FileText, CreditCard, Search
+  BarChart3, MessageSquare, FileText, CreditCard, Search, Headphones
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import CampaignsManager from '@/components/dashboard/CampaignsManager';
@@ -13,60 +12,44 @@ import DiscoverCreators from '@/components/dashboard/DiscoverCreators';
 import OutreachesManager from '@/components/dashboard/OutreachesManager';
 import ContractsManager from '@/components/dashboard/ContractsManager';
 import PaymentsManager from '@/components/dashboard/PaymentsManager';
-
-interface Campaign {
-  id: string;
-  name: string;
-  brand: string;
-  status: 'active' | 'completed' | 'draft' | 'paused';
-  budget: number;
-  spent: number;
-  influencer_count: number;
-  reach: number;
-  engagement_rate: number;
-}
-
-// Mock data without authentication
-const mockCampaigns: Campaign[] = [
-  {
-    id: '1',
-    name: 'Tech Product Launch',
-    brand: 'TechCorp',
-    status: 'active',
-    budget: 15000,
-    spent: 12000,
-    influencer_count: 5,
-    reach: 250000,
-    engagement_rate: 4.2
-  },
-  {
-    id: '2',
-    name: 'Fashion Summer Collection',
-    brand: 'StyleBrand',
-    status: 'draft',
-    budget: 8000,
-    spent: 0,
-    influencer_count: 3,
-    reach: 0,
-    engagement_rate: 0
-  },
-  {
-    id: '3',
-    name: 'Fitness App Promotion',
-    brand: 'FitLife',
-    status: 'completed',
-    budget: 12000,
-    spent: 11500,
-    influencer_count: 2,
-    reach: 180000,
-    engagement_rate: 5.1
-  }
-];
+import ConversationsManager from '@/components/dashboard/ConversationsManager';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import type { Campaign } from '@/types/campaign';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'campaigns' | 'discover' | 'outreach' | 'contracts' | 'payments'>('campaigns');
-  const [campaigns] = useState<Campaign[]>(mockCampaigns);
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<'campaigns' | 'discover' | 'outreach' | 'contracts' | 'payments' | 'conversations'>('campaigns');
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch campaigns from Supabase
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('campaigns')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        
+        setCampaigns(data || []);
+      } catch (error) {
+        console.error('Error fetching campaigns:', error);
+        toast({
+          title: "Error loading campaigns",
+          description: "Please try again later.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCampaigns();
+  }, [toast]);
 
   // Calculate KPI data from campaigns
   const kpiData = {
@@ -96,6 +79,7 @@ const Dashboard = () => {
     { id: 'outreach', label: 'Outreaches', icon: MessageSquare, description: 'Chat with creators' },
     { id: 'contracts', label: 'Contracts', icon: FileText, description: 'Manage contracts' },
     { id: 'payments', label: 'Payments', icon: CreditCard, description: 'Handle payments' },
+    { id: 'conversations', label: 'Conversations', icon: Headphones, description: 'Manage AI conversations' },
   ];
 
   return (
@@ -244,6 +228,7 @@ const Dashboard = () => {
           {activeTab === 'outreach' && <OutreachesManager />}
           {activeTab === 'contracts' && <ContractsManager />}
           {activeTab === 'payments' && <PaymentsManager />}
+          {activeTab === 'conversations' && <ConversationsManager />}
         </div>
       </div>
     </div>

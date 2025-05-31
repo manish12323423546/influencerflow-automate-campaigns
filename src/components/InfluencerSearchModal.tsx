@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,55 +8,61 @@ import { Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { Checkbox } from '@/components/ui/checkbox';
+import type { Influencer } from '@/types/influencer';
+import { fetchInfluencers } from '@/lib/supabase';
 
-interface Influencer {
-  id: string;
-  handle: string;
-  name: string;
-  avatar_url: string | null;
-  platform: string;
-  industry: string;
-  followers_count: number;
-  engagement_rate: number;
-}
-
-interface InfluencerSearchModalProps {
+export interface InfluencerSearchModalProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSelectInfluencers: (influencerIds: string[]) => void;
-  selectedInfluencers: string[];
+  onClose: () => void;
+  onSelect: (influencers: Influencer[]) => void;
 }
 
-export const InfluencerSearchModal = ({
-  open,
-  onOpenChange,
-  onSelectInfluencers,
-  selectedInfluencers,
-}: InfluencerSearchModalProps) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [localSelected, setLocalSelected] = useState<string[]>([]);
+export function InfluencerSearchModal({ open, onClose, onSelect }: InfluencerSearchModalProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [influencers, setInfluencers] = useState<Influencer[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Fetch influencers data
-  const { data: influencers = [], isLoading } = useQuery({
-    queryKey: ['influencers-search', searchTerm],
-    queryFn: async () => {
+  const handleSearch = async () => {
+    setIsLoading(true);
+    try {
       let query = supabase
         .from('influencers')
-        .select('id, handle, name, avatar_url, platform, industry, followers_count, engagement_rate')
-        .order('roi_index', { ascending: false })
-        .limit(50);
+        .select('*')
+        .order('followers_count', { ascending: false });
 
-      if (searchTerm) {
-        query = query.or(`handle.ilike.%${searchTerm}%,name.ilike.%${searchTerm}%`);
+      if (searchQuery.trim()) {
+        query = query.or(`name.ilike.%${searchQuery}%,handle.ilike.%${searchQuery}%,industry.ilike.%${searchQuery}%`);
       }
 
       const { data, error } = await query;
-      
+
       if (error) throw error;
-      return data as Influencer[];
-    },
-    enabled: open,
-  });
+      setInfluencers(data || []);
+    } catch (error) {
+      console.error('Error searching influencers:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSelect = () => {
+    const selectedInfluencers = influencers.filter(inf => selectedIds.has(inf.id));
+    onSelect(selectedInfluencers);
+    onClose();
+  };
+
+  const toggleInfluencer = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   const formatFollowers = (count: number) => {
     if (count >= 1000000) {
@@ -68,107 +73,74 @@ export const InfluencerSearchModal = ({
     return count.toString();
   };
 
-  const handleToggleInfluencer = (influencerId: string) => {
-    setLocalSelected(prev => {
-      if (prev.includes(influencerId)) {
-        return prev.filter(id => id !== influencerId);
-      } else {
-        return [...prev, influencerId];
-      }
-    });
-  };
-
-  const handleConfirmSelection = () => {
-    onSelectInfluencers(localSelected);
-    setLocalSelected([]);
-    onOpenChange(false);
-  };
-
   const isSelected = (influencerId: string) => {
-    return selectedInfluencers.includes(influencerId) || localSelected.includes(influencerId);
+    return selectedIds.has(influencerId);
   };
 
   const isAlreadySelected = (influencerId: string) => {
-    return selectedInfluencers.includes(influencerId);
+    return selectedIds.has(influencerId);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-zinc-900 border-zinc-800 max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="bg-zinc-900 border-zinc-800 text-snow">
         <DialogHeader>
-          <DialogTitle className="text-snow">Search and Select Influencers</DialogTitle>
+          <DialogTitle>Search Influencers</DialogTitle>
         </DialogHeader>
-        
-        <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
-          {/* Search Input */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-snow/50" />
+
+        <div className="space-y-4">
+          <div className="flex space-x-2">
             <Input
-              placeholder="Search influencers by name or handle..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-zinc-800 border-zinc-700 text-snow placeholder:text-snow/50 focus:border-purple-500 pl-10"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name, platform, or niche..."
+              className="bg-zinc-800 border-zinc-700 text-snow"
             />
+            <Button
+              onClick={handleSearch}
+              disabled={isLoading}
+              className="bg-purple-500 hover:bg-purple-600"
+            >
+              <Search className="h-4 w-4" />
+            </Button>
           </div>
 
-          {/* Results */}
-          <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+          <div className="max-h-[400px] overflow-y-auto space-y-2">
             {isLoading ? (
-              <div className="text-center py-8 text-snow/60">Loading influencers...</div>
+              <div className="text-center py-8 text-snow/70">
+                Searching influencers...
+              </div>
             ) : influencers.length === 0 ? (
-              <div className="text-center py-8 text-snow/60">No influencers found</div>
+              <div className="text-center py-8 text-snow/70">
+                No influencers found. Try a different search term.
+              </div>
             ) : (
               influencers.map((influencer) => (
                 <div
                   key={influencer.id}
-                  className={`p-4 rounded-lg border transition-colors cursor-pointer ${
-                    isSelected(influencer.id)
-                      ? 'bg-purple-500/10 border-purple-500/30'
-                      : 'bg-zinc-800 border-zinc-700 hover:border-zinc-600'
-                  }`}
-                  onClick={() => !isAlreadySelected(influencer.id) && handleToggleInfluencer(influencer.id)}
+                  className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+                    selectedIds.has(influencer.id)
+                      ? 'bg-purple-500/20 border-purple-500'
+                      : 'bg-zinc-800 hover:bg-zinc-700 border-transparent'
+                  } border`}
+                  onClick={() => toggleInfluencer(influencer.id)}
                 >
-                  <div className="flex items-center space-x-4">
-                    <Checkbox
-                      checked={isSelected(influencer.id)}
-                      disabled={isAlreadySelected(influencer.id)}
-                      onChange={() => !isAlreadySelected(influencer.id) && handleToggleInfluencer(influencer.id)}
-                    />
-                    
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={influencer.avatar_url || ''} alt={influencer.name} />
-                      <AvatarFallback className="bg-purple-500 text-white">
-                        {influencer.name.split(' ').map(n => n[0]).join('')}
-                      </AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-snow">{influencer.name}</p>
-                          <p className="text-sm text-snow/60">{influencer.handle}</p>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          <Badge variant="outline" className="border-blue-500/30 text-blue-500">
-                            {influencer.industry}
-                          </Badge>
-                          <Badge variant="outline" className="border-purple-500/30 text-purple-500">
-                            {influencer.platform}
-                          </Badge>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center space-x-4 mt-2 text-sm text-snow/70">
-                        <span>{formatFollowers(influencer.followers_count)} followers</span>
-                        <span>{influencer.engagement_rate.toFixed(1)}% engagement</span>
-                      </div>
-                      
-                      {isAlreadySelected(influencer.id) && (
-                        <Badge className="mt-2 bg-green-500/10 text-green-500">
-                          Already Selected
-                        </Badge>
-                      )}
+                  <div className="flex items-center space-x-3">
+                    {influencer.avatar_url && (
+                      <img
+                        src={influencer.avatar_url}
+                        alt={influencer.name}
+                        className="h-10 w-10 rounded-full"
+                      />
+                    )}
+                    <div>
+                      <h3 className="font-medium">{influencer.name}</h3>
+                      <p className="text-sm text-snow/70">
+                        {influencer.platform} • {influencer.followers_count.toLocaleString()} followers
+                      </p>
+                      <p className="text-xs text-snow/50">
+                        {influencer.industry}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -176,30 +148,20 @@ export const InfluencerSearchModal = ({
             )}
           </div>
 
-          {/* Actions */}
-          <div className="flex justify-between items-center pt-4 border-t border-zinc-800">
-            <p className="text-sm text-snow/60">
-              {localSelected.length} new influencer(s) selected
-            </p>
-            <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                className="border-zinc-700 text-snow hover:bg-zinc-800"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleConfirmSelection}
-                disabled={localSelected.length === 0}
-                className="bg-purple-500 hover:bg-purple-600"
-              >
-                Add Selected ({localSelected.length})
-              </Button>
-            </div>
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSelect}
+              disabled={selectedIds.size === 0}
+              className="bg-purple-500 hover:bg-purple-600"
+            >
+              Add Selected ({selectedIds.size})
+            </Button>
           </div>
         </div>
       </DialogContent>
     </Dialog>
   );
-};
+}

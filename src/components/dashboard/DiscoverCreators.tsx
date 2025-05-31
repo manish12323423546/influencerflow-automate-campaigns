@@ -1,12 +1,12 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Search, Star, Users, TrendingUp, MessageSquare, Heart } from 'lucide-react';
+import { Search, Star, Users, TrendingUp, MessageSquare, Heart, MessageCircle, Phone } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { conversationalAIService } from '@/services/conversationalAI';
 
 interface Creator {
   id: string;
@@ -14,12 +14,10 @@ interface Creator {
   handle: string;
   avatar_url: string;
   platform: string;
+  niche: string;
   followers_count: number;
   engagement_rate: number;
-  niche: string;
-  location: string;
-  rate_per_post: number;
-  isShortlisted?: boolean;
+  isShortlisted: boolean;
 }
 
 const mockCreators: Creator[] = [
@@ -29,11 +27,9 @@ const mockCreators: Creator[] = [
     handle: '@sarahj_tech',
     avatar_url: '/placeholder.svg',
     platform: 'Instagram',
+    niche: 'Technology',
     followers_count: 125000,
     engagement_rate: 4.8,
-    niche: 'Technology',
-    location: 'San Francisco, CA',
-    rate_per_post: 2500,
     isShortlisted: false
   },
   {
@@ -42,11 +38,9 @@ const mockCreators: Creator[] = [
     handle: '@mikefitness',
     avatar_url: '/placeholder.svg',
     platform: 'YouTube',
-    followers_count: 89000,
-    engagement_rate: 6.2,
     niche: 'Fitness',
-    location: 'Los Angeles, CA',
-    rate_per_post: 1800,
+    followers_count: 250000,
+    engagement_rate: 5.5,
     isShortlisted: true
   },
   {
@@ -54,12 +48,10 @@ const mockCreators: Creator[] = [
     name: 'Emma Style',
     handle: '@emmastyle',
     avatar_url: '/placeholder.svg',
-    platform: 'Instagram',
-    followers_count: 95000,
-    engagement_rate: 5.5,
+    platform: 'TikTok',
     niche: 'Fashion',
-    location: 'New York, NY',
-    rate_per_post: 2200,
+    followers_count: 180000,
+    engagement_rate: 7.1,
     isShortlisted: false
   }
 ];
@@ -67,58 +59,80 @@ const mockCreators: Creator[] = [
 const DiscoverCreators = () => {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
-  const [platformFilter, setPlatformFilter] = useState('all');
-  const [nicheFilter, setNicheFilter] = useState('all');
-  const [creators, setCreators] = useState<Creator[]>(mockCreators);
+  const [platformFilter, setPlatformFilter] = useState<string>('all');
+  const [nicheFilter, setNicheFilter] = useState<string>('all');
+  const [isCallInProgress, setIsCallInProgress] = useState<Record<string, boolean>>({});
 
-  const filteredCreators = creators.filter(creator => {
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      if (!creator.name.toLowerCase().includes(searchLower) && 
-          !creator.handle.toLowerCase().includes(searchLower) &&
-          !creator.niche.toLowerCase().includes(searchLower)) {
-        return false;
-      }
-    }
+  const filteredCreators = mockCreators.filter(creator => {
+    const matchesSearch = creator.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         creator.handle.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesPlatform = platformFilter === 'all' || creator.platform.toLowerCase() === platformFilter.toLowerCase();
+    const matchesNiche = nicheFilter === 'all' || creator.niche.toLowerCase() === nicheFilter.toLowerCase();
     
-    if (platformFilter !== 'all' && creator.platform.toLowerCase() !== platformFilter) {
-      return false;
-    }
-    
-    if (nicheFilter !== 'all' && creator.niche.toLowerCase() !== nicheFilter.toLowerCase()) {
-      return false;
-    }
-    
-    return true;
+    return matchesSearch && matchesPlatform && matchesNiche;
   });
 
   const handleShortlist = (creatorId: string) => {
-    setCreators(prev => 
-      prev.map(creator => 
-        creator.id === creatorId 
-          ? { ...creator, isShortlisted: !creator.isShortlisted }
-          : creator
-      )
-    );
-    
-    const creator = creators.find(c => c.id === creatorId);
-    toast({
-      title: creator?.isShortlisted ? "Removed from shortlist" : "Added to shortlist",
-      description: `${creator?.name} has been ${creator?.isShortlisted ? 'removed from' : 'added to'} your shortlist.`,
-    });
+    const creator = mockCreators.find(c => c.id === creatorId);
+    if (creator) {
+      toast({
+        title: creator.isShortlisted ? "Removed from shortlist" : "Added to shortlist",
+        description: `${creator.name} has been ${creator.isShortlisted ? 'removed from' : 'added to'} your shortlist.`,
+      });
+    }
   };
 
-  const getPlatformColor = (platform: string) => {
-    switch (platform.toLowerCase()) {
-      case 'instagram':
-        return 'bg-pink-500/20 text-pink-400 border-pink-500/30';
-      case 'youtube':
-        return 'bg-red-500/20 text-red-400 border-red-500/30';
-      case 'tiktok':
-        return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
-      default:
-        return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+  const handlePhoneCall = async (creatorId: string, creatorName: string) => {
+    try {
+      setIsCallInProgress(prev => ({ ...prev, [creatorId]: true }));
+      toast({
+        title: "Initiating call",
+        description: `Starting a call with ${creatorName}...`,
+      });
+
+      const response = await fetch("https://api.elevenlabs.io//v1/convai/twilio/outbound-call", {
+        method: "POST",
+        headers: {
+          "Xi-Api-Key": "sk_97b3adae38c4d320bb4af66a35659213de2e129dc9546f84",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          "agent_id": "agent_01jwkpad6te50bmvfd8ax6xvqk",
+          "agent_phone_number_id": "phnum_01jwkwbn2terqtgd2nzxedgz0z",
+          "to_number": "+918140030507" // In a real app, this would come from the creator's data
+        }),
+      });
+
+      const body = await response.json();
+      console.log(body);
+
+      if (response.ok) {
+        toast({
+          title: "Call initiated",
+          description: `Connected with ${creatorName}`,
+        });
+      } else {
+        throw new Error('Failed to initiate call');
+      }
+    } catch (error) {
+      console.error('Error initiating call:', error);
+      toast({
+        title: "Call failed",
+        description: "Unable to initiate the call. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCallInProgress(prev => ({ ...prev, [creatorId]: false }));
     }
+  };
+
+  const formatFollowers = (count: number) => {
+    if (count >= 1000000) {
+      return `${(count / 1000000).toFixed(1)}M`;
+    } else if (count >= 1000) {
+      return `${(count / 1000).toFixed(0)}K`;
+    }
+    return count.toString();
   };
 
   return (
@@ -190,65 +204,58 @@ const DiscoverCreators = () => {
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-wrap gap-2">
-                  <Badge className={getPlatformColor(creator.platform)}>
-                    {creator.platform}
-                  </Badge>
-                  <Badge variant="outline" className="border-zinc-600 text-snow/70">
-                    {creator.niche}
-                  </Badge>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="flex items-center space-x-2">
-                    <Users className="h-4 w-4 text-coral" />
-                    <span className="text-snow/80">{creator.followers_count.toLocaleString()}</span>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline" className="border-blue-500/30 text-blue-500">
+                      {creator.platform}
+                    </Badge>
+                    <Badge variant="outline" className="border-purple-500/30 text-purple-500">
+                      {creator.niche}
+                    </Badge>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <TrendingUp className="h-4 w-4 text-coral" />
-                    <span className="text-snow/80">{creator.engagement_rate}%</span>
+                  
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-snow/60">Followers</p>
+                      <p className="text-snow font-medium">{formatFollowers(creator.followers_count)}</p>
+                    </div>
+                    <div>
+                      <p className="text-snow/60">Engagement</p>
+                      <p className="text-snow font-medium">{creator.engagement_rate}%</p>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Star className="h-4 w-4 text-coral" />
-                    <span className="text-snow/80">${creator.rate_per_post}</span>
+
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 border-zinc-700 text-snow hover:bg-zinc-800"
+                    >
+                      <MessageCircle className="h-4 w-4 mr-1" />
+                      Message
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handlePhoneCall(creator.id, creator.name)}
+                      disabled={isCallInProgress[creator.id]}
+                      className={`flex-1 ${
+                        isCallInProgress[creator.id]
+                          ? 'bg-green-500 border-green-500 text-white'
+                          : 'border-zinc-700 text-snow hover:bg-zinc-800'
+                      }`}
+                    >
+                      <Phone className="h-4 w-4 mr-1" />
+                      {isCallInProgress[creator.id] ? 'Calling...' : 'Call'}
+                    </Button>
                   </div>
-                </div>
-
-                <p className="text-snow/60 text-sm">{creator.location}</p>
-
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => handleShortlist(creator.id)}
-                    variant={creator.isShortlisted ? "default" : "outline"}
-                    size="sm"
-                    className={creator.isShortlisted 
-                      ? "bg-coral hover:bg-coral/90 text-white flex-1" 
-                      : "border-zinc-700 text-snow hover:bg-zinc-800 flex-1"
-                    }
-                  >
-                    {creator.isShortlisted ? 'Shortlisted' : 'Shortlist Creator'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-zinc-700 text-snow hover:bg-zinc-800"
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                  </Button>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
       </div>
-
-      {filteredCreators.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-snow/60 text-lg">No creators found matching your criteria.</p>
-          <p className="text-snow/40 text-sm mt-2">Try adjusting your search or filters.</p>
-        </div>
-      )}
     </div>
   );
 };

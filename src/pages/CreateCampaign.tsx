@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,28 +6,71 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Save, Users, Target, DollarSign, Calendar, FileText, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Save, Users, Target, DollarSign, Calendar, FileText, AlertCircle, Search, Loader2 } from 'lucide-react';
 import { InfluencerSearchModal } from '@/components/InfluencerSearchModal';
+import { findMatchingInfluencers } from '@/lib/openai';
+import { supabase } from '@/integrations/supabase/client';
+import type { Influencer } from '@/types/influencer';
+
+interface InfluencerWithMatch extends Influencer {
+  match_score?: number;
+  match_reason?: string;
+}
+
+const STORAGE_KEY = 'campaign_draft';
+
+// Default anonymous user ID for non-authenticated campaigns
+const ANONYMOUS_USER_ID = '00000000-0000-0000-0000-000000000000';
 
 const CreateCampaign = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
-  const [selectedInfluencers, setSelectedInfluencers] = useState<string[]>([]);
+  const [isMatchingInfluencers, setIsMatchingInfluencers] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    goals: '',
-    target_audience: '',
-    budget: '',
-    deliverables: '',
-    timeline: '',
-    brand: '',
-    status: 'draft',
+  // Initialize state from localStorage if available
+  const [formData, setFormData] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const { formData } = JSON.parse(saved);
+      return formData;
+    }
+    return {
+      name: '',
+      description: '',
+      goals: '',
+      target_audience: '',
+      budget: '',
+      deliverables: '',
+      timeline: '',
+      brand: '',
+      status: 'draft' as const,
+    };
   });
+
+  const [selectedInfluencers, setSelectedInfluencers] = useState<InfluencerWithMatch[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const { selectedInfluencers } = JSON.parse(saved);
+      return selectedInfluencers;
+    }
+    return [];
+  });
+
+  // Save to localStorage whenever form data or selected influencers change
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      formData,
+      selectedInfluencers
+    }));
+  }, [formData, selectedInfluencers]);
+
+  // Clear localStorage after successful campaign creation
+  const clearStoredData = () => {
+    localStorage.removeItem(STORAGE_KEY);
+  };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -69,6 +111,70 @@ const CreateCampaign = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleFindInfluencers = async () => {
+    if (!validateForm()) {
+      toast({
+        title: "Please complete the form",
+        description: "We need campaign details to find matching influencers.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsMatchingInfluencers(true);
+    try {
+      // Fetch all influencers from Supabase
+      const { data: allInfluencers, error } = await supabase
+        .from('influencers')
+        .select('*')
+        .order('followers_count', { ascending: false });
+
+      if (error) throw error;
+      if (!allInfluencers) throw new Error('No influencers found');
+      
+      // Use OpenRouter to find matches
+      const matches = await findMatchingInfluencers({
+        ...formData,
+        budget: parseFloat(formData.budget)
+      }, allInfluencers as Influencer[]);
+
+      // Fetch full influencer details for matches
+      const { data: matchedInfluencers, error: matchError } = await supabase
+        .from('influencers')
+        .select('*')
+        .in('id', matches.matches.map(m => m.influencer_id));
+
+      if (matchError) throw matchError;
+      if (!matchedInfluencers) throw new Error('Failed to fetch matched influencers');
+
+      // Add match scores and reasons to the influencer objects
+      const enrichedInfluencers = matchedInfluencers.map(inf => {
+        const match = matches.matches.find(m => m.influencer_id === inf.id);
+        return {
+          ...(inf as Influencer),
+          match_score: match?.match_score || 0,
+          match_reason: match?.match_reason || ''
+        };
+      });
+
+      setSelectedInfluencers(enrichedInfluencers);
+      
+      toast({
+        title: "Found matching influencers",
+        description: `Found ${enrichedInfluencers.length} influencers that match your campaign.`,
+      });
+    } catch (error) {
+      console.error('Error finding influencers:', error);
+      toast({
+        title: "Error finding influencers",
+        description: "Please try again or select influencers manually.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsMatchingInfluencers(false);
+    }
+  };
+
   const handleCreateCampaign = async () => {
     if (!validateForm()) {
       toast({
@@ -79,31 +185,91 @@ const CreateCampaign = () => {
       return;
     }
 
+    if (selectedInfluencers.length === 0) {
+      toast({
+        title: "No influencers selected",
+        description: "Please select at least one influencer for your campaign.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
-    // Simulate API call delay
-    setTimeout(() => {
+    try {
+      // Create the campaign in Supabase without requiring auth
+      const { data: campaign, error: campaignError } = await supabase
+        .from('campaigns')
+        .insert({
+          user_id: ANONYMOUS_USER_ID,
+          name: formData.name,
+          brand: formData.brand,
+          description: formData.description,
+          goals: formData.goals,
+          target_audience: formData.target_audience,
+          budget: parseFloat(formData.budget),
+          deliverables: formData.deliverables,
+          timeline: formData.timeline,
+          status: formData.status,
+          influencer_count: selectedInfluencers.length,
+          spent: 0,
+          reach: selectedInfluencers.reduce((sum, inf) => sum + inf.followers_count, 0),
+          engagement_rate: selectedInfluencers.reduce((sum, inf) => sum + inf.engagement_rate, 0) / selectedInfluencers.length,
+        })
+        .select()
+        .single();
+
+      if (campaignError) throw campaignError;
+      if (!campaign) throw new Error('Failed to create campaign');
+
+      // Create campaign-influencer relationships
+      const { error: relationError } = await supabase
+        .from('campaign_influencers')
+        .insert(
+          selectedInfluencers.map(inf => ({
+            campaign_id: campaign.id,
+            influencer_id: inf.id,
+            status: 'pending',
+            match_score: inf.match_score,
+            match_reason: inf.match_reason,
+            fee: 0, // Default fee value
+          }))
+        );
+
+      if (relationError) throw relationError;
+
+      // Clear stored data after successful creation
+      clearStoredData();
+
       toast({
         title: "Campaign created successfully",
         description: `${formData.name} has been created with ${selectedInfluencers.length} influencer(s).`,
       });
 
-      // Generate mock campaign ID and navigate
-      const mockCampaignId = Math.random().toString(36).substr(2, 9);
-      navigate(`/campaigns/${mockCampaignId}`);
+      navigate(`/campaigns/${campaign.id}`);
+    } catch (error) {
+      console.error('Error creating campaign:', error);
+      toast({
+        title: "Error creating campaign",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
       setIsSubmitting(false);
-    }, 1000);
+    }
   };
 
-  const handleAddInfluencers = (influencerIds: string[]) => {
+  const handleAddInfluencers = (influencers: Influencer[]) => {
     setSelectedInfluencers(prev => {
-      const newIds = influencerIds.filter(id => !prev.includes(id));
-      return [...prev, ...newIds];
+      const newInfluencers = influencers.filter(
+        inf => !prev.some(p => p.id === inf.id)
+      );
+      return [...prev, ...newInfluencers];
     });
   };
 
   const handleRemoveInfluencer = (influencerId: string) => {
-    setSelectedInfluencers(prev => prev.filter(id => id !== influencerId));
+    setSelectedInfluencers(prev => prev.filter(inf => inf.id !== influencerId));
   };
 
   return (
@@ -179,6 +345,54 @@ const CreateCampaign = () => {
                   </div>
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-snow mb-2">
+                    Description
+                  </label>
+                  <Textarea
+                    value={formData.description}
+                    onChange={(e) => handleInputChange('description', e.target.value)}
+                    placeholder="Enter campaign description"
+                    className="bg-zinc-800 border-zinc-700 text-snow min-h-[100px]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-snow mb-2">
+                    Goals *
+                  </label>
+                  <Textarea
+                    value={formData.goals}
+                    onChange={(e) => handleInputChange('goals', e.target.value)}
+                    placeholder="What are your campaign goals?"
+                    className={`bg-zinc-800 border-zinc-700 text-snow ${errors.goals ? 'border-red-500' : ''}`}
+                  />
+                  {errors.goals && (
+                    <p className="text-red-400 text-sm mt-1 flex items-center">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {errors.goals}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-snow mb-2">
+                    Target Audience *
+                  </label>
+                  <Textarea
+                    value={formData.target_audience}
+                    onChange={(e) => handleInputChange('target_audience', e.target.value)}
+                    placeholder="Describe your target audience"
+                    className={`bg-zinc-800 border-zinc-700 text-snow ${errors.target_audience ? 'border-red-500' : ''}`}
+                  />
+                  {errors.target_audience && (
+                    <p className="text-red-400 text-sm mt-1 flex items-center">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {errors.target_audience}
+                    </p>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-snow mb-2">
@@ -201,94 +415,17 @@ const CreateCampaign = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-snow mb-2">
-                      Status
+                      Timeline
                     </label>
-                    <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
-                      <SelectTrigger className="bg-zinc-800 border-zinc-700 text-snow">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-zinc-800 border-zinc-700">
-                        <SelectItem value="draft">Draft</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="active">Active</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Input
+                      value={formData.timeline}
+                      onChange={(e) => handleInputChange('timeline', e.target.value)}
+                      placeholder="e.g., 2 weeks, 1 month"
+                      className="bg-zinc-800 border-zinc-700 text-snow"
+                    />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-snow mb-2">
-                    Campaign Description
-                  </label>
-                  <Textarea
-                    value={formData.description}
-                    onChange={(e) => handleInputChange('description', e.target.value)}
-                    placeholder="Describe your campaign"
-                    className="bg-zinc-800 border-zinc-700 text-snow"
-                    rows={3}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Goals and Audience */}
-            <Card className="bg-zinc-900 border-zinc-800">
-              <CardHeader>
-                <CardTitle className="text-snow flex items-center">
-                  <Target className="h-5 w-5 mr-2 text-purple-500" />
-                  Goals & Audience
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-snow mb-2">
-                    Campaign Goals *
-                  </label>
-                  <Textarea
-                    value={formData.goals}
-                    onChange={(e) => handleInputChange('goals', e.target.value)}
-                    placeholder="What do you want to achieve with this campaign?"
-                    className={`bg-zinc-800 border-zinc-700 text-snow ${errors.goals ? 'border-red-500' : ''}`}
-                    rows={3}
-                  />
-                  {errors.goals && (
-                    <p className="text-red-400 text-sm mt-1 flex items-center">
-                      <AlertCircle className="h-4 w-4 mr-1" />
-                      {errors.goals}
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-snow mb-2">
-                    Target Audience *
-                  </label>
-                  <Textarea
-                    value={formData.target_audience}
-                    onChange={(e) => handleInputChange('target_audience', e.target.value)}
-                    placeholder="Describe your target audience (demographics, interests, etc.)"
-                    className={`bg-zinc-800 border-zinc-700 text-snow ${errors.target_audience ? 'border-red-500' : ''}`}
-                    rows={3}
-                  />
-                  {errors.target_audience && (
-                    <p className="text-red-400 text-sm mt-1 flex items-center">
-                      <AlertCircle className="h-4 w-4 mr-1" />
-                      {errors.target_audience}
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Deliverables and Timeline */}
-            <Card className="bg-zinc-900 border-zinc-800">
-              <CardHeader>
-                <CardTitle className="text-snow flex items-center">
-                  <FileText className="h-5 w-5 mr-2 text-purple-500" />
-                  Deliverables & Timeline
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-snow mb-2">
                     Deliverables *
@@ -296,9 +433,8 @@ const CreateCampaign = () => {
                   <Textarea
                     value={formData.deliverables}
                     onChange={(e) => handleInputChange('deliverables', e.target.value)}
-                    placeholder="What content/deliverables do you expect? (e.g., 1 Instagram post, 3 stories, 1 reel)"
+                    placeholder="What do you expect from influencers?"
                     className={`bg-zinc-800 border-zinc-700 text-snow ${errors.deliverables ? 'border-red-500' : ''}`}
-                    rows={3}
                   />
                   {errors.deliverables && (
                     <p className="text-red-400 text-sm mt-1 flex items-center">
@@ -307,107 +443,118 @@ const CreateCampaign = () => {
                     </p>
                   )}
                 </div>
+              </CardContent>
+            </Card>
 
-                <div>
-                  <label className="block text-sm font-medium text-snow mb-2">
-                    Timeline
-                  </label>
-                  <Input
-                    value={formData.timeline}
-                    onChange={(e) => handleInputChange('timeline', e.target.value)}
-                    placeholder="e.g., 4 weeks, Q1 2024, March 2024"
-                    className="bg-zinc-800 border-zinc-700 text-snow"
-                  />
-                </div>
+            {/* Influencer Selection */}
+            <Card className="bg-zinc-900 border-zinc-800">
+              <CardHeader>
+                <CardTitle className="text-snow flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Users className="h-5 w-5 mr-2 text-purple-500" />
+                    Selected Influencers
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={handleFindInfluencers}
+                      disabled={isMatchingInfluencers}
+                      className="bg-zinc-800 border-zinc-700 text-snow hover:bg-zinc-700"
+                    >
+                      {isMatchingInfluencers ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Search className="h-4 w-4 mr-2" />
+                      )}
+                      Find Matching Influencers
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setSearchModalOpen(true)}
+                      className="bg-zinc-800 border-zinc-700 text-snow hover:bg-zinc-700"
+                    >
+                      <Users className="h-4 w-4 mr-2" />
+                      Browse All
+                    </Button>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {selectedInfluencers.length === 0 ? (
+                  <div className="text-center py-8 text-snow/70">
+                    No influencers selected yet. Click "Find Matching Influencers" or browse all.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {selectedInfluencers.map((influencer) => (
+                      <div
+                        key={influencer.id}
+                        className="flex items-center justify-between p-4 bg-zinc-800 rounded-lg"
+                      >
+                        <div className="flex items-center space-x-4">
+                          {influencer.avatar_url && (
+                            <img
+                              src={influencer.avatar_url}
+                              alt={influencer.name}
+                              className="h-10 w-10 rounded-full"
+                            />
+                          )}
+                          <div>
+                            <h3 className="text-snow font-medium">{influencer.name}</h3>
+                            <p className="text-snow/70 text-sm">
+                              {influencer.platform} • {influencer.followers_count.toLocaleString()} followers
+                            </p>
+                            {'match_score' in influencer && (
+                              <p className="text-xs text-purple-400 mt-1">
+                                Match Score: {influencer.match_score}% - {influencer.match_reason}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveInfluencer(influencer.id)}
+                          className="text-red-400 hover:text-red-500 hover:bg-red-500/10"
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Selected Influencers */}
             <Card className="bg-zinc-900 border-zinc-800">
               <CardHeader>
-                <CardTitle className="text-snow flex items-center">
-                  <Users className="h-5 w-5 mr-2 text-purple-500" />
-                  Selected Influencers ({selectedInfluencers.length})
-                </CardTitle>
+                <CardTitle className="text-snow">Campaign Summary</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <Button
-                    onClick={() => setSearchModalOpen(true)}
-                    variant="outline"
-                    className="w-full border-zinc-700 text-snow hover:bg-zinc-800"
-                  >
-                    <Users className="h-4 w-4 mr-2" />
-                    Add Influencers
-                  </Button>
-                  
-                  {selectedInfluencers.length === 0 ? (
-                    <p className="text-sm text-snow/60 text-center py-4">
-                      No influencers selected yet. Add influencers to your campaign.
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {selectedInfluencers.map((influencerId) => (
-                        <div
-                          key={influencerId}
-                          className="flex items-center justify-between p-2 bg-zinc-800 rounded"
-                        >
-                          <span className="text-sm text-snow">Influencer {influencerId.slice(0, 8)}...</span>
-                          <Button
-                            onClick={() => handleRemoveInfluencer(influencerId)}
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-400 hover:text-red-300 h-6 w-6 p-0"
-                          >
-                            ×
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+              <CardContent className="space-y-4">
+                <div>
+                  <p className="text-sm text-snow/70">Selected Influencers</p>
+                  <p className="text-2xl font-bold text-snow">{selectedInfluencers.length}</p>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Campaign Summary */}
-            <Card className="bg-zinc-900 border-zinc-800">
-              <CardHeader>
-                <CardTitle className="text-snow flex items-center">
-                  <DollarSign className="h-5 w-5 mr-2 text-purple-500" />
-                  Campaign Summary
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-snow/70">Budget:</span>
-                  <span className="text-snow font-medium">
+                <div>
+                  <p className="text-sm text-snow/70">Total Budget</p>
+                  <p className="text-2xl font-bold text-snow">
                     ${formData.budget ? parseFloat(formData.budget).toLocaleString() : '0'}
-                  </span>
+                  </p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-snow/70">Influencers:</span>
-                  <span className="text-snow font-medium">{selectedInfluencers.length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-snow/70">Status:</span>
-                  <span className="text-snow font-medium capitalize">{formData.status}</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Create Campaign Button */}
-            <Card className="bg-zinc-900 border-zinc-800">
-              <CardContent className="pt-6">
                 <Button
+                  className="w-full bg-purple-500 hover:bg-purple-600 text-white"
                   onClick={handleCreateCampaign}
                   disabled={isSubmitting}
-                  className="w-full bg-purple-500 hover:bg-purple-600"
                 >
-                  <Save className="h-4 w-4 mr-2" />
-                  {isSubmitting ? 'Creating Campaign...' : 'Create Campaign'}
+                  {isSubmitting ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  Create Campaign
                 </Button>
               </CardContent>
             </Card>
@@ -415,12 +562,10 @@ const CreateCampaign = () => {
         </div>
       </div>
 
-      {/* Influencer Search Modal */}
       <InfluencerSearchModal
         open={searchModalOpen}
-        onOpenChange={setSearchModalOpen}
-        onSelectInfluencers={handleAddInfluencers}
-        selectedInfluencers={selectedInfluencers}
+        onClose={() => setSearchModalOpen(false)}
+        onSelect={handleAddInfluencers}
       />
     </div>
   );

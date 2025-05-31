@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -11,91 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Search, Plus, ArrowLeft, Bell, Filter, Calendar, DollarSign } from 'lucide-react';
 import { motion } from 'framer-motion';
 import NotificationCenter from '@/components/NotificationCenter';
-
-interface Campaign {
-  id: string;
-  name: string;
-  description: string | null;
-  goals: string | null;
-  target_audience: string | null;
-  budget: number;
-  deliverables: string | null;
-  timeline: string | null;
-  status: string;
-  brand: string;
-  user_id: string;
-  created_at: string;
-  updated_at: string;
-  influencer_count?: number;
-}
-
-// Mock campaigns data
-const mockCampaigns: Campaign[] = [
-  {
-    id: '1',
-    name: 'Tech Product Launch',
-    description: 'Launch campaign for our new tech product line with focus on early adopters',
-    goals: 'Increase brand awareness and drive pre-orders',
-    target_audience: 'Tech enthusiasts, ages 25-45',
-    budget: 15000,
-    deliverables: 'Instagram posts, YouTube reviews, blog articles',
-    timeline: '3 months',
-    status: 'active',
-    brand: 'TechCorp',
-    user_id: 'mock-user-123',
-    created_at: '2024-01-15T10:30:00Z',
-    updated_at: '2024-01-15T10:30:00Z',
-    influencer_count: 5
-  },
-  {
-    id: '2',
-    name: 'Fashion Summer Collection',
-    description: 'Promote our new summer fashion collection targeting young professionals',
-    goals: 'Drive sales and increase social media engagement',
-    target_audience: 'Fashion-conscious professionals, ages 22-35',
-    budget: 8000,
-    deliverables: 'Instagram stories, TikTok videos, outfit posts',
-    timeline: '2 months',
-    status: 'draft',
-    brand: 'StyleBrand',
-    user_id: 'mock-user-123',
-    created_at: '2024-01-10T14:20:00Z',
-    updated_at: '2024-01-10T14:20:00Z',
-    influencer_count: 3
-  },
-  {
-    id: '3',
-    name: 'Fitness App Promotion',
-    description: 'Increase app downloads and engagement through fitness influencer partnerships',
-    goals: 'Boost app downloads by 40% and increase user retention',
-    target_audience: 'Fitness enthusiasts, ages 18-40',
-    budget: 12000,
-    deliverables: 'Workout videos, app reviews, fitness challenges',
-    timeline: '6 weeks',
-    status: 'completed',
-    brand: 'FitLife',
-    user_id: 'mock-user-123',
-    created_at: '2024-01-05T09:15:00Z',
-    updated_at: '2024-01-05T09:15:00Z',
-    influencer_count: 7
-  },
-  {
-    id: '4',
-    name: 'Sustainable Beauty Line',
-    description: 'Launch eco-friendly beauty products with sustainability-focused creators',
-    goals: 'Build brand credibility and drive conscious consumer adoption',
-    target_audience: 'Eco-conscious consumers, ages 25-50',
-    budget: 20000,
-    deliverables: 'Product reviews, sustainability content, tutorials',
-    timeline: '4 months',
-    status: 'pending',
-    brand: 'GreenBeauty',
-    user_id: 'mock-user-123',
-    created_at: '2024-01-20T16:45:00Z',
-    updated_at: '2024-01-20T16:45:00Z',
-    influencer_count: 4
-  }
-];
+import { supabase } from '@/integrations/supabase/client';
+import type { Campaign } from '@/types/campaign';
 
 const Campaigns = () => {
   const navigate = useNavigate();
@@ -103,14 +19,41 @@ const Campaigns = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showNotifications, setShowNotifications] = useState(false);
-  const [campaigns, setCampaigns] = useState<Campaign[]>(mockCampaigns);
-  const [isLoading, setIsLoading] = useState(false);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Mock user data
   const mockUser = {
     id: 'mock-user-123',
     email: 'brand@example.com'
   };
+
+  // Fetch campaigns from Supabase
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('campaigns')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        
+        setCampaigns(data || []);
+      } catch (error) {
+        console.error('Error fetching campaigns:', error);
+        toast({
+          title: "Error loading campaigns",
+          description: "Please try again later.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCampaigns();
+  }, [toast]);
 
   // Filter campaigns based on search and status
   const filteredCampaigns = campaigns.filter(campaign => {

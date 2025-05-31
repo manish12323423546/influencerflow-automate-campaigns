@@ -4,9 +4,11 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, Plus } from 'lucide-react';
+import { Send, Plus, Phone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { NewOutreachModal } from '@/components/NewOutreachModal';
+import { useToast } from '@/hooks/use-toast';
+import { conversationalAIService } from '@/services/conversationalAI';
 
 interface Chat {
   id: string;
@@ -98,10 +100,12 @@ const mockMessages: Record<string, Message[]> = {
 
 const OutreachesManager = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [selectedChat, setSelectedChat] = useState<string>('1');
   const [newMessage, setNewMessage] = useState('');
   const [chats] = useState<Chat[]>(mockChats);
   const [newOutreachModalOpen, setNewOutreachModalOpen] = useState(false);
+  const [isCallInProgress, setIsCallInProgress] = useState(false);
 
   const currentMessages = mockMessages[selectedChat] || [];
   const currentChat = chats.find(chat => chat.id === selectedChat);
@@ -136,6 +140,65 @@ const OutreachesManager = () => {
   const handleCreateOutreach = (creatorId: string) => {
     // Add logic to create new outreach with the selected creator
     console.log('Creating outreach with creator:', creatorId);
+  };
+
+  const handlePhoneCall = async () => {
+    if (!currentChat) return;
+    
+    try {
+      setIsCallInProgress(true);
+      toast({
+        title: "Initiating call",
+        description: `Starting a call with ${currentChat.creatorName}...`,
+      });
+
+      // In a real implementation, you would get this data from your backend
+      const campaignData = {
+        campaign_id: 'campaign_001',
+        campaign_name: 'Product Launch Campaign',
+        brand_name: 'Your Brand',
+        brief: 'We are looking to collaborate on our new product launch',
+        deliverables: ['Social Media Post', 'Story']
+      };
+
+      // In a real implementation, you would get the phone number from your backend
+      const phoneNumber = '+1234567890'; // This should come from your backend
+      
+      const response = await conversationalAIService.initiateOutboundCall(phoneNumber, campaignData);
+      
+      if (response.success) {
+        toast({
+          title: "Call initiated",
+          description: `Connected with ${currentChat.creatorName}`,
+        });
+
+        // Poll for call status
+        const statusCheckInterval = setInterval(async () => {
+          try {
+            const statusResponse = await conversationalAIService.getCallStatus(response.call_id);
+            if (statusResponse.status === 'completed' || statusResponse.status === 'failed') {
+              clearInterval(statusCheckInterval);
+              setIsCallInProgress(false);
+              
+              toast({
+                title: statusResponse.status === 'completed' ? "Call completed" : "Call failed",
+                description: `Call with ${currentChat.creatorName} has ${statusResponse.status}`,
+              });
+            }
+          } catch (error) {
+            console.error('Error checking call status:', error);
+          }
+        }, 5000); // Check every 5 seconds
+      }
+    } catch (error) {
+      console.error('Error initiating call:', error);
+      toast({
+        title: "Call failed",
+        description: "Unable to initiate the call. Please try again.",
+        variant: "destructive",
+      });
+      setIsCallInProgress(false);
+    }
   };
 
   return (
@@ -227,8 +290,20 @@ const OutreachesManager = () => {
                         <p className="text-sm text-snow/60">{currentChat.creatorHandle}</p>
                       </div>
                     </div>
-                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(currentChat.status)} text-white`}>
-                      {currentChat.status}
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        onClick={handlePhoneCall}
+                        disabled={isCallInProgress || currentChat.status === 'new'}
+                        className={`${
+                          isCallInProgress ? 'bg-green-500' : 'bg-coral'
+                        } hover:bg-coral/90 text-white`}
+                      >
+                        <Phone className="h-4 w-4 mr-2" />
+                        {isCallInProgress ? 'Call in Progress' : 'Call Creator'}
+                      </Button>
+                      <div className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(currentChat.status)} text-white`}>
+                        {currentChat.status}
+                      </div>
                     </div>
                   </div>
                 </CardHeader>

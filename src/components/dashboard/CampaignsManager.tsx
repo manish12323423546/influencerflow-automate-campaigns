@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -7,18 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search } from 'lucide-react';
-
-interface Campaign {
-  id: string;
-  name: string;
-  brand: string;
-  status: 'active' | 'completed' | 'draft' | 'paused';
-  budget: number;
-  spent: number;
-  influencer_count: number;
-  reach: number;
-  engagement_rate: number;
-}
+import type { Campaign } from '@/types/campaign';
 
 interface CampaignsManagerProps {
   campaigns: Campaign[];
