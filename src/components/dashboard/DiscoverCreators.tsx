@@ -1,9 +1,11 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Search, Star, Users, TrendingUp, MessageSquare, Heart, MessageCircle, Phone, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,12 +20,34 @@ interface Creator {
   followers_count: number;
   engagement_rate: number;
   phone_no: number | null;
+  gmail_gmail: string | null;
   isShortlisted: boolean;
+}
+
+interface Campaign {
+  id: string;
+  name: string;
+  brand: string;
+  status: string;
+  budget: number;
+  spent: number;
+  influencer_count: number;
+  reach: number;
+  engagement_rate: number;
+  goals: string | null;
+  target_audience: string | null;
+  deliverables: string | null;
+  timeline: string | null;
+  description: string | null;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
 }
 
 const DiscoverCreators = () => {
   const { toast } = useToast();
   const [creators, setCreators] = useState<Creator[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [platformFilter, setPlatformFilter] = useState<string>('all');
@@ -31,19 +55,22 @@ const DiscoverCreators = () => {
   const [isCallInProgress, setIsCallInProgress] = useState<Record<string, boolean>>({});
   const [isGmailInProgress, setIsGmailInProgress] = useState<Record<string, boolean>>({});
   const [gmailResponses, setGmailResponses] = useState<Record<string, any>>({});
+  const [selectedCreatorForGmail, setSelectedCreatorForGmail] = useState<Creator | null>(null);
+  const [isGmailModalOpen, setIsGmailModalOpen] = useState(false);
 
   useEffect(() => {
-    const fetchCreators = async () => {
+    const fetchData = async () => {
       try {
-        const { data, error } = await supabase
+        // Fetch creators
+        const { data: creatorsData, error: creatorsError } = await supabase
           .from('influencers')
           .select('*')
           .order('followers_count', { ascending: false });
 
-        if (error) throw error;
+        if (creatorsError) throw creatorsError;
         
         // Transform the data to match Creator interface
-        const transformedData = (data || []).map(influencer => ({
+        const transformedData = (creatorsData || []).map(influencer => ({
           id: influencer.id,
           name: influencer.name,
           handle: influencer.handle,
@@ -53,14 +80,25 @@ const DiscoverCreators = () => {
           followers_count: influencer.followers_count,
           engagement_rate: Number(influencer.engagement_rate),
           phone_no: influencer.phone_no,
+          gmail_gmail: influencer.gmail_gmail,
           isShortlisted: false // This could be fetched from a separate table
         }));
         
         setCreators(transformedData);
+
+        // Fetch campaigns
+        const { data: campaignsData, error: campaignsError } = await supabase
+          .from('campaigns')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (campaignsError) throw campaignsError;
+        setCampaigns(campaignsData || []);
+
       } catch (error) {
-        console.error('Error fetching creators:', error);
+        console.error('Error fetching data:', error);
         toast({
-          title: "Error loading creators",
+          title: "Error loading data",
           description: "Please try again later.",
           variant: "destructive",
         });
@@ -69,7 +107,7 @@ const DiscoverCreators = () => {
       }
     };
 
-    fetchCreators();
+    fetchData();
   }, [toast]);
 
   const filteredCreators = creators.filter(creator => {
@@ -152,37 +190,63 @@ const DiscoverCreators = () => {
     }
   };
 
-  const handleGmailSend = async (creatorId: string, creatorName: string) => {
+  const handleGmailClick = (creator: Creator) => {
+    if (!creator.gmail_gmail) {
+      toast({
+        title: "Gmail not available",
+        description: `No Gmail address found for ${creator.name}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    setSelectedCreatorForGmail(creator);
+    setIsGmailModalOpen(true);
+  };
+
+  const handleGmailSend = async (campaignId: string) => {
+    if (!selectedCreatorForGmail) return;
+
+    const selectedCampaign = campaigns.find(c => c.id === campaignId);
+    if (!selectedCampaign) return;
+
     try {
-      setIsGmailInProgress(prev => ({ ...prev, [creatorId]: true }));
+      setIsGmailInProgress(prev => ({ ...prev, [selectedCreatorForGmail.id]: true }));
       
       toast({
         title: "Sending...",
-        description: `Sending workflow for ${creatorName}...`,
+        description: `Sending Gmail workflow for ${selectedCreatorForGmail.name}...`,
       });
 
-      console.log('Sending Gmail workflow for creator:', creatorName);
+      console.log('Sending Gmail workflow for creator:', selectedCreatorForGmail.name);
+
+      const requestBody = {
+        gmail: selectedCreatorForGmail.gmail_gmail,
+        campaign: selectedCampaign,
+        creator: selectedCreatorForGmail
+      };
+
+      console.log('Request body:', requestBody);
 
       const response = await fetch("https://varhhh.app.n8n.cloud/webhook/08b089ba-1617-4d04-a5c7-f9b7d8ca57c4", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          "Send": "Send"
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const responseData = await response.json();
       console.log('Gmail workflow response:', responseData);
 
       if (response.ok) {
-        setGmailResponses(prev => ({ ...prev, [creatorId]: responseData }));
+        setGmailResponses(prev => ({ ...prev, [selectedCreatorForGmail.id]: responseData }));
         
         toast({
           title: "Workflow Successful",
-          description: `Gmail workflow completed for ${creatorName} (200 OK)`,
+          description: `Gmail workflow completed for ${selectedCreatorForGmail.name} (200 OK)`,
         });
+        setIsGmailModalOpen(false);
+        setSelectedCreatorForGmail(null);
       } else {
         throw new Error(`Failed to send workflow: ${response.status}`);
       }
@@ -194,7 +258,7 @@ const DiscoverCreators = () => {
         variant: "destructive",
       });
     } finally {
-      setIsGmailInProgress(prev => ({ ...prev, [creatorId]: false }));
+      setIsGmailInProgress(prev => ({ ...prev, [selectedCreatorForGmail.id]: false }));
     }
   };
 
@@ -210,6 +274,11 @@ const DiscoverCreators = () => {
   const formatPhoneNumber = (phoneNumber: number | null) => {
     if (!phoneNumber) return 'Not available';
     return `+${phoneNumber}`;
+  };
+
+  const formatGmail = (gmail: string | null) => {
+    if (!gmail) return 'Not available';
+    return gmail;
   };
 
   // Get unique platforms and industries for filters
@@ -262,6 +331,34 @@ const DiscoverCreators = () => {
           </SelectContent>
         </Select>
       </div>
+
+      {/* Campaign Selection Modal */}
+      <Dialog open={isGmailModalOpen} onOpenChange={setIsGmailModalOpen}>
+        <DialogContent className="bg-zinc-800 border-zinc-700 text-snow">
+          <DialogHeader>
+            <DialogTitle>Select Campaign for {selectedCreatorForGmail?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-snow/70">Choose a campaign to send Gmail workflow for:</p>
+            <div className="grid gap-2 max-h-60 overflow-y-auto">
+              {campaigns.map((campaign) => (
+                <Button
+                  key={campaign.id}
+                  variant="outline"
+                  onClick={() => handleGmailSend(campaign.id)}
+                  disabled={isGmailInProgress[selectedCreatorForGmail?.id || '']}
+                  className="justify-start border-zinc-700 text-snow hover:bg-zinc-700"
+                >
+                  <div className="text-left">
+                    <div className="font-medium">{campaign.name}</div>
+                    <div className="text-xs text-snow/60">{campaign.brand} - {campaign.status}</div>
+                  </div>
+                </Button>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Influencer Leaderboard */}
       <div>
@@ -332,6 +429,12 @@ const DiscoverCreators = () => {
                       <p className="text-snow text-sm font-medium">{formatPhoneNumber(creator.phone_no)}</p>
                     </div>
 
+                    {/* Gmail Display */}
+                    <div className="bg-zinc-700/30 rounded-md p-3">
+                      <p className="text-snow/60 text-xs mb-1">Gmail</p>
+                      <p className="text-snow text-sm font-medium">{formatGmail(creator.gmail_gmail)}</p>
+                    </div>
+
                     {/* Gmail Response Display */}
                     {gmailResponses[creator.id] && (
                       <div className="bg-green-500/10 border border-green-500/30 rounded-md p-3 mt-3">
@@ -370,11 +473,13 @@ const DiscoverCreators = () => {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handleGmailSend(creator.id, creator.name)}
-                        disabled={isGmailInProgress[creator.id]}
+                        onClick={() => handleGmailClick(creator)}
+                        disabled={isGmailInProgress[creator.id] || !creator.gmail_gmail}
                         className={`col-span-2 ${
                           isGmailInProgress[creator.id]
                             ? 'bg-coral border-coral text-white'
+                            : !creator.gmail_gmail
+                            ? 'bg-gray-500 border-gray-500 text-gray-300 cursor-not-allowed'
                             : 'border-zinc-700 text-snow hover:bg-zinc-800'
                         }`}
                       >

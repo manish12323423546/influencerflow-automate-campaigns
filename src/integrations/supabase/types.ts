@@ -289,6 +289,7 @@ export type Database = {
           engagement_rate: number
           fake_follower_score: number
           followers_count: number
+          gmail_gmail: string | null
           handle: string
           id: string
           industry: string
@@ -310,6 +311,7 @@ export type Database = {
           engagement_rate?: number
           fake_follower_score?: number
           followers_count?: number
+          gmail_gmail?: string | null
           handle: string
           id?: string
           industry: string
@@ -331,6 +333,7 @@ export type Database = {
           engagement_rate?: number
           fake_follower_score?: number
           followers_count?: number
+          gmail_gmail?: string | null
           handle?: string
           id?: string
           industry?: string
