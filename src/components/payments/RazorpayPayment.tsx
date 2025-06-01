@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -72,20 +71,20 @@ const RazorpayPayment = ({
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [paymentData, setPaymentData] = useState({
-    amount: defaultAmount?.toString() || '',
+    amount: defaultAmount?.toString() || '5000',
     currency: 'INR',
     paymentType: 'milestone'
   });
 
   // Update amount when defaultAmount changes
-  useState(() => {
+  useEffect(() => {
     if (defaultAmount) {
       setPaymentData(prev => ({
         ...prev,
         amount: defaultAmount.toString()
       }));
     }
-  });
+  }, [defaultAmount]);
 
   const loadRazorpayScript = () => {
     return new Promise<boolean>((resolve) => {
@@ -252,8 +251,10 @@ const RazorpayPayment = ({
               disabled={!!defaultAmount}
               className={defaultAmount ? "bg-gray-100 cursor-not-allowed" : ""}
             />
-            {defaultAmount && (
+            {defaultAmount ? (
               <p className="text-xs text-gray-500">Amount is pre-filled from the selected payment</p>
+            ) : (
+              <p className="text-xs text-gray-500">Default amount: ₹5,000</p>
             )}
           </div>
           
