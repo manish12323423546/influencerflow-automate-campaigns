@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   Users, TrendingUp, DollarSign, Target, Bell, Activity, Settings, Plus,
-  BarChart3, MessageSquare, FileText, CreditCard, Search, Headphones
+  BarChart3, MessageSquare, FileText, CreditCard, Search, Headphones, Database
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import CampaignsManager from '@/components/dashboard/CampaignsManager';
@@ -14,6 +13,7 @@ import OutreachesManager from '@/components/dashboard/OutreachesManager';
 import ContractsManager from '@/components/dashboard/ContractsManager';
 import PaymentsManager from '@/components/dashboard/PaymentsManager';
 import ConversationsManager from '@/components/dashboard/ConversationsManager';
+import KnowledgeBaseManager from '@/components/dashboard/KnowledgeBaseManager';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Campaign } from '@/types/campaign';
@@ -21,7 +21,7 @@ import type { Campaign } from '@/types/campaign';
 const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'campaigns' | 'discover' | 'outreach' | 'contracts' | 'payments' | 'conversations'>('campaigns');
+  const [activeTab, setActiveTab] = useState<'campaigns' | 'discover' | 'outreach' | 'contracts' | 'payments' | 'conversations' | 'knowledge'>('campaigns');
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [totalInfluencers, setTotalInfluencers] = useState(0);
@@ -111,6 +111,7 @@ const Dashboard = () => {
     { id: 'contracts', label: 'Contracts', icon: FileText, description: 'Manage contracts' },
     { id: 'payments', label: 'Payments', icon: CreditCard, description: 'Handle payments' },
     { id: 'conversations', label: 'Conversations', icon: Headphones, description: 'Manage AI conversations' },
+    { id: 'knowledge', label: 'Knowledge Base', icon: Database, description: 'Manage AI knowledge' },
   ];
 
   if (isLoading) {
@@ -271,6 +272,7 @@ const Dashboard = () => {
           {activeTab === 'contracts' && <ContractsManager />}
           {activeTab === 'payments' && <PaymentsManager />}
           {activeTab === 'conversations' && <ConversationsManager />}
+          {activeTab === 'knowledge' && <KnowledgeBaseManager />}
         </div>
       </div>
     </div>
