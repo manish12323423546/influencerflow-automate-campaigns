@@ -181,13 +181,13 @@ const CampaignOpportunities = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
         <div>
-          <h2 className="text-2xl font-semibold text-snow">Campaign Opportunities</h2>
-          <p className="text-snow/60">Brand collaboration offers waiting for your response</p>
+          <h2 className="text-xl sm:text-2xl font-semibold text-snow">Campaign Opportunities</h2>
+          <p className="text-sm sm:text-base text-snow/60">Brand collaboration offers waiting for your response</p>
         </div>
-        <Badge className="bg-purple-500/10 text-purple-500">
+        <Badge className="bg-purple-500/10 text-purple-500 self-start sm:self-auto text-xs sm:text-sm">
           {opportunities.filter(opp => opp.status === 'pending').length} pending
         </Badge>
       </div>
@@ -198,16 +198,16 @@ const CampaignOpportunities = () => {
         </div>
       ) : opportunities.length === 0 ? (
         <Card className="bg-zinc-900 border-zinc-800">
-          <CardContent className="text-center py-12">
-            <Briefcase className="h-12 w-12 mx-auto mb-4 text-snow/30" />
-            <h3 className="text-lg font-medium text-snow mb-2">No opportunities yet</h3>
-            <p className="text-snow/60">
+          <CardContent className="text-center py-8 sm:py-12">
+            <Briefcase className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-4 text-snow/30" />
+            <h3 className="text-base sm:text-lg font-medium text-snow mb-2">No opportunities yet</h3>
+            <p className="text-sm sm:text-base text-snow/60 max-w-md mx-auto">
               Brands will send collaboration offers here. Make sure your profile is complete to attract more opportunities!
             </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {opportunities.map((opportunity, index) => (
             <motion.div
               key={opportunity.id}
@@ -216,30 +216,31 @@ const CampaignOpportunities = () => {
               transition={{ delay: index * 0.1 }}
             >
               <Card className="bg-zinc-900 border-zinc-800 hover:border-purple-500/50 transition-colors">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-4">
-                      <Avatar className="h-12 w-12">
+                <CardHeader className="p-4 sm:p-6">
+                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between space-y-3 lg:space-y-0">
+                    <div className="flex items-start space-x-3 sm:space-x-4 flex-1">
+                      <Avatar className="h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0">
                         <AvatarImage src={opportunity.brand_logo} alt={opportunity.brand_name} />
-                        <AvatarFallback className="bg-purple-500 text-white">
+                        <AvatarFallback className="bg-purple-500 text-white text-sm">
                           {opportunity.brand_name.split(' ').map(n => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>
-                      <div>
-                        <h3 className="text-lg font-semibold text-snow">{opportunity.campaign_name}</h3>
-                        <p className="text-snow/60">{opportunity.brand_name}</p>
-                        <div className="flex items-center space-x-4 mt-2">
-                          <span className="text-sm text-snow/50 flex items-center">
-                            <DollarSign className="h-4 w-4 mr-1" />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base sm:text-lg font-semibold text-snow truncate">{opportunity.campaign_name}</h3>
+                        <p className="text-snow/60 text-sm sm:text-base">{opportunity.brand_name}</p>
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2">
+                          <span className="text-xs sm:text-sm text-snow/50 flex items-center">
+                            <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                             ${opportunity.rate.toLocaleString()}
                           </span>
-                          <span className="text-sm text-snow/50 flex items-center">
-                            <Clock className="h-4 w-4 mr-1" />
-                            {formatDeadline(opportunity.deadline)}
+                          <span className="text-xs sm:text-sm text-snow/50 flex items-center">
+                            <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                            <span className="hidden sm:inline">{formatDeadline(opportunity.deadline)}</span>
+                            <span className="sm:hidden">{formatDeadline(opportunity.deadline).replace(' left', '')}</span>
                           </span>
                           {opportunity.location && (
-                            <span className="text-sm text-snow/50 flex items-center">
-                              <MapPin className="h-4 w-4 mr-1" />
+                            <span className="text-xs sm:text-sm text-snow/50 flex items-center">
+                              <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                               {opportunity.location}
                             </span>
                           )}
@@ -247,89 +248,91 @@ const CampaignOpportunities = () => {
                       </div>
                     </div>
                     
-                    <Badge className={getStatusColor(opportunity.status)}>
+                    <Badge className={`${getStatusColor(opportunity.status)} self-start lg:self-auto text-xs sm:text-sm`}>
                       {opportunity.status}
                     </Badge>
                   </div>
                 </CardHeader>
                 
-                <CardContent className="space-y-4">
+                <CardContent className="p-4 sm:p-6 pt-0 space-y-3 sm:space-y-4">
                   <div>
                     <h4 className="text-sm font-medium text-snow mb-2">Campaign Brief</h4>
-                    <p className="text-snow/80 text-sm leading-relaxed">{opportunity.brief}</p>
+                    <p className="text-snow/80 text-xs sm:text-sm leading-relaxed">{opportunity.brief}</p>
                   </div>
                   
                   <div>
                     <h4 className="text-sm font-medium text-snow mb-2">Deliverables</h4>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1 sm:gap-2">
                       {opportunity.deliverables.map((deliverable, idx) => (
-                        <Badge key={idx} variant="outline" className="border-zinc-700 text-snow/70">
+                        <Badge key={idx} variant="outline" className="border-zinc-700 text-snow/70 text-xs">
                           {deliverable}
                         </Badge>
                       ))}
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-2 pt-4">
-                    <Badge variant="outline" className="border-blue-500/30 text-blue-500">
-                      {opportunity.platform}
-                    </Badge>
-                    <span className="text-xs text-snow/50">
-                      Received {new Date(opportunity.created_at).toLocaleDateString()}
-                    </span>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0 pt-2 sm:pt-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="outline" className="border-blue-500/30 text-blue-500 text-xs">
+                        {opportunity.platform}
+                      </Badge>
+                      <span className="text-xs text-snow/50">
+                        Received {new Date(opportunity.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
                   </div>
                   
                   {opportunity.status === 'pending' && (
-                    <div className="flex space-x-3 pt-4">
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-3 sm:pt-4">
                       <Button
                         onClick={() => handleAccept(opportunity.id, opportunity.campaign_id)}
                         disabled={updateOfferMutation.isPending}
-                        className="bg-green-500 hover:bg-green-600 flex-1"
+                        className="bg-green-500 hover:bg-green-600 flex-1 text-xs sm:text-sm"
                       >
-                        <CheckCircle className="h-4 w-4 mr-2" />
+                        <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                         Accept
                       </Button>
                       <Button
                         onClick={() => handleNegotiate(opportunity.id, opportunity.campaign_id)}
                         disabled={updateOfferMutation.isPending}
                         variant="outline"
-                        className="border-yellow-500 text-yellow-500 hover:bg-yellow-500/10 flex-1"
+                        className="border-yellow-500 text-yellow-500 hover:bg-yellow-500/10 flex-1 text-xs sm:text-sm"
                       >
-                        <MessageSquare className="h-4 w-4 mr-2" />
+                        <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                         Negotiate
                       </Button>
                       <Button
                         onClick={() => handleDecline(opportunity.id, opportunity.campaign_id)}
                         disabled={updateOfferMutation.isPending}
                         variant="outline"
-                        className="border-red-500 text-red-500 hover:bg-red-500/10 flex-1"
+                        className="border-red-500 text-red-500 hover:bg-red-500/10 flex-1 text-xs sm:text-sm"
                       >
-                        <XCircle className="h-4 w-4 mr-2" />
+                        <XCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                         Decline
                       </Button>
                     </div>
                   )}
                   
                   {opportunity.status === 'negotiating' && (
-                    <div className="pt-4">
+                    <div className="pt-3 sm:pt-4">
                       <Button
                         variant="outline"
-                        className="w-full border-purple-500 text-purple-500 hover:bg-purple-500/10"
+                        className="w-full border-purple-500 text-purple-500 hover:bg-purple-500/10 text-xs sm:text-sm"
                       >
-                        <MessageSquare className="h-4 w-4 mr-2" />
+                        <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                         Continue Negotiation
                       </Button>
                     </div>
                   )}
                   
                   {opportunity.status === 'accepted' && (
-                    <div className="pt-4">
+                    <div className="pt-3 sm:pt-4">
                       <Button
                         onClick={() => navigate(`/creator-campaigns/${opportunity.id}`)}
                         variant="outline"
-                        className="w-full border-green-500 text-green-500 hover:bg-green-500/10"
+                        className="w-full border-green-500 text-green-500 hover:bg-green-500/10 text-xs sm:text-sm"
                       >
-                        <Eye className="h-4 w-4 mr-2" />
+                        <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                         View Campaign Details
                       </Button>
                     </div>

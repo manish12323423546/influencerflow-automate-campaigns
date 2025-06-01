@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -121,18 +122,18 @@ const CreatorContracts = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
         <div>
-          <h2 className="text-2xl font-semibold text-snow">My Contracts</h2>
-          <p className="text-snow/60">View and manage your campaign contracts</p>
+          <h2 className="text-xl sm:text-2xl font-semibold text-snow">My Contracts</h2>
+          <p className="text-sm sm:text-base text-snow/60">View and manage your campaign contracts</p>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex flex-wrap gap-1 sm:gap-2">
           <Button
             onClick={() => setFilter('all')}
             variant={filter === 'all' ? 'default' : 'outline'}
             size="sm"
-            className={filter === 'all' ? 'bg-purple-500 hover:bg-purple-600' : 'border-zinc-700 text-snow hover:bg-zinc-800'}
+            className={`text-xs sm:text-sm ${filter === 'all' ? 'bg-purple-500 hover:bg-purple-600' : 'border-zinc-700 text-snow hover:bg-zinc-800'}`}
           >
             All ({contracts.length})
           </Button>
@@ -140,7 +141,7 @@ const CreatorContracts = () => {
             onClick={() => setFilter('pending')}
             variant={filter === 'pending' ? 'default' : 'outline'}
             size="sm"
-            className={filter === 'pending' ? 'bg-purple-500 hover:bg-purple-600' : 'border-zinc-700 text-snow hover:bg-zinc-800'}
+            className={`text-xs sm:text-sm ${filter === 'pending' ? 'bg-purple-500 hover:bg-purple-600' : 'border-zinc-700 text-snow hover:bg-zinc-800'}`}
           >
             Pending ({getPendingContracts()})
           </Button>
@@ -148,7 +149,7 @@ const CreatorContracts = () => {
             onClick={() => setFilter('signed')}
             variant={filter === 'signed' ? 'default' : 'outline'}
             size="sm"
-            className={filter === 'signed' ? 'bg-purple-500 hover:bg-purple-600' : 'border-zinc-700 text-snow hover:bg-zinc-800'}
+            className={`text-xs sm:text-sm ${filter === 'signed' ? 'bg-purple-500 hover:bg-purple-600' : 'border-zinc-700 text-snow hover:bg-zinc-800'}`}
           >
             Signed ({getSignedContracts()})
           </Button>
@@ -156,21 +157,21 @@ const CreatorContracts = () => {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-          <h3 className="text-snow/70 text-sm font-medium mb-2">Total Contracts</h3>
-          <p className="text-3xl font-bold text-snow">{contracts.length}</p>
-          <p className="text-blue-500 text-sm mt-1">All time</p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 sm:p-6">
+          <h3 className="text-snow/70 text-xs sm:text-sm font-medium mb-2">Total Contracts</h3>
+          <p className="text-2xl sm:text-3xl font-bold text-snow">{contracts.length}</p>
+          <p className="text-blue-500 text-xs sm:text-sm mt-1">All time</p>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-          <h3 className="text-snow/70 text-sm font-medium mb-2">Pending Review</h3>
-          <p className="text-3xl font-bold text-snow">{getPendingContracts()}</p>
-          <p className="text-yellow-500 text-sm mt-1">Awaiting signature</p>
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 sm:p-6">
+          <h3 className="text-snow/70 text-xs sm:text-sm font-medium mb-2">Pending Review</h3>
+          <p className="text-2xl sm:text-3xl font-bold text-snow">{getPendingContracts()}</p>
+          <p className="text-yellow-500 text-xs sm:text-sm mt-1">Awaiting signature</p>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-          <h3 className="text-snow/70 text-sm font-medium mb-2">Signed</h3>
-          <p className="text-3xl font-bold text-snow">{getSignedContracts()}</p>
-          <p className="text-green-500 text-sm mt-1">Active contracts</p>
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 sm:p-6">
+          <h3 className="text-snow/70 text-xs sm:text-sm font-medium mb-2">Signed</h3>
+          <p className="text-2xl sm:text-3xl font-bold text-snow">{getSignedContracts()}</p>
+          <p className="text-green-500 text-xs sm:text-sm mt-1">Active contracts</p>
         </div>
       </div>
 
@@ -180,12 +181,12 @@ const CreatorContracts = () => {
         </div>
       ) : filteredContracts.length === 0 ? (
         <Card className="bg-zinc-900 border-zinc-800">
-          <CardContent className="text-center py-12">
-            <FileText className="h-12 w-12 mx-auto mb-4 text-snow/30" />
-            <h3 className="text-lg font-medium text-snow mb-2">
+          <CardContent className="text-center py-8 sm:py-12">
+            <FileText className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-4 text-snow/30" />
+            <h3 className="text-base sm:text-lg font-medium text-snow mb-2">
               {filter === 'all' ? 'No contracts yet' : `No ${filter} contracts`}
             </h3>
-            <p className="text-snow/60">
+            <p className="text-sm sm:text-base text-snow/60 max-w-md mx-auto">
               {filter === 'all' 
                 ? 'Your campaign contracts will appear here once brands send them.'
                 : `You don't have any ${filter} contracts at the moment.`
@@ -195,52 +196,41 @@ const CreatorContracts = () => {
         </Card>
       ) : (
         <Card className="bg-zinc-900 border-zinc-800">
-          <CardHeader>
-            <CardTitle className="text-snow">
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-snow text-base sm:text-lg">
               {filter === 'all' ? 'All Contracts' : 
                filter === 'pending' ? 'Pending Contracts' : 'Signed Contracts'}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-zinc-700">
-                  <TableHead className="text-snow/80">Campaign</TableHead>
-                  <TableHead className="text-snow/80">Brand</TableHead>
-                  <TableHead className="text-snow/80">Amount</TableHead>
-                  <TableHead className="text-snow/80">Status</TableHead>
-                  <TableHead className="text-snow/80">Created</TableHead>
-                  <TableHead className="text-snow/80">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredContracts.map((contract) => (
-                  <TableRow key={contract.id} className="border-zinc-700 hover:bg-zinc-700/50">
-                    <TableCell className="font-medium text-snow">
-                      {contract.campaign_name}
-                    </TableCell>
-                    <TableCell className="text-snow/80">
-                      {contract.brand_name}
-                    </TableCell>
-                    <TableCell className="text-snow/80">
-                      ${contract.amount.toLocaleString()}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(contract.status)}>
-                        {contract.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-snow/80">
-                      {new Date(contract.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
+            {/* Mobile Card View */}
+            <div className="block lg:hidden space-y-3 p-4">
+              {filteredContracts.map((contract) => (
+                <Card key={contract.id} className="bg-zinc-800 border-zinc-700">
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-snow text-sm">{contract.campaign_name}</h4>
+                          <p className="text-snow/60 text-xs">{contract.brand_name}</p>
+                        </div>
+                        <Badge className={`${getStatusColor(contract.status)} text-xs`}>
+                          {contract.status}
+                        </Badge>
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-snow/80">${contract.amount.toLocaleString()}</span>
+                        <span className="text-snow/60">{new Date(contract.created_at).toLocaleDateString()}</span>
+                      </div>
+                      
+                      <div className="flex space-x-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          className="border-zinc-600 text-snow/70 hover:bg-zinc-700"
+                          className="flex-1 border-zinc-600 text-snow/70 hover:bg-zinc-700 text-xs"
                         >
-                          <Eye className="h-4 w-4 mr-1" />
+                          <Eye className="h-3 w-3 mr-1" />
                           View
                         </Button>
                         {contract.pdf_url && (
@@ -248,18 +238,80 @@ const CreatorContracts = () => {
                             onClick={() => handleDownload(contract.pdf_url)}
                             variant="outline"
                             size="sm"
-                            className="border-zinc-600 text-snow/70 hover:bg-zinc-700"
+                            className="flex-1 border-zinc-600 text-snow/70 hover:bg-zinc-700 text-xs"
                           >
-                            <Download className="h-4 w-4 mr-1" />
+                            <Download className="h-3 w-3 mr-1" />
                             PDF
                           </Button>
                         )}
                       </div>
-                    </TableCell>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden lg:block">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-zinc-700">
+                    <TableHead className="text-snow/80 text-sm">Campaign</TableHead>
+                    <TableHead className="text-snow/80 text-sm">Brand</TableHead>
+                    <TableHead className="text-snow/80 text-sm">Amount</TableHead>
+                    <TableHead className="text-snow/80 text-sm">Status</TableHead>
+                    <TableHead className="text-snow/80 text-sm">Created</TableHead>
+                    <TableHead className="text-snow/80 text-sm">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredContracts.map((contract) => (
+                    <TableRow key={contract.id} className="border-zinc-700 hover:bg-zinc-700/50">
+                      <TableCell className="font-medium text-snow text-sm">
+                        {contract.campaign_name}
+                      </TableCell>
+                      <TableCell className="text-snow/80 text-sm">
+                        {contract.brand_name}
+                      </TableCell>
+                      <TableCell className="text-snow/80 text-sm">
+                        ${contract.amount.toLocaleString()}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`${getStatusColor(contract.status)} text-xs`}>
+                          {contract.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-snow/80 text-sm">
+                        {new Date(contract.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-zinc-600 text-snow/70 hover:bg-zinc-700 text-xs"
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            View
+                          </Button>
+                          {contract.pdf_url && (
+                            <Button
+                              onClick={() => handleDownload(contract.pdf_url)}
+                              variant="outline"
+                              size="sm"
+                              className="border-zinc-600 text-snow/70 hover:bg-zinc-700 text-xs"
+                            >
+                              <Download className="h-3 w-3 mr-1" />
+                              PDF
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       )}
