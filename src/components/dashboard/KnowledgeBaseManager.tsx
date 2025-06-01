@@ -7,8 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileText, Plus, Upload, Link as LinkIcon, Search, Loader2, Trash2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { FileText, Plus, Upload, Link as LinkIcon, Search, Loader2, Trash2, Target, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import type { Campaign } from '@/types/campaign';
 import axios from 'axios';
 
 interface KnowledgeBaseDocument {
@@ -39,11 +42,14 @@ interface KnowledgeBaseResponse {
 const KnowledgeBaseManager = () => {
   const { toast } = useToast();
   const [documents, setDocuments] = useState<KnowledgeBaseDocument[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [createType, setCreateType] = useState<'text' | 'file' | 'url'>('text');
+  const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
+  const [createType, setCreateType] = useState<'text' | 'file' | 'url' | 'campaigns'>('text');
   const [isCreating, setIsCreating] = useState(false);
+  const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     text: '',
@@ -82,9 +88,30 @@ const KnowledgeBaseManager = () => {
     }
   };
 
+  // Fetch campaigns from Supabase
+  const fetchCampaigns = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('campaigns')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setCampaigns(data || []);
+    } catch (error) {
+      console.error('Error fetching campaigns:', error);
+      toast({
+        title: "Error loading campaigns",
+        description: "Failed to fetch campaigns data.",
+        variant: "destructive",
+      });
+    }
+  };
+
   useEffect(() => {
     if (apiKey) {
       fetchDocuments();
+      fetchCampaigns();
     }
   }, [apiKey, searchTerm]);
 
@@ -119,6 +146,76 @@ const KnowledgeBaseManager = () => {
       toast({
         title: "Error creating document",
         description: "Failed to create knowledge base document from text.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  // Create document from campaigns
+  const createFromCampaigns = async () => {
+    if (selectedCampaigns.length === 0) {
+      toast({
+        title: "No campaigns selected",
+        description: "Please select at least one campaign to add to knowledge base.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsCreating(true);
+      const selectedCampaignData = campaigns.filter(campaign => 
+        selectedCampaigns.includes(campaign.id)
+      );
+
+      // Format campaign data for knowledge base
+      const campaignText = selectedCampaignData.map(campaign => {
+        return `Campaign: ${campaign.name}
+Brand: ${campaign.brand}
+Description: ${campaign.description || 'No description provided'}
+Budget: $${campaign.budget.toLocaleString()}
+Status: ${campaign.status}
+Goals: ${campaign.goals || 'No goals specified'}
+Target Audience: ${campaign.target_audience || 'No target audience specified'}
+Deliverables: ${campaign.deliverables || 'No deliverables specified'}
+Timeline: ${campaign.timeline || 'No timeline specified'}
+Created: ${new Date(campaign.created_at).toLocaleDateString()}
+---`;
+      }).join('\n\n');
+
+      const documentName = selectedCampaignData.length === 1 
+        ? `Campaign: ${selectedCampaignData[0].name}`
+        : `${selectedCampaignData.length} Selected Campaigns`;
+
+      const response = await axios.post(
+        `${baseUrl}/text`,
+        {
+          text: campaignText,
+          name: documentName
+        },
+        {
+          headers: {
+            'xi-api-key': apiKey,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      toast({
+        title: "Campaigns added to knowledge base",
+        description: `Successfully added ${selectedCampaigns.length} campaign(s) to knowledge base.`,
+      });
+
+      setIsCampaignModalOpen(false);
+      setSelectedCampaigns([]);
+      fetchDocuments();
+    } catch (error) {
+      console.error('Error creating document from campaigns:', error);
+      toast({
+        title: "Error adding campaigns",
+        description: "Failed to add campaigns to knowledge base.",
         variant: "destructive",
       });
     } finally {
@@ -181,6 +278,22 @@ const KnowledgeBaseManager = () => {
     }
   };
 
+  const handleCampaignSelection = (campaignId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedCampaigns(prev => [...prev, campaignId]);
+    } else {
+      setSelectedCampaigns(prev => prev.filter(id => id !== campaignId));
+    }
+  };
+
+  const handleSelectAllCampaigns = () => {
+    if (selectedCampaigns.length === campaigns.length) {
+      setSelectedCampaigns([]);
+    } else {
+      setSelectedCampaigns(campaigns.map(campaign => campaign.id));
+    }
+  };
+
   const formatDate = (unixSeconds: number) => {
     return new Date(unixSeconds * 1000).toLocaleDateString();
   };
@@ -218,13 +331,22 @@ const KnowledgeBaseManager = () => {
           <h2 className="text-2xl font-bold text-snow">Knowledge Base</h2>
           <p className="text-snow/70">Manage your AI knowledge base documents</p>
         </div>
-        <Button 
-          onClick={() => setIsCreateModalOpen(true)}
-          className="bg-coral hover:bg-coral/90 text-white"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add Document
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => setIsCampaignModalOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <Target className="mr-2 h-4 w-4" />
+            Add Campaigns
+          </Button>
+          <Button 
+            onClick={() => setIsCreateModalOpen(true)}
+            className="bg-coral hover:bg-coral/90 text-white"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Document
+          </Button>
+        </div>
       </div>
 
       {/* Search */}
@@ -264,13 +386,22 @@ const KnowledgeBaseManager = () => {
               <p className="text-snow/70 mb-4">
                 {searchTerm ? 'No documents match your search.' : 'Start by creating your first knowledge base document.'}
               </p>
-              <Button 
-                onClick={() => setIsCreateModalOpen(true)}
-                className="bg-coral hover:bg-coral/90 text-white"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Create Document
-              </Button>
+              <div className="flex justify-center gap-2">
+                <Button 
+                  onClick={() => setIsCampaignModalOpen(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Target className="mr-2 h-4 w-4" />
+                  Add Campaigns
+                </Button>
+                <Button 
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="bg-coral hover:bg-coral/90 text-white"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Document
+                </Button>
+              </div>
             </div>
           ) : (
             <Table>
@@ -317,6 +448,96 @@ const KnowledgeBaseManager = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Add Campaigns Modal */}
+      <Dialog open={isCampaignModalOpen} onOpenChange={setIsCampaignModalOpen}>
+        <DialogContent className="bg-zinc-900 border-zinc-800 text-snow max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add Campaigns to Knowledge Base</DialogTitle>
+            <DialogDescription className="text-snow/70">
+              Select campaigns to add to your knowledge base. This will help your AI understand your campaign data.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Select All Button */}
+            <div className="flex items-center justify-between">
+              <Button
+                onClick={handleSelectAllCampaigns}
+                variant="outline"
+                className="border-zinc-700 text-snow hover:bg-zinc-800"
+              >
+                <Users className="mr-2 h-4 w-4" />
+                {selectedCampaigns.length === campaigns.length ? 'Deselect All' : 'Select All'}
+              </Button>
+              <span className="text-snow/70">
+                {selectedCampaigns.length} of {campaigns.length} campaigns selected
+              </span>
+            </div>
+
+            {/* Campaigns List */}
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {campaigns.map((campaign) => (
+                <div
+                  key={campaign.id}
+                  className="flex items-center space-x-3 p-3 bg-zinc-800/50 rounded-lg border border-zinc-700"
+                >
+                  <Checkbox
+                    checked={selectedCampaigns.includes(campaign.id)}
+                    onCheckedChange={(checked) => 
+                      handleCampaignSelection(campaign.id, checked as boolean)
+                    }
+                    className="border-zinc-600"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-snow font-medium truncate">{campaign.name}</h4>
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        campaign.status === 'active' 
+                          ? 'bg-green-500/20 text-green-400'
+                          : campaign.status === 'completed'
+                          ? 'bg-blue-500/20 text-blue-400'
+                          : 'bg-yellow-500/20 text-yellow-400'
+                      }`}>
+                        {campaign.status}
+                      </span>
+                    </div>
+                    <p className="text-snow/70 text-sm">Brand: {campaign.brand}</p>
+                    <p className="text-snow/60 text-xs">Budget: ${campaign.budget.toLocaleString()}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsCampaignModalOpen(false)}
+              className="border-zinc-700 text-snow hover:bg-zinc-800"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={createFromCampaigns}
+              disabled={isCreating || selectedCampaigns.length === 0}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {isCreating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                <>
+                  <Target className="mr-2 h-4 w-4" />
+                  Add to Knowledge Base
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Create Document Modal */}
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
