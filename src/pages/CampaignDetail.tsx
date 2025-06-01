@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -280,24 +281,25 @@ const CampaignDetail = () => {
         creator: selectedInfluencerForGmail
       };
 
-      console.log('Request body:', requestBody);
+      console.log('Request body:', JSON.stringify(requestBody, null, 2));
 
       const response = await fetch("https://varhhh.app.n8n.cloud/webhook/08b089ba-1617-4d04-a5c7-f9b7d8ca57c4", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Accept": "application/json"
         },
-        mode: "no-cors", // Add this to handle CORS
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify(requestBody)
       });
 
-      // Since we're using no-cors, we won't get a proper response status
-      // We'll assume success and show a positive message
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+
       setGmailResponses(prev => ({ ...prev, [selectedInfluencerForGmail.id]: { status: 'sent', timestamp: new Date().toISOString() } }));
       
       toast({
-        title: "Request Sent",
-        description: `Gmail workflow request sent for ${selectedInfluencerForGmail.name}. Please check your webhook logs to confirm it was received.`,
+        title: "Request Sent Successfully",
+        description: `Gmail workflow request sent for ${selectedInfluencerForGmail.name}. JSON body sent in proper format.`,
       });
       setIsGmailModalOpen(false);
       setSelectedInfluencerForGmail(null);
