@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -88,7 +87,7 @@ const KnowledgeBaseManager = () => {
     }
   };
 
-  // Fetch campaigns from Supabase
+  // Fetch campaigns from Supabase with ALL fields
   const fetchCampaigns = async () => {
     try {
       const { data, error } = await supabase
@@ -97,6 +96,7 @@ const KnowledgeBaseManager = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      console.log('Fetched complete campaign data:', data);
       setCampaigns(data || []);
     } catch (error) {
       console.error('Error fetching campaigns:', error);
@@ -153,76 +153,6 @@ const KnowledgeBaseManager = () => {
     }
   };
 
-  // Create document from campaigns
-  const createFromCampaigns = async () => {
-    if (selectedCampaigns.length === 0) {
-      toast({
-        title: "No campaigns selected",
-        description: "Please select at least one campaign to add to knowledge base.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      setIsCreating(true);
-      const selectedCampaignData = campaigns.filter(campaign => 
-        selectedCampaigns.includes(campaign.id)
-      );
-
-      // Format campaign data for knowledge base
-      const campaignText = selectedCampaignData.map(campaign => {
-        return `Campaign: ${campaign.name}
-Brand: ${campaign.brand}
-Description: ${campaign.description || 'No description provided'}
-Budget: $${campaign.budget.toLocaleString()}
-Status: ${campaign.status}
-Goals: ${campaign.goals || 'No goals specified'}
-Target Audience: ${campaign.target_audience || 'No target audience specified'}
-Deliverables: ${campaign.deliverables || 'No deliverables specified'}
-Timeline: ${campaign.timeline || 'No timeline specified'}
-Created: ${new Date(campaign.created_at).toLocaleDateString()}
----`;
-      }).join('\n\n');
-
-      const documentName = selectedCampaignData.length === 1 
-        ? `Campaign: ${selectedCampaignData[0].name}`
-        : `${selectedCampaignData.length} Selected Campaigns`;
-
-      const response = await axios.post(
-        `${baseUrl}/text`,
-        {
-          text: campaignText,
-          name: documentName
-        },
-        {
-          headers: {
-            'xi-api-key': apiKey,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      toast({
-        title: "Campaigns added to knowledge base",
-        description: `Successfully added ${selectedCampaigns.length} campaign(s) to knowledge base.`,
-      });
-
-      setIsCampaignModalOpen(false);
-      setSelectedCampaigns([]);
-      fetchDocuments();
-    } catch (error) {
-      console.error('Error creating document from campaigns:', error);
-      toast({
-        title: "Error adding campaigns",
-        description: "Failed to add campaigns to knowledge base.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
   // Create document from file or URL
   const createFromFileOrUrl = async () => {
     try {
@@ -263,6 +193,113 @@ Created: ${new Date(campaign.created_at).toLocaleDateString()}
       toast({
         title: "Error creating document",
         description: `Failed to create knowledge base document from ${createType}.`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  // Create document from campaigns with complete data
+  const createFromCampaigns = async () => {
+    if (selectedCampaigns.length === 0) {
+      toast({
+        title: "No campaigns selected",
+        description: "Please select at least one campaign to add to knowledge base.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsCreating(true);
+      const selectedCampaignData = campaigns.filter(campaign => 
+        selectedCampaigns.includes(campaign.id)
+      );
+
+      console.log('Selected campaigns with complete data:', selectedCampaignData);
+
+      // Format campaign data for knowledge base with ALL available fields
+      const campaignText = selectedCampaignData.map(campaign => {
+        return `CAMPAIGN DETAILS:
+Campaign ID: ${campaign.id}
+Campaign Name: ${campaign.name}
+Brand: ${campaign.brand}
+Description: ${campaign.description || 'No description provided'}
+Status: ${campaign.status}
+Budget: $${campaign.budget.toLocaleString()}
+Amount Spent: $${campaign.spent.toLocaleString()}
+Remaining Budget: $${(campaign.budget - campaign.spent).toLocaleString()}
+Influencer Count: ${campaign.influencer_count}
+Total Reach: ${campaign.reach.toLocaleString()}
+Engagement Rate: ${campaign.engagement_rate}%
+Goals: ${campaign.goals || 'No goals specified'}
+Target Audience: ${campaign.target_audience || 'No target audience specified'}
+Deliverables: ${campaign.deliverables || 'No deliverables specified'}
+Timeline: ${campaign.timeline || 'No timeline specified'}
+User ID: ${campaign.user_id}
+Created Date: ${new Date(campaign.created_at).toLocaleDateString()}
+Created Time: ${new Date(campaign.created_at).toLocaleTimeString()}
+Last Updated: ${new Date(campaign.updated_at).toLocaleDateString()}
+Last Updated Time: ${new Date(campaign.updated_at).toLocaleTimeString()}
+Campaign Performance Metrics:
+- Total Budget: $${campaign.budget.toLocaleString()}
+- Budget Utilized: $${campaign.spent.toLocaleString()}
+- Budget Utilization Rate: ${((campaign.spent / campaign.budget) * 100).toFixed(2)}%
+- Cost Per Influencer: $${campaign.influencer_count > 0 ? (campaign.spent / campaign.influencer_count).toFixed(2) : '0'}
+- Average Reach Per Dollar: ${campaign.spent > 0 ? (campaign.reach / campaign.spent).toFixed(2) : campaign.reach}
+- Engagement Rate: ${campaign.engagement_rate}%
+Campaign Status Analysis:
+- Current Status: ${campaign.status}
+- Campaign Duration: From ${new Date(campaign.created_at).toLocaleDateString()} to present
+- Days Running: ${Math.floor((new Date().getTime() - new Date(campaign.created_at).getTime()) / (1000 * 60 * 60 * 24))} days
+Additional Information:
+- Campaign Goals: ${campaign.goals || 'Not specified'}
+- Target Audience Details: ${campaign.target_audience || 'Not specified'}
+- Expected Deliverables: ${campaign.deliverables || 'Not specified'}
+- Project Timeline: ${campaign.timeline || 'Not specified'}
+=====================================`;
+      }).join('\n\n');
+
+      const documentName = selectedCampaignData.length === 1 
+        ? `Complete Campaign Data: ${selectedCampaignData[0].name}`
+        : `Complete Data for ${selectedCampaignData.length} Selected Campaigns`;
+
+      console.log('Sending campaign data to knowledge base:', {
+        documentName,
+        textLength: campaignText.length,
+        campaignCount: selectedCampaignData.length
+      });
+
+      const response = await axios.post(
+        `${baseUrl}/text`,
+        {
+          text: campaignText,
+          name: documentName
+        },
+        {
+          headers: {
+            'xi-api-key': apiKey,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      console.log('Knowledge base document created:', response.data);
+
+      toast({
+        title: "Complete campaign data added to knowledge base",
+        description: `Successfully added complete data for ${selectedCampaigns.length} campaign(s) to knowledge base with all available fields.`,
+      });
+
+      setIsCampaignModalOpen(false);
+      setSelectedCampaigns([]);
+      fetchDocuments();
+    } catch (error) {
+      console.error('Error creating document from campaigns:', error);
+      toast({
+        title: "Error adding campaigns",
+        description: "Failed to add campaigns to knowledge base.",
         variant: "destructive",
       });
     } finally {
@@ -453,9 +490,9 @@ Created: ${new Date(campaign.created_at).toLocaleDateString()}
       <Dialog open={isCampaignModalOpen} onOpenChange={setIsCampaignModalOpen}>
         <DialogContent className="bg-zinc-900 border-zinc-800 text-snow max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add Campaigns to Knowledge Base</DialogTitle>
+            <DialogTitle>Add Complete Campaign Data to Knowledge Base</DialogTitle>
             <DialogDescription className="text-snow/70">
-              Select campaigns to add to your knowledge base. This will help your AI understand your campaign data.
+              Select campaigns to add their complete data to your knowledge base. This will include all available fields and performance metrics.
             </DialogDescription>
           </DialogHeader>
 
@@ -475,7 +512,7 @@ Created: ${new Date(campaign.created_at).toLocaleDateString()}
               </span>
             </div>
 
-            {/* Campaigns List */}
+            {/* Campaigns List with enhanced display */}
             <div className="space-y-2 max-h-96 overflow-y-auto">
               {campaigns.map((campaign) => (
                 <div
@@ -490,7 +527,7 @@ Created: ${new Date(campaign.created_at).toLocaleDateString()}
                     className="border-zinc-600"
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mb-1">
                       <h4 className="text-snow font-medium truncate">{campaign.name}</h4>
                       <span className={`px-2 py-1 rounded-full text-xs ${
                         campaign.status === 'active' 
@@ -502,8 +539,16 @@ Created: ${new Date(campaign.created_at).toLocaleDateString()}
                         {campaign.status}
                       </span>
                     </div>
-                    <p className="text-snow/70 text-sm">Brand: {campaign.brand}</p>
-                    <p className="text-snow/60 text-xs">Budget: ${campaign.budget.toLocaleString()}</p>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <p className="text-snow/70">Brand: {campaign.brand}</p>
+                      <p className="text-snow/60">Budget: ${campaign.budget.toLocaleString()}</p>
+                      <p className="text-snow/60">Spent: ${campaign.spent.toLocaleString()}</p>
+                      <p className="text-snow/60">Reach: {campaign.reach.toLocaleString()}</p>
+                    </div>
+                    <p className="text-snow/50 text-xs mt-1">
+                      Created: {new Date(campaign.created_at).toLocaleDateString()} | 
+                      Updated: {new Date(campaign.updated_at).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -526,12 +571,12 @@ Created: ${new Date(campaign.created_at).toLocaleDateString()}
               {isCreating ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Adding...
+                  Adding Complete Data...
                 </>
               ) : (
                 <>
                   <Target className="mr-2 h-4 w-4" />
-                  Add to Knowledge Base
+                  Add Complete Campaign Data
                 </>
               )}
             </Button>
