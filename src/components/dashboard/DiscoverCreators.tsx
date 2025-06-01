@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Search, Star, Users, TrendingUp, MessageSquare, Heart, MessageCircle, Phone, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { conversationalAIService } from '@/services/conversationalAI';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Creator {
   id: string;
@@ -15,50 +15,16 @@ interface Creator {
   handle: string;
   avatar_url: string;
   platform: string;
-  niche: string;
+  industry: string;
   followers_count: number;
   engagement_rate: number;
   isShortlisted: boolean;
 }
 
-const mockCreators: Creator[] = [
-  {
-    id: '1',
-    name: 'Sarah Johnson',
-    handle: '@sarahj_tech',
-    avatar_url: '/placeholder.svg',
-    platform: 'Instagram',
-    niche: 'Technology',
-    followers_count: 125000,
-    engagement_rate: 4.8,
-    isShortlisted: false
-  },
-  {
-    id: '2',
-    name: 'Mike Chen',
-    handle: '@mikefitness',
-    avatar_url: '/placeholder.svg',
-    platform: 'YouTube',
-    niche: 'Fitness',
-    followers_count: 250000,
-    engagement_rate: 5.5,
-    isShortlisted: true
-  },
-  {
-    id: '3',
-    name: 'Emma Style',
-    handle: '@emmastyle',
-    avatar_url: '/placeholder.svg',
-    platform: 'TikTok',
-    niche: 'Fashion',
-    followers_count: 180000,
-    engagement_rate: 7.1,
-    isShortlisted: false
-  }
-];
-
 const DiscoverCreators = () => {
   const { toast } = useToast();
+  const [creators, setCreators] = useState<Creator[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [nicheFilter, setNicheFilter] = useState<string>('all');
@@ -66,17 +32,64 @@ const DiscoverCreators = () => {
   const [isGmailInProgress, setIsGmailInProgress] = useState<Record<string, boolean>>({});
   const [gmailResponses, setGmailResponses] = useState<Record<string, any>>({});
 
-  const filteredCreators = mockCreators.filter(creator => {
+  useEffect(() => {
+    const fetchCreators = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('influencers')
+          .select('*')
+          .order('followers_count', { ascending: false });
+
+        if (error) throw error;
+        
+        // Transform the data to match Creator interface
+        const transformedData = (data || []).map(influencer => ({
+          id: influencer.id,
+          name: influencer.name,
+          handle: influencer.handle,
+          avatar_url: influencer.avatar_url || '/placeholder.svg',
+          platform: influencer.platform,
+          industry: influencer.industry,
+          followers_count: influencer.followers_count,
+          engagement_rate: Number(influencer.engagement_rate),
+          isShortlisted: false // This could be fetched from a separate table
+        }));
+        
+        setCreators(transformedData);
+      } catch (error) {
+        console.error('Error fetching creators:', error);
+        toast({
+          title: "Error loading creators",
+          description: "Please try again later.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCreators();
+  }, [toast]);
+
+  const filteredCreators = creators.filter(creator => {
     const matchesSearch = creator.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          creator.handle.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPlatform = platformFilter === 'all' || creator.platform.toLowerCase() === platformFilter.toLowerCase();
-    const matchesNiche = nicheFilter === 'all' || creator.niche.toLowerCase() === nicheFilter.toLowerCase();
+    const matchesNiche = nicheFilter === 'all' || creator.industry.toLowerCase() === nicheFilter.toLowerCase();
     
     return matchesSearch && matchesPlatform && matchesNiche;
   });
 
   const handleShortlist = (creatorId: string) => {
-    const creator = mockCreators.find(c => c.id === creatorId);
+    setCreators(prev => 
+      prev.map(creator => 
+        creator.id === creatorId 
+          ? { ...creator, isShortlisted: !creator.isShortlisted }
+          : creator
+      )
+    );
+    
+    const creator = creators.find(c => c.id === creatorId);
     if (creator) {
       toast({
         title: creator.isShortlisted ? "Removed from shortlist" : "Added to shortlist",
@@ -102,7 +115,7 @@ const DiscoverCreators = () => {
         body: JSON.stringify({
           "agent_id": "agent_01jwkpad6te50bmvfd8ax6xvqk",
           "agent_phone_number_id": "phnum_01jwkwbn2terqtgd2nzxedgz0z",
-          "to_number": "+918140030507" // In a real app, this would come from the creator's data
+          "to_number": "+918140030507"
         }),
       });
 
@@ -184,6 +197,18 @@ const DiscoverCreators = () => {
     return count.toString();
   };
 
+  // Get unique platforms and industries for filters
+  const uniquePlatforms = [...new Set(creators.map(creator => creator.platform))];
+  const uniqueIndustries = [...new Set(creators.map(creator => creator.industry))];
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-coral"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Search and Filters */}
@@ -204,9 +229,9 @@ const DiscoverCreators = () => {
           </SelectTrigger>
           <SelectContent className="bg-zinc-800 border-zinc-700">
             <SelectItem value="all">All Platforms</SelectItem>
-            <SelectItem value="instagram">Instagram</SelectItem>
-            <SelectItem value="youtube">YouTube</SelectItem>
-            <SelectItem value="tiktok">TikTok</SelectItem>
+            {uniquePlatforms.map(platform => (
+              <SelectItem key={platform} value={platform.toLowerCase()}>{platform}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
@@ -216,10 +241,9 @@ const DiscoverCreators = () => {
           </SelectTrigger>
           <SelectContent className="bg-zinc-800 border-zinc-700">
             <SelectItem value="all">All Niches</SelectItem>
-            <SelectItem value="technology">Technology</SelectItem>
-            <SelectItem value="fitness">Fitness</SelectItem>
-            <SelectItem value="fashion">Fashion</SelectItem>
-            <SelectItem value="lifestyle">Lifestyle</SelectItem>
+            {uniqueIndustries.map(industry => (
+              <SelectItem key={industry} value={industry.toLowerCase()}>{industry}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -227,107 +251,120 @@ const DiscoverCreators = () => {
       {/* Influencer Leaderboard */}
       <div>
         <h2 className="text-2xl font-semibold text-snow mb-4">Influencer Leaderboard</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCreators.map((creator) => (
-            <Card key={creator.id} className="bg-zinc-800/50 border-zinc-700 hover:border-coral/50 transition-colors">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3">
-                    <img
-                      src={creator.avatar_url}
-                      alt={creator.name}
-                      className="h-12 w-12 rounded-full"
-                    />
-                    <div>
-                      <CardTitle className="text-lg text-snow">{creator.name}</CardTitle>
-                      <p className="text-snow/60 text-sm">{creator.handle}</p>
+        {filteredCreators.length === 0 ? (
+          <Card className="bg-zinc-800/50 border-zinc-700">
+            <CardContent className="py-8">
+              <div className="text-center text-snow/60">
+                {creators.length === 0 
+                  ? "No creators found in the database."
+                  : "No creators match your current filters. Try adjusting your search criteria."
+                }
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredCreators.map((creator) => (
+              <Card key={creator.id} className="bg-zinc-800/50 border-zinc-700 hover:border-coral/50 transition-colors">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-3">
+                      <img
+                        src={creator.avatar_url}
+                        alt={creator.name}
+                        className="h-12 w-12 rounded-full"
+                      />
+                      <div>
+                        <CardTitle className="text-lg text-snow">{creator.name}</CardTitle>
+                        <p className="text-snow/60 text-sm">{creator.handle}</p>
+                      </div>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleShortlist(creator.id)}
+                      className={creator.isShortlisted ? 'text-coral' : 'text-snow/70 hover:text-coral'}
+                    >
+                      <Heart className={`h-4 w-4 ${creator.isShortlisted ? 'fill-current' : ''}`} />
+                    </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleShortlist(creator.id)}
-                    className={creator.isShortlisted ? 'text-coral' : 'text-snow/70 hover:text-coral'}
-                  >
-                    <Heart className={`h-4 w-4 ${creator.isShortlisted ? 'fill-current' : ''}`} />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline" className="border-blue-500/30 text-blue-500">
-                      {creator.platform}
-                    </Badge>
-                    <Badge variant="outline" className="border-purple-500/30 text-purple-500">
-                      {creator.niche}
-                    </Badge>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-snow/60">Followers</p>
-                      <p className="text-snow font-medium">{formatFollowers(creator.followers_count)}</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="outline" className="border-blue-500/30 text-blue-500">
+                        {creator.platform}
+                      </Badge>
+                      <Badge variant="outline" className="border-purple-500/30 text-purple-500">
+                        {creator.industry}
+                      </Badge>
                     </div>
-                    <div>
-                      <p className="text-snow/60">Engagement</p>
-                      <p className="text-snow font-medium">{creator.engagement_rate}%</p>
+                    
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-snow/60">Followers</p>
+                        <p className="text-snow font-medium">{formatFollowers(creator.followers_count)}</p>
+                      </div>
+                      <div>
+                        <p className="text-snow/60">Engagement</p>
+                        <p className="text-snow font-medium">{creator.engagement_rate.toFixed(1)}%</p>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Gmail Response Display */}
-                  {gmailResponses[creator.id] && (
-                    <div className="bg-green-500/10 border border-green-500/30 rounded-md p-3 mt-3">
-                      <p className="text-green-500 text-sm font-medium mb-2">Workflow Response (200 OK):</p>
-                      <pre className="text-xs text-green-400 overflow-auto max-h-20">
-                        {JSON.stringify(gmailResponses[creator.id], null, 2)}
-                      </pre>
-                    </div>
-                  )}
+                    {/* Gmail Response Display */}
+                    {gmailResponses[creator.id] && (
+                      <div className="bg-green-500/10 border border-green-500/30 rounded-md p-3 mt-3">
+                        <p className="text-green-500 text-sm font-medium mb-2">Workflow Response (200 OK):</p>
+                        <pre className="text-xs text-green-400 overflow-auto max-h-20">
+                          {JSON.stringify(gmailResponses[creator.id], null, 2)}
+                        </pre>
+                      </div>
+                    )}
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-zinc-700 text-snow hover:bg-zinc-800"
-                    >
-                      <MessageCircle className="h-4 w-4 mr-1" />
-                      Message
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handlePhoneCall(creator.id, creator.name)}
-                      disabled={isCallInProgress[creator.id]}
-                      className={`${
-                        isCallInProgress[creator.id]
-                          ? 'bg-green-500 border-green-500 text-white'
-                          : 'border-zinc-700 text-snow hover:bg-zinc-800'
-                      }`}
-                    >
-                      <Phone className="h-4 w-4 mr-1" />
-                      {isCallInProgress[creator.id] ? 'Calling...' : 'Call'}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleGmailSend(creator.id, creator.name)}
-                      disabled={isGmailInProgress[creator.id]}
-                      className={`col-span-2 ${
-                        isGmailInProgress[creator.id]
-                          ? 'bg-coral border-coral text-white'
-                          : 'border-zinc-700 text-snow hover:bg-zinc-800'
-                      }`}
-                    >
-                      <Mail className="h-4 w-4 mr-1" />
-                      {isGmailInProgress[creator.id] ? 'Sending...' : 'Gmail'}
-                    </Button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-zinc-700 text-snow hover:bg-zinc-800"
+                      >
+                        <MessageCircle className="h-4 w-4 mr-1" />
+                        Message
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handlePhoneCall(creator.id, creator.name)}
+                        disabled={isCallInProgress[creator.id]}
+                        className={`${
+                          isCallInProgress[creator.id]
+                            ? 'bg-green-500 border-green-500 text-white'
+                            : 'border-zinc-700 text-snow hover:bg-zinc-800'
+                        }`}
+                      >
+                        <Phone className="h-4 w-4 mr-1" />
+                        {isCallInProgress[creator.id] ? 'Calling...' : 'Call'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleGmailSend(creator.id, creator.name)}
+                        disabled={isGmailInProgress[creator.id]}
+                        className={`col-span-2 ${
+                          isGmailInProgress[creator.id]
+                            ? 'bg-coral border-coral text-white'
+                            : 'border-zinc-700 text-snow hover:bg-zinc-800'
+                        }`}
+                      >
+                        <Mail className="h-4 w-4 mr-1" />
+                        {isGmailInProgress[creator.id] ? 'Sending...' : 'Gmail'}
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

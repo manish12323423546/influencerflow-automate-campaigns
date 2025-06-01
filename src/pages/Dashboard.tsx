@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -23,23 +24,53 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState<'campaigns' | 'discover' | 'outreach' | 'contracts' | 'payments' | 'conversations'>('campaigns');
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [totalInfluencers, setTotalInfluencers] = useState(0);
+  const [totalContracts, setTotalContracts] = useState(0);
+  const [totalPayments, setTotalPayments] = useState(0);
 
-  // Fetch campaigns from Supabase
+  // Fetch all data from Supabase
   useEffect(() => {
-    const fetchCampaigns = async () => {
+    const fetchDashboardData = async () => {
       try {
-        const { data, error } = await supabase
+        // Fetch campaigns
+        const { data: campaignsData, error: campaignsError } = await supabase
           .from('campaigns')
           .select('*')
           .order('created_at', { ascending: false });
 
-        if (error) throw error;
-        
-        setCampaigns(data || []);
+        if (campaignsError) throw campaignsError;
+        setCampaigns(campaignsData || []);
+
+        // Fetch influencers count
+        const { count: influencersCount, error: influencersError } = await supabase
+          .from('influencers')
+          .select('*', { count: 'exact', head: true });
+
+        if (influencersError) throw influencersError;
+        setTotalInfluencers(influencersCount || 0);
+
+        // Fetch contracts count
+        const { count: contractsCount, error: contractsError } = await supabase
+          .from('contracts')
+          .select('*', { count: 'exact', head: true });
+
+        if (contractsError) throw contractsError;
+        setTotalContracts(contractsCount || 0);
+
+        // Fetch payments total
+        const { data: paymentsData, error: paymentsError } = await supabase
+          .from('payments')
+          .select('amount')
+          .eq('status', 'completed');
+
+        if (paymentsError) throw paymentsError;
+        const totalPaid = (paymentsData || []).reduce((sum, payment) => sum + Number(payment.amount), 0);
+        setTotalPayments(totalPaid);
+
       } catch (error) {
-        console.error('Error fetching campaigns:', error);
+        console.error('Error fetching dashboard data:', error);
         toast({
-          title: "Error loading campaigns",
+          title: "Error loading dashboard data",
           description: "Please try again later.",
           variant: "destructive",
         });
@@ -48,10 +79,10 @@ const Dashboard = () => {
       }
     };
 
-    fetchCampaigns();
+    fetchDashboardData();
   }, [toast]);
 
-  // Calculate KPI data from campaigns
+  // Calculate KPI data from real campaigns
   const kpiData = {
     totalCampaigns: campaigns.length,
     activeCampaigns: campaigns.filter(c => c.status === 'active').length,
@@ -81,6 +112,17 @@ const Dashboard = () => {
     { id: 'payments', label: 'Payments', icon: CreditCard, description: 'Handle payments' },
     { id: 'conversations', label: 'Conversations', icon: Headphones, description: 'Manage AI conversations' },
   ];
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-carbon text-snow flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-coral mx-auto mb-4"></div>
+          <p className="text-snow/70">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-carbon text-snow">
