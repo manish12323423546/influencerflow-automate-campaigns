@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, Edit, Users, BarChart3, FileText, MessageSquare, Plus } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ArrowLeft, Edit, Users, BarChart3, FileText, MessageSquare, Plus, Phone, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Campaign {
@@ -36,6 +36,8 @@ interface CampaignInfluencer {
   followers_count: number;
   engagement_rate: number;
   fee: number;
+  phone_no?: number | null;
+  gmail_gmail?: string | null;
 }
 
 interface Contract {
@@ -54,7 +56,7 @@ interface PerformanceMetric {
   trend: 'up' | 'down' | 'neutral';
 }
 
-// Mock data
+// Mock data - updated to include phone and gmail
 const mockCampaign: Campaign = {
   id: '1',
   name: 'Tech Product Launch',
@@ -81,7 +83,9 @@ const mockInfluencers: CampaignInfluencer[] = [
     status: 'confirmed',
     followers_count: 125000,
     engagement_rate: 4.8,
-    fee: 2500
+    fee: 2500,
+    phone_no: 1234567890,
+    gmail_gmail: 'sarah@gmail.com'
   },
   {
     id: '2',
@@ -91,7 +95,9 @@ const mockInfluencers: CampaignInfluencer[] = [
     status: 'shortlisted',
     followers_count: 89000,
     engagement_rate: 6.2,
-    fee: 1800
+    fee: 1800,
+    phone_no: 9876543210,
+    gmail_gmail: 'mike@gmail.com'
   },
   {
     id: '3',
@@ -101,7 +107,9 @@ const mockInfluencers: CampaignInfluencer[] = [
     status: 'invited',
     followers_count: 95000,
     engagement_rate: 5.5,
-    fee: 2200
+    fee: 2200,
+    phone_no: null,
+    gmail_gmail: 'emma@gmail.com'
   }
 ];
 
@@ -131,6 +139,11 @@ const CampaignDetail = () => {
   const [campaign] = useState<Campaign>(mockCampaign);
   const [influencers, setInfluencers] = useState<CampaignInfluencer[]>(mockInfluencers);
   const [contracts] = useState<Contract[]>(mockContracts);
+  const [isCallInProgress, setIsCallInProgress] = useState<Record<string, boolean>>({});
+  const [isGmailInProgress, setIsGmailInProgress] = useState<Record<string, boolean>>({});
+  const [gmailResponses, setGmailResponses] = useState<Record<string, any>>({});
+  const [isGmailModalOpen, setIsGmailModalOpen] = useState(false);
+  const [selectedInfluencerForGmail, setSelectedInfluencerForGmail] = useState<CampaignInfluencer | null>(null);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -182,6 +195,128 @@ const CampaignDetail = () => {
     });
   };
 
+  const handlePhoneCall = async (influencerId: string, influencerName: string, phoneNumber: number | null) => {
+    if (!phoneNumber) {
+      toast({
+        title: "Phone number not available",
+        description: `No phone number found for ${influencerName}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsCallInProgress(prev => ({ ...prev, [influencerId]: true }));
+      toast({
+        title: "Initiating call",
+        description: `Starting a call with ${influencerName} at ${phoneNumber}...`,
+      });
+
+      const response = await fetch("https://api.elevenlabs.io/v1/convai/twilio/outbound-call", {
+        method: "POST",
+        headers: {
+          "Xi-Api-Key": "sk_97b3adae38c4d320bb4af66a35659213de2e129dc9546f84",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          "agent_id": "agent_01jwkpad6te50bmvfd8ax6xvqk",
+          "agent_phone_number_id": "phnum_01jwkwbn2terqtgd2nzxedgz0z",
+          "to_number": `+${phoneNumber}`
+        }),
+      });
+
+      const body = await response.json();
+      console.log(body);
+
+      if (response.ok) {
+        toast({
+          title: "Call initiated",
+          description: `Connected with ${influencerName}`,
+        });
+      } else {
+        throw new Error('Failed to initiate call');
+      }
+    } catch (error) {
+      console.error('Error initiating call:', error);
+      toast({
+        title: "Call failed",
+        description: "Unable to initiate the call. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCallInProgress(prev => ({ ...prev, [influencerId]: false }));
+    }
+  };
+
+  const handleGmailClick = (influencer: CampaignInfluencer) => {
+    if (!influencer.gmail_gmail) {
+      toast({
+        title: "Gmail not available",
+        description: `No Gmail address found for ${influencer.name}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    setSelectedInfluencerForGmail(influencer);
+    setIsGmailModalOpen(true);
+  };
+
+  const handleGmailSend = async () => {
+    if (!selectedInfluencerForGmail) return;
+
+    try {
+      setIsGmailInProgress(prev => ({ ...prev, [selectedInfluencerForGmail.id]: true }));
+      
+      toast({
+        title: "Sending...",
+        description: `Sending Gmail workflow for ${selectedInfluencerForGmail.name}...`,
+      });
+
+      console.log('Sending Gmail workflow for influencer:', selectedInfluencerForGmail.name);
+
+      const requestBody = {
+        gmail: selectedInfluencerForGmail.gmail_gmail,
+        campaign: campaign,
+        creator: selectedInfluencerForGmail
+      };
+
+      console.log('Request body:', requestBody);
+
+      const response = await fetch("https://varhhh.app.n8n.cloud/webhook-test/08b089ba-1617-4d04-a5c7-f9b7d8ca57c4", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      const responseData = await response.json();
+      console.log('Gmail workflow response:', responseData);
+
+      if (response.ok) {
+        setGmailResponses(prev => ({ ...prev, [selectedInfluencerForGmail.id]: responseData }));
+        
+        toast({
+          title: "Workflow Successful",
+          description: `Gmail workflow completed for ${selectedInfluencerForGmail.name} (200 OK)`,
+        });
+        setIsGmailModalOpen(false);
+        setSelectedInfluencerForGmail(null);
+      } else {
+        throw new Error(`Failed to send workflow: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error sending Gmail workflow:', error);
+      toast({
+        title: "Workflow Failed",
+        description: "Unable to send Gmail workflow. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGmailInProgress(prev => ({ ...prev, [selectedInfluencerForGmail.id]: false }));
+    }
+  };
+
   const budgetProgress = (campaign.spent / campaign.budget) * 100;
 
   return (
@@ -223,6 +358,36 @@ const CampaignDetail = () => {
           </div>
         </div>
       </header>
+
+      {/* Gmail Confirmation Modal */}
+      <Dialog open={isGmailModalOpen} onOpenChange={setIsGmailModalOpen}>
+        <DialogContent className="bg-zinc-800 border-zinc-700 text-snow">
+          <DialogHeader>
+            <DialogTitle>Send Gmail Workflow</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-snow/70">
+              Send Gmail workflow for {selectedInfluencerForGmail?.name} for campaign "{campaign.name}"?
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setIsGmailModalOpen(false)}
+                className="border-zinc-700 text-snow hover:bg-zinc-700"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleGmailSend}
+                disabled={isGmailInProgress[selectedInfluencerForGmail?.id || '']}
+                className="bg-coral hover:bg-coral/90 text-white"
+              >
+                {isGmailInProgress[selectedInfluencerForGmail?.id || ''] ? 'Sending...' : 'Send Gmail'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="overview" className="space-y-6">
@@ -374,6 +539,38 @@ const CampaignDetail = () => {
                               </Button>
                             )}
                             <Button
+                              onClick={() => handlePhoneCall(influencer.id, influencer.name, influencer.phone_no)}
+                              disabled={isCallInProgress[influencer.id] || !influencer.phone_no}
+                              variant="ghost"
+                              size="sm"
+                              className={`${
+                                isCallInProgress[influencer.id]
+                                  ? 'bg-green-500 border-green-500 text-white'
+                                  : !influencer.phone_no
+                                  ? 'text-gray-500 cursor-not-allowed'
+                                  : 'text-snow/70 hover:text-coral'
+                              }`}
+                            >
+                              <Phone className="h-4 w-4 mr-1" />
+                              {isCallInProgress[influencer.id] ? 'Calling...' : 'Call'}
+                            </Button>
+                            <Button
+                              onClick={() => handleGmailClick(influencer)}
+                              disabled={isGmailInProgress[influencer.id] || !influencer.gmail_gmail}
+                              variant="ghost"
+                              size="sm"
+                              className={`${
+                                isGmailInProgress[influencer.id]
+                                  ? 'bg-coral border-coral text-white'
+                                  : !influencer.gmail_gmail
+                                  ? 'text-gray-500 cursor-not-allowed'
+                                  : 'text-snow/70 hover:text-coral'
+                              }`}
+                            >
+                              <Mail className="h-4 w-4 mr-1" />
+                              {isGmailInProgress[influencer.id] ? 'Sending...' : 'Gmail'}
+                            </Button>
+                            <Button
                               onClick={() => handleRemoveInfluencer(influencer.id)}
                               variant="ghost"
                               size="sm"
@@ -389,6 +586,30 @@ const CampaignDetail = () => {
                 </Table>
               </CardContent>
             </Card>
+
+            {/* Gmail Response Display */}
+            {Object.keys(gmailResponses).length > 0 && (
+              <Card className="bg-zinc-800/50 border-zinc-700">
+                <CardHeader>
+                  <CardTitle className="text-snow">Gmail Workflow Responses</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {Object.entries(gmailResponses).map(([influencerId, response]) => {
+                    const influencer = influencers.find(inf => inf.id === influencerId);
+                    return (
+                      <div key={influencerId} className="bg-green-500/10 border border-green-500/30 rounded-md p-3 mb-3">
+                        <p className="text-green-500 text-sm font-medium mb-2">
+                          {influencer?.name} - Workflow Response (200 OK):
+                        </p>
+                        <pre className="text-xs text-green-400 overflow-auto max-h-20">
+                          {JSON.stringify(response, null, 2)}
+                        </pre>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="contracts" className="space-y-6">
