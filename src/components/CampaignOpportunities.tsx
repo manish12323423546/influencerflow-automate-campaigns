@@ -28,58 +28,6 @@ interface CampaignOffer {
   location?: string;
 }
 
-// Mock campaign opportunities using existing Supabase data structure
-const mockCampaignOffers: CampaignOffer[] = [
-  {
-    id: '1',
-    campaign_id: '1',
-    influencer_id: 'mock-creator-123',
-    brand_name: 'TechCorp',
-    campaign_name: 'Tech Product Launch',
-    brief: 'We are launching our revolutionary new smartphone and need authentic creators to showcase its features. Looking for creative content that highlights the camera quality, battery life, and sleek design.',
-    rate: 2500,
-    deadline: '2024-02-15',
-    status: 'pending',
-    created_at: '2024-01-20T10:00:00Z',
-    brand_logo: '/placeholder.svg',
-    deliverables: ['3 Instagram posts', '1 Reel', '5 Stories'],
-    platform: 'Instagram',
-    location: 'Remote'
-  },
-  {
-    id: '2',
-    campaign_id: '2',
-    influencer_id: 'mock-creator-123',
-    brand_name: 'StyleBrand',
-    campaign_name: 'Fashion Summer Collection',
-    brief: 'Promote our new summer collection with vibrant, lifestyle-focused content. We want to see the clothes in everyday settings that resonate with young professionals.',
-    rate: 1800,
-    deadline: '2024-03-01',
-    status: 'negotiating',
-    created_at: '2024-01-18T14:30:00Z',
-    brand_logo: '/placeholder.svg',
-    deliverables: ['2 Instagram posts', '3 Stories', '1 IGTV'],
-    platform: 'Instagram',
-    location: 'New York, NY'
-  },
-  {
-    id: '3',
-    campaign_id: '3',
-    influencer_id: 'mock-creator-123',
-    brand_name: 'FitLife',
-    campaign_name: 'Fitness App Promotion',
-    brief: 'Help us promote our new fitness app with workout content and app demonstrations. Show real usage scenarios and highlight the personal training features.',
-    rate: 3200,
-    deadline: '2024-02-28',
-    status: 'pending',
-    created_at: '2024-01-19T09:15:00Z',
-    brand_logo: '/placeholder.svg',
-    deliverables: ['2 YouTube videos', '4 Instagram posts', '10 Stories'],
-    platform: 'Multi-platform',
-    location: 'Remote'
-  }
-];
-
 const CampaignOpportunities = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -87,53 +35,52 @@ const CampaignOpportunities = () => {
   const [opportunities, setOpportunities] = useState<CampaignOffer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Mock query for campaign opportunities using existing data structure
+  // Query for campaign opportunities from Supabase
   const { data: campaignOpportunities = [], isLoading: queryLoading } = useQuery({
     queryKey: ['campaign-opportunities'],
     queryFn: async () => {
-      // Simulate API call by fetching from campaigns and campaign_influencers tables
-      console.log('Fetching campaign opportunities...');
+      console.log('Fetching campaign opportunities from Supabase...');
       
-      // In a real scenario, this would join campaigns with campaign_influencers
-      // where the current user is the influencer and status is 'pending' or 'negotiating'
-      const { data: campaigns, error } = await supabase
-        .from('campaigns')
+      const { data: campaignInfluencers, error } = await supabase
+        .from('campaign_influencers')
         .select(`
           *,
-          campaign_influencers!inner(
+          campaigns (
             id,
-            status,
-            fee,
-            influencer_id
+            name,
+            brand,
+            description,
+            budget,
+            timeline,
+            deliverables,
+            created_at
           )
         `)
-        .eq('campaign_influencers.status', 'shortlisted');
+        .in('status', ['shortlisted', 'pending'])
+        .order('created_at', { ascending: false });
       
       if (error) {
         console.error('Error fetching opportunities:', error);
-        // Return mock data if Supabase fails
-        return mockCampaignOffers;
+        return [];
       }
       
       // Transform the data to match our interface
-      const transformedData = campaigns?.map(campaign => ({
-        id: campaign.id,
-        campaign_id: campaign.id,
-        influencer_id: 'mock-creator-123',
-        brand_name: campaign.brand,
-        campaign_name: campaign.name,
-        brief: campaign.description || 'No description provided',
-        rate: campaign.budget / 10, // Simulate individual rate
-        deadline: '2024-02-28',
-        status: 'pending' as const,
-        created_at: campaign.created_at,
+      return campaignInfluencers?.map(ci => ({
+        id: ci.id,
+        campaign_id: ci.campaign_id,
+        influencer_id: ci.influencer_id,
+        brand_name: ci.campaigns?.brand || 'Unknown Brand',
+        campaign_name: ci.campaigns?.name || 'Unnamed Campaign',
+        brief: ci.campaigns?.description || 'No description provided',
+        rate: ci.fee || 0,
+        deadline: '2024-03-15', // Default deadline, can be enhanced later
+        status: ci.status === 'shortlisted' ? 'pending' as const : ci.status as any,
+        created_at: ci.created_at,
         brand_logo: '/placeholder.svg',
-        deliverables: campaign.deliverables?.split(',') || ['Content creation'],
+        deliverables: ci.campaigns?.deliverables?.split(',') || ['Content creation'],
         platform: 'Multi-platform',
         location: 'Remote'
       })) || [];
-
-      return transformedData.length > 0 ? transformedData : mockCampaignOffers;
     },
   });
 
@@ -145,18 +92,16 @@ const CampaignOpportunities = () => {
   // Mutation to update campaign offer status
   const updateOfferMutation = useMutation({
     mutationFn: async ({ offerId, status, campaignId }: { offerId: string; status: string; campaignId: string }) => {
-      // Update in Supabase campaign_influencers table
       const { data, error } = await supabase
         .from('campaign_influencers')
         .update({ status })
-        .eq('campaign_id', campaignId)
-        .eq('influencer_id', 'mock-creator-123')
+        .eq('id', offerId)
         .select()
         .single();
       
       if (error) {
         console.error('Supabase update error:', error);
-        // Continue with mock behavior for demo
+        throw error;
       }
       
       return { offerId, status };
@@ -182,7 +127,6 @@ const CampaignOpportunities = () => {
       queryClient.invalidateQueries({ queryKey: ['campaign-opportunities'] });
       queryClient.invalidateQueries({ queryKey: ['my-campaigns'] });
       
-      // If accepted, navigate to campaign details after a brief delay
       if (status === 'accepted') {
         setTimeout(() => {
           navigate(`/creator-campaigns/${offerId}`);
@@ -249,8 +193,8 @@ const CampaignOpportunities = () => {
       </div>
 
       {isLoading ? (
-        <div className="text-center py-8 text-snow/60">
-          Loading opportunities...
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-coral"></div>
         </div>
       ) : opportunities.length === 0 ? (
         <Card className="bg-zinc-900 border-zinc-800">

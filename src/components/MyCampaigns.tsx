@@ -31,76 +31,18 @@ interface MyCampaign {
   next_deliverable_due?: string;
 }
 
-// Mock campaigns data using existing structure
-const mockMyCampaigns: MyCampaign[] = [
-  {
-    id: '1',
-    campaign_id: '1',
-    brand_name: 'TechCorp',
-    campaign_name: 'Tech Product Launch',
-    brief: 'Showcase new smartphone features with authentic content',
-    rate: 2500,
-    deadline: '2024-02-15',
-    status: 'in_progress',
-    created_at: '2024-01-20T10:00:00Z',
-    brand_logo: '/placeholder.svg',
-    deliverables_count: 3,
-    completed_deliverables: 1,
-    platform: 'Instagram',
-    progress: 33,
-    payment_status: 'partial',
-    next_deliverable_due: '2024-02-05'
-  },
-  {
-    id: '2',
-    campaign_id: '2',
-    brand_name: 'StyleBrand',
-    campaign_name: 'Fashion Summer Collection',
-    brief: 'Promote summer collection with lifestyle content',
-    rate: 1800,
-    deadline: '2024-03-01',
-    status: 'accepted',
-    created_at: '2024-01-25T14:30:00Z',
-    brand_logo: '/placeholder.svg',
-    deliverables_count: 4,
-    completed_deliverables: 0,
-    platform: 'Instagram',
-    progress: 0,
-    payment_status: 'pending',
-    next_deliverable_due: '2024-02-10'
-  },
-  {
-    id: '3',
-    campaign_id: '3',
-    brand_name: 'FitLife',
-    campaign_name: 'Fitness App Promotion',
-    brief: 'Create workout content featuring the new fitness app',
-    rate: 3200,
-    deadline: '2024-01-30',
-    status: 'completed',
-    created_at: '2024-01-10T09:15:00Z',
-    brand_logo: '/placeholder.svg',
-    deliverables_count: 5,
-    completed_deliverables: 5,
-    platform: 'Multi-platform',
-    progress: 100,
-    payment_status: 'completed'
-  }
-];
-
 const MyCampaigns = () => {
   const { toast } = useToast();
   const [campaigns, setCampaigns] = useState<MyCampaign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
 
-  // Query to fetch user's campaigns
+  // Query to fetch user's campaigns from Supabase
   const { data: userCampaigns = [], isLoading: queryLoading } = useQuery({
     queryKey: ['my-campaigns'],
     queryFn: async () => {
-      console.log('Fetching user campaigns...');
+      console.log('Fetching user campaigns from Supabase...');
       
-      // Try to fetch from Supabase first
       const { data: campaignInfluencers, error } = await supabase
         .from('campaign_influencers')
         .select(`
@@ -112,26 +54,27 @@ const MyCampaigns = () => {
             description,
             budget,
             timeline,
+            deliverables,
             created_at
           )
         `)
-        .eq('status', 'confirmed')
-        .eq('influencer_id', 'mock-creator-123'); // Mock influencer ID
+        .in('status', ['accepted', 'confirmed'])
+        .order('created_at', { ascending: false });
       
       if (error) {
         console.error('Error fetching campaigns:', error);
-        return mockMyCampaigns;
+        return [];
       }
       
       // Transform Supabase data to match our interface
-      const transformedData = campaignInfluencers?.map(ci => ({
+      return campaignInfluencers?.map(ci => ({
         id: ci.id,
         campaign_id: ci.campaign_id,
         brand_name: ci.campaigns?.brand || 'Unknown Brand',
         campaign_name: ci.campaigns?.name || 'Unnamed Campaign',
         brief: ci.campaigns?.description || 'No description available',
         rate: ci.fee || 0,
-        deadline: '2024-02-28',
+        deadline: '2024-03-15', // Default deadline
         status: 'in_progress' as const,
         created_at: ci.created_at,
         brand_logo: '/placeholder.svg',
@@ -142,8 +85,6 @@ const MyCampaigns = () => {
         payment_status: 'partial' as const,
         next_deliverable_due: '2024-02-10'
       })) || [];
-
-      return transformedData.length > 0 ? transformedData : mockMyCampaigns;
     },
   });
 
@@ -265,8 +206,8 @@ const MyCampaigns = () => {
       </div>
 
       {isLoading ? (
-        <div className="text-center py-8 text-snow/60">
-          Loading campaigns...
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-coral"></div>
         </div>
       ) : filteredCampaigns.length === 0 ? (
         <Card className="bg-zinc-900 border-zinc-800">

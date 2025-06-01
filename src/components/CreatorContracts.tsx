@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
 import { FileText, Download, PenTool, Calendar, DollarSign, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 
 interface Contract {
@@ -27,70 +28,6 @@ interface Contract {
   amount?: number;
 }
 
-// Mock data for demonstration
-const mockContracts: Contract[] = [
-  {
-    id: '1',
-    campaign_id: '1',
-    brand_user_id: 'brand-1',
-    contract_data: {
-      deliverables: ['3 Instagram Posts', '1 Reel', '5 Stories'],
-      payment_terms: 'Net 30',
-      usage_rights: '1 year',
-      exclusivity: 'Category exclusive for 6 months'
-    },
-    status: 'sent',
-    signed_at: null,
-    pdf_url: null,
-    created_at: '2024-01-15T10:00:00Z',
-    updated_at: '2024-01-15T10:00:00Z',
-    campaign_name: 'Tech Product Launch',
-    brand_name: 'TechCorp',
-    brand_logo: '/placeholder.svg',
-    amount: 2500
-  },
-  {
-    id: '2',
-    campaign_id: '2',
-    brand_user_id: 'brand-2',
-    contract_data: {
-      deliverables: ['2 Instagram Posts', '3 Stories'],
-      payment_terms: 'Net 15',
-      usage_rights: '6 months',
-      exclusivity: 'Non-exclusive'
-    },
-    status: 'signed',
-    signed_at: '2024-01-10T14:30:00Z',
-    pdf_url: '/contracts/contract-2.pdf',
-    created_at: '2024-01-08T09:00:00Z',
-    updated_at: '2024-01-10T14:30:00Z',
-    campaign_name: 'Fashion Summer Collection',
-    brand_name: 'StyleBrand',
-    brand_logo: '/placeholder.svg',
-    amount: 1800
-  },
-  {
-    id: '3',
-    campaign_id: '3',
-    brand_user_id: 'brand-3',
-    contract_data: {
-      deliverables: ['1 YouTube Video', '2 Instagram Posts'],
-      payment_terms: 'Net 30',
-      usage_rights: '2 years',
-      exclusivity: 'Platform exclusive for 3 months'
-    },
-    status: 'completed',
-    signed_at: '2023-12-20T11:15:00Z',
-    pdf_url: '/contracts/contract-3.pdf',
-    created_at: '2023-12-15T08:00:00Z',
-    updated_at: '2023-12-28T16:00:00Z',
-    campaign_name: 'Fitness App Promotion',
-    brand_name: 'FitLife',
-    brand_logo: '/placeholder.svg',
-    amount: 3200
-  }
-];
-
 const CreatorContracts = () => {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -98,34 +35,43 @@ const CreatorContracts = () => {
   const [isSigningContract, setIsSigningContract] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    loadContracts();
-  }, []);
-
-  const loadContracts = async () => {
-    try {
-      // For now, using mock data. In production, this would fetch from Supabase
-      // const { data, error } = await supabase
-      //   .from('contracts')
-      //   .select(`
-      //     *,
-      //     campaigns(name),
-      //     brand_profiles(company_name, company_logo_url)
-      //   `)
-      //   .order('created_at', { ascending: false });
-
-      // if (error) throw error;
+  // Query to fetch contracts from Supabase
+  const { data: supabaseContracts = [], isLoading: queryLoading } = useQuery({
+    queryKey: ['creator-contracts'],
+    queryFn: async () => {
+      console.log('Fetching creator contracts from Supabase...');
       
-      // For demo purposes, using mock data
-      setContracts(mockContracts);
-    } catch (error) {
-      console.error('Error loading contracts:', error);
-      // Fallback to mock data
-      setContracts(mockContracts);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      const { data, error } = await supabase
+        .from('contracts')
+        .select(`
+          *,
+          campaigns (
+            name,
+            brand
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching contracts:', error);
+        return [];
+      }
+      
+      // Transform the data to match our interface
+      return data?.map(contract => ({
+        ...contract,
+        campaign_name: contract.campaigns?.name || 'Unknown Campaign',
+        brand_name: contract.campaigns?.brand || 'Unknown Brand',
+        brand_logo: '/placeholder.svg',
+        amount: contract.contract_data?.amount || 0
+      })) || [];
+    },
+  });
+
+  useEffect(() => {
+    setContracts(supabaseContracts);
+    setIsLoading(queryLoading);
+  }, [supabaseContracts, queryLoading]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -158,10 +104,16 @@ const CreatorContracts = () => {
   const handleSignContract = async (contractId: string) => {
     setIsSigningContract(true);
     try {
-      // Simulate e-signature process
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const { error } = await supabase
+        .from('contracts')
+        .update({ 
+          status: 'signed',
+          signed_at: new Date().toISOString()
+        })
+        .eq('id', contractId);
+
+      if (error) throw error;
       
-      // Update contract status
       setContracts(prev => prev.map(contract => 
         contract.id === contractId 
           ? { 
@@ -179,6 +131,7 @@ const CreatorContracts = () => {
 
       setSelectedContract(null);
     } catch (error) {
+      console.error('Error signing contract:', error);
       toast({
         title: 'Error signing contract',
         description: 'Please try again later.',
@@ -190,7 +143,6 @@ const CreatorContracts = () => {
   };
 
   const downloadContract = (contractId: string, contractName: string) => {
-    // Simulate PDF download
     toast({
       title: 'Downloading contract',
       description: `${contractName} contract is being downloaded.`,
@@ -203,10 +155,8 @@ const CreatorContracts = () => {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <div className="h-6 bg-zinc-800 rounded animate-pulse"></div>
-        <div className="h-32 bg-zinc-800 rounded animate-pulse"></div>
-        <div className="h-32 bg-zinc-800 rounded animate-pulse"></div>
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-coral"></div>
       </div>
     );
   }
@@ -266,65 +216,87 @@ const CreatorContracts = () => {
         </Card>
       </div>
 
-      {/* Contracts List */}
-      <Tabs defaultValue="pending" className="space-y-4">
-        <TabsList className="bg-zinc-900 border-zinc-800">
-          <TabsTrigger value="pending" className="data-[state=active]:bg-purple-500">
-            Pending ({pendingContracts.length})
-          </TabsTrigger>
-          <TabsTrigger value="signed" className="data-[state=active]:bg-purple-500">
-            Signed ({signedContracts.length})
-          </TabsTrigger>
-          <TabsTrigger value="all" className="data-[state=active]:bg-purple-500">
-            All Contracts ({contracts.length})
-          </TabsTrigger>
-        </TabsList>
+      {contracts.length === 0 ? (
+        <Card className="bg-zinc-900 border-zinc-800">
+          <CardContent className="p-8 text-center">
+            <FileText className="h-12 w-12 mx-auto mb-4 text-snow/30" />
+            <h3 className="text-lg font-medium text-snow mb-2">No contracts found</h3>
+            <p className="text-snow/60">Your contracts will appear here once brands send them to you.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* Contracts List */}
+          <Tabs defaultValue="pending" className="space-y-4">
+            <TabsList className="bg-zinc-900 border-zinc-800">
+              <TabsTrigger value="pending" className="data-[state=active]:bg-purple-500">
+                Pending ({pendingContracts.length})
+              </TabsTrigger>
+              <TabsTrigger value="signed" className="data-[state=active]:bg-purple-500">
+                Signed ({signedContracts.length})
+              </TabsTrigger>
+              <TabsTrigger value="all" className="data-[state=active]:bg-purple-500">
+                All Contracts ({contracts.length})
+              </TabsTrigger>
+            </TabsList>
 
-        <TabsContent value="pending" className="space-y-4">
-          {pendingContracts.length === 0 ? (
-            <Card className="bg-zinc-900 border-zinc-800">
-              <CardContent className="p-8 text-center">
-                <FileText className="h-12 w-12 mx-auto mb-4 text-snow/30" />
-                <h3 className="text-lg font-medium text-snow mb-2">No pending contracts</h3>
-                <p className="text-snow/60">All contracts have been signed or are in draft.</p>
-              </CardContent>
-            </Card>
-          ) : (
-            pendingContracts.map((contract) => (
-              <ContractCard 
-                key={contract.id} 
-                contract={contract} 
-                onView={setSelectedContract}
-                onSign={handleSignContract}
-                onDownload={downloadContract}
-              />
-            ))
-          )}
-        </TabsContent>
+            <TabsContent value="pending" className="space-y-4">
+              {pendingContracts.length === 0 ? (
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardContent className="p-8 text-center">
+                    <FileText className="h-12 w-12 mx-auto mb-4 text-snow/30" />
+                    <h3 className="text-lg font-medium text-snow mb-2">No pending contracts</h3>
+                    <p className="text-snow/60">All contracts have been signed or are in draft.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                pendingContracts.map((contract) => (
+                  <ContractCard 
+                    key={contract.id} 
+                    contract={contract} 
+                    onView={setSelectedContract}
+                    onSign={handleSignContract}
+                    onDownload={downloadContract}
+                  />
+                ))
+              )}
+            </TabsContent>
 
-        <TabsContent value="signed" className="space-y-4">
-          {signedContracts.map((contract) => (
-            <ContractCard 
-              key={contract.id} 
-              contract={contract} 
-              onView={setSelectedContract}
-              onDownload={downloadContract}
-            />
-          ))}
-        </TabsContent>
+            <TabsContent value="signed" className="space-y-4">
+              {signedContracts.length === 0 ? (
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardContent className="p-8 text-center">
+                    <CheckCircle className="h-12 w-12 mx-auto mb-4 text-snow/30" />
+                    <h3 className="text-lg font-medium text-snow mb-2">No signed contracts</h3>
+                    <p className="text-snow/60">Your signed contracts will appear here.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                signedContracts.map((contract) => (
+                  <ContractCard 
+                    key={contract.id} 
+                    contract={contract} 
+                    onView={setSelectedContract}
+                    onDownload={downloadContract}
+                  />
+                ))
+              )}
+            </TabsContent>
 
-        <TabsContent value="all" className="space-y-4">
-          {contracts.map((contract) => (
-            <ContractCard 
-              key={contract.id} 
-              contract={contract} 
-              onView={setSelectedContract}
-              onSign={contract.status === 'sent' ? handleSignContract : undefined}
-              onDownload={downloadContract}
-            />
-          ))}
-        </TabsContent>
-      </Tabs>
+            <TabsContent value="all" className="space-y-4">
+              {contracts.map((contract) => (
+                <ContractCard 
+                  key={contract.id} 
+                  contract={contract} 
+                  onView={setSelectedContract}
+                  onSign={contract.status === 'sent' ? handleSignContract : undefined}
+                  onDownload={downloadContract}
+                />
+              ))}
+            </TabsContent>
+          </Tabs>
+        </>
+      )}
 
       {/* Contract Details Modal */}
       <Dialog open={!!selectedContract} onOpenChange={() => setSelectedContract(null)}>
@@ -366,12 +338,10 @@ const CreatorContracts = () => {
                   <p className="text-snow">{new Date(selectedContract.created_at).toLocaleDateString()}</p>
                 </div>
                 {selectedContract.signed_at && (
-                  <>
-                    <div>
-                      <p className="text-sm text-snow/60">Signed Date</p>
-                      <p className="text-snow">{new Date(selectedContract.signed_at).toLocaleDateString()}</p>
-                    </div>
-                  </>
+                  <div>
+                    <p className="text-sm text-snow/60">Signed Date</p>
+                    <p className="text-snow">{new Date(selectedContract.signed_at).toLocaleDateString()}</p>
+                  </div>
                 )}
               </div>
 
@@ -379,33 +349,41 @@ const CreatorContracts = () => {
               <div className="space-y-4">
                 <h4 className="text-lg font-medium text-snow">Contract Terms</h4>
                 
-                <div>
-                  <p className="text-sm text-snow/60 mb-2">Deliverables</p>
-                  <div className="space-y-1">
-                    {selectedContract.contract_data.deliverables?.map((deliverable: string, index: number) => (
-                      <div key={index} className="flex items-center space-x-2">
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        <span className="text-snow">{deliverable}</span>
-                      </div>
-                    ))}
+                {selectedContract.contract_data?.deliverables && (
+                  <div>
+                    <p className="text-sm text-snow/60 mb-2">Deliverables</p>
+                    <div className="space-y-1">
+                      {selectedContract.contract_data.deliverables?.map((deliverable: string, index: number) => (
+                        <div key={index} className="flex items-center space-x-2">
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          <span className="text-snow">{deliverable}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-snow/60">Payment Terms</p>
-                    <p className="text-snow">{selectedContract.contract_data.payment_terms}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-snow/60">Usage Rights</p>
-                    <p className="text-snow">{selectedContract.contract_data.usage_rights}</p>
-                  </div>
+                  {selectedContract.contract_data?.payment_terms && (
+                    <div>
+                      <p className="text-sm text-snow/60">Payment Terms</p>
+                      <p className="text-snow">{selectedContract.contract_data.payment_terms}</p>
+                    </div>
+                  )}
+                  {selectedContract.contract_data?.usage_rights && (
+                    <div>
+                      <p className="text-sm text-snow/60">Usage Rights</p>
+                      <p className="text-snow">{selectedContract.contract_data.usage_rights}</p>
+                    </div>
+                  )}
                 </div>
 
-                <div>
-                  <p className="text-sm text-snow/60">Exclusivity</p>
-                  <p className="text-snow">{selectedContract.contract_data.exclusivity}</p>
-                </div>
+                {selectedContract.contract_data?.exclusivity && (
+                  <div>
+                    <p className="text-sm text-snow/60">Exclusivity</p>
+                    <p className="text-snow">{selectedContract.contract_data.exclusivity}</p>
+                  </div>
+                )}
               </div>
 
               {/* Actions */}
