@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CreditCard, Clock, CheckCircle, XCircle, DollarSign } from 'lucide-react';
+import { CreditCard, Clock, CheckCircle, XCircle, DollarSign, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import RazorpayPayment from '@/components/payments/RazorpayPayment';
 
 interface Payment {
   id: string;
@@ -29,6 +30,8 @@ const PaymentsManager = () => {
   const { toast } = useToast();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showRazorpayPayment, setShowRazorpayPayment] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
 
   useEffect(() => {
     const fetchPayments = async () => {
@@ -109,6 +112,16 @@ const PaymentsManager = () => {
     }
   };
 
+  const handleRazorpayPayment = (payment: Payment) => {
+    setSelectedPayment(payment);
+    setShowRazorpayPayment(true);
+  };
+
+  const handlePaymentSuccess = () => {
+    // Refresh payments data
+    window.location.reload();
+  };
+
   // Calculate summary stats
   const paymentStats = {
     pending: payments.filter(p => p.status === 'pending').length,
@@ -186,6 +199,17 @@ const PaymentsManager = () => {
         </Card>
       </div>
 
+      {/* New Payment Button */}
+      <div className="flex justify-end">
+        <Button
+          onClick={() => setShowRazorpayPayment(true)}
+          className="bg-coral hover:bg-coral/90 text-white"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Create New Payment
+        </Button>
+      </div>
+
       {/* Tabs for Payments and Transactions */}
       <Tabs defaultValue="payments" className="space-y-4">
         <TabsList className="grid w-full grid-cols-2 lg:w-[400px] bg-zinc-800 border border-zinc-700">
@@ -253,13 +277,24 @@ const PaymentsManager = () => {
                         </TableCell>
                         <TableCell>
                           {payment.status === 'pending' && (
-                            <Button
-                              onClick={() => handlePayNow(payment.id)}
-                              size="sm"
-                              className="bg-coral hover:bg-coral/90 text-white"
-                            >
-                              Pay Now
-                            </Button>
+                            <div className="flex space-x-2">
+                              <Button
+                                onClick={() => handlePayNow(payment.id)}
+                                size="sm"
+                                variant="outline"
+                                className="border-zinc-600 text-snow/70 hover:bg-zinc-700"
+                              >
+                                Pay Now
+                              </Button>
+                              <Button
+                                onClick={() => handleRazorpayPayment(payment)}
+                                size="sm"
+                                className="bg-coral hover:bg-coral/90 text-white"
+                              >
+                                <CreditCard className="h-4 w-4 mr-1" />
+                                Razorpay
+                              </Button>
+                            </div>
                           )}
                           {payment.status === 'processing' && (
                             <span className="text-sm text-snow/60">Processing...</span>
@@ -330,6 +365,20 @@ const PaymentsManager = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Razorpay Payment Modal */}
+      <RazorpayPayment
+        isOpen={showRazorpayPayment}
+        onClose={() => {
+          setShowRazorpayPayment(false);
+          setSelectedPayment(null);
+        }}
+        onSuccess={handlePaymentSuccess}
+        campaignId={selectedPayment?.campaign_id}
+        influencerId={selectedPayment?.influencer_id}
+        amount={selectedPayment?.amount}
+        description={selectedPayment?.milestone_description || `Payment for ${selectedPayment?.campaign?.name || 'campaign'}`}
+      />
     </div>
   );
 };
