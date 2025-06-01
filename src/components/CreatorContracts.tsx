@@ -22,6 +22,19 @@ interface Contract {
   pdf_url?: string;
 }
 
+// Helper function to safely format dates
+const formatDate = (dateString: string | null | undefined, fallback: string = 'N/A'): string => {
+  if (!dateString) return fallback;
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return fallback;
+    return date.toLocaleDateString();
+  } catch (error) {
+    console.error('Date formatting error:', error);
+    return fallback;
+  }
+};
+
 const CreatorContracts = () => {
   const { toast } = useToast();
   const [filter, setFilter] = useState<'all' | 'pending' | 'signed'>('all');
@@ -221,7 +234,7 @@ const CreatorContracts = () => {
                       
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-snow/80">${contract.amount.toLocaleString()}</span>
-                        <span className="text-snow/60">{new Date(contract.created_at).toLocaleDateString()}</span>
+                        <span className="text-snow/60">{formatDate(contract.created_at)}</span>
                       </div>
                       
                       <div className="flex space-x-2">
@@ -282,7 +295,7 @@ const CreatorContracts = () => {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-snow/80 text-sm">
-                        {new Date(contract.created_at).toLocaleDateString()}
+                        {formatDate(contract.created_at)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
