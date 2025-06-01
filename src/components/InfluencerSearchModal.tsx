@@ -9,7 +9,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { Influencer } from '@/types/influencer';
-import { fetchInfluencers } from '@/lib/supabase';
 
 export interface InfluencerSearchModalProps {
   open: boolean;
@@ -38,7 +37,14 @@ export function InfluencerSearchModal({ open, onClose, onSelect }: InfluencerSea
       const { data, error } = await query;
 
       if (error) throw error;
-      setInfluencers(data || []);
+      
+      // Transform the data to match the Influencer type
+      const transformedData: Influencer[] = (data || []).map(influencer => ({
+        ...influencer,
+        platform: influencer.platform as 'instagram' | 'tiktok' | 'youtube' | 'twitter'
+      }));
+      
+      setInfluencers(transformedData);
     } catch (error) {
       console.error('Error searching influencers:', error);
     } finally {
