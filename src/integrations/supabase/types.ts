@@ -67,6 +67,8 @@ export type Database = {
           fee: number
           id: string
           influencer_id: string | null
+          match_reason: string | null
+          match_score: number | null
           status: string
         }
         Insert: {
@@ -75,6 +77,8 @@ export type Database = {
           fee?: number
           id?: string
           influencer_id?: string | null
+          match_reason?: string | null
+          match_score?: number | null
           status: string
         }
         Update: {
@@ -83,6 +87,8 @@ export type Database = {
           fee?: number
           id?: string
           influencer_id?: string | null
+          match_reason?: string | null
+          match_score?: number | null
           status?: string
         }
         Relationships: [

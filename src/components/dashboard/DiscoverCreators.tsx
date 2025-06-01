@@ -1,10 +1,11 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Search, Star, Users, TrendingUp, MessageSquare, Heart, MessageCircle, Phone } from 'lucide-react';
+import { Search, Star, Users, TrendingUp, MessageSquare, Heart, MessageCircle, Phone, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { conversationalAIService } from '@/services/conversationalAI';
 
@@ -62,6 +63,8 @@ const DiscoverCreators = () => {
   const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [nicheFilter, setNicheFilter] = useState<string>('all');
   const [isCallInProgress, setIsCallInProgress] = useState<Record<string, boolean>>({});
+  const [isGmailInProgress, setIsGmailInProgress] = useState<Record<string, boolean>>({});
+  const [gmailResponses, setGmailResponses] = useState<Record<string, any>>({});
 
   const filteredCreators = mockCreators.filter(creator => {
     const matchesSearch = creator.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -123,6 +126,52 @@ const DiscoverCreators = () => {
       });
     } finally {
       setIsCallInProgress(prev => ({ ...prev, [creatorId]: false }));
+    }
+  };
+
+  const handleGmailSend = async (creatorId: string, creatorName: string) => {
+    try {
+      setIsGmailInProgress(prev => ({ ...prev, [creatorId]: true }));
+      
+      toast({
+        title: "Sending...",
+        description: `Sending workflow for ${creatorName}...`,
+      });
+
+      console.log('Sending Gmail workflow for creator:', creatorName);
+
+      const response = await fetch("https://varhhh.app.n8n.cloud/webhook/08b089ba-1617-4d04-a5c7-f9b7d8ca57c4", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          "Send": "Send"
+        }),
+      });
+
+      const responseData = await response.json();
+      console.log('Gmail workflow response:', responseData);
+
+      if (response.ok) {
+        setGmailResponses(prev => ({ ...prev, [creatorId]: responseData }));
+        
+        toast({
+          title: "Workflow Successful",
+          description: `Gmail workflow completed for ${creatorName} (200 OK)`,
+        });
+      } else {
+        throw new Error(`Failed to send workflow: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error sending Gmail workflow:', error);
+      toast({
+        title: "Workflow Failed",
+        description: "Unable to send Gmail workflow. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGmailInProgress(prev => ({ ...prev, [creatorId]: false }));
     }
   };
 
@@ -226,11 +275,21 @@ const DiscoverCreators = () => {
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
+                  {/* Gmail Response Display */}
+                  {gmailResponses[creator.id] && (
+                    <div className="bg-green-500/10 border border-green-500/30 rounded-md p-3 mt-3">
+                      <p className="text-green-500 text-sm font-medium mb-2">Workflow Response (200 OK):</p>
+                      <pre className="text-xs text-green-400 overflow-auto max-h-20">
+                        {JSON.stringify(gmailResponses[creator.id], null, 2)}
+                      </pre>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2">
                     <Button
                       size="sm"
                       variant="outline"
-                      className="flex-1 border-zinc-700 text-snow hover:bg-zinc-800"
+                      className="border-zinc-700 text-snow hover:bg-zinc-800"
                     >
                       <MessageCircle className="h-4 w-4 mr-1" />
                       Message
@@ -240,7 +299,7 @@ const DiscoverCreators = () => {
                       variant="outline"
                       onClick={() => handlePhoneCall(creator.id, creator.name)}
                       disabled={isCallInProgress[creator.id]}
-                      className={`flex-1 ${
+                      className={`${
                         isCallInProgress[creator.id]
                           ? 'bg-green-500 border-green-500 text-white'
                           : 'border-zinc-700 text-snow hover:bg-zinc-800'
@@ -248,6 +307,20 @@ const DiscoverCreators = () => {
                     >
                       <Phone className="h-4 w-4 mr-1" />
                       {isCallInProgress[creator.id] ? 'Calling...' : 'Call'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleGmailSend(creator.id, creator.name)}
+                      disabled={isGmailInProgress[creator.id]}
+                      className={`col-span-2 ${
+                        isGmailInProgress[creator.id]
+                          ? 'bg-coral border-coral text-white'
+                          : 'border-zinc-700 text-snow hover:bg-zinc-800'
+                      }`}
+                    >
+                      <Mail className="h-4 w-4 mr-1" />
+                      {isGmailInProgress[creator.id] ? 'Sending...' : 'Gmail'}
                     </Button>
                   </div>
                 </div>
