@@ -77,6 +77,16 @@ const RazorpayPayment = ({
     paymentType: 'milestone'
   });
 
+  // Update amount when defaultAmount changes
+  useState(() => {
+    if (defaultAmount) {
+      setPaymentData(prev => ({
+        ...prev,
+        amount: defaultAmount.toString()
+      }));
+    }
+  });
+
   const loadRazorpayScript = () => {
     return new Promise<boolean>((resolve) => {
       if (window.Razorpay) {
@@ -240,7 +250,11 @@ const RazorpayPayment = ({
               onChange={(e) => setPaymentData(prev => ({ ...prev, amount: e.target.value }))}
               placeholder="0.00"
               disabled={!!defaultAmount}
+              className={defaultAmount ? "bg-gray-100 cursor-not-allowed" : ""}
             />
+            {defaultAmount && (
+              <p className="text-xs text-gray-500">Amount is pre-filled from the selected payment</p>
+            )}
           </div>
           
           <div className="grid gap-2">
