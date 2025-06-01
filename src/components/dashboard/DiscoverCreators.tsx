@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +17,7 @@ interface Creator {
   industry: string;
   followers_count: number;
   engagement_rate: number;
+  phone_no: number | null;
   isShortlisted: boolean;
 }
 
@@ -52,6 +52,7 @@ const DiscoverCreators = () => {
           industry: influencer.industry,
           followers_count: influencer.followers_count,
           engagement_rate: Number(influencer.engagement_rate),
+          phone_no: influencer.phone_no,
           isShortlisted: false // This could be fetched from a separate table
         }));
         
@@ -98,15 +99,24 @@ const DiscoverCreators = () => {
     }
   };
 
-  const handlePhoneCall = async (creatorId: string, creatorName: string) => {
+  const handlePhoneCall = async (creatorId: string, creatorName: string, phoneNumber: number | null) => {
+    if (!phoneNumber) {
+      toast({
+        title: "Phone number not available",
+        description: `No phone number found for ${creatorName}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setIsCallInProgress(prev => ({ ...prev, [creatorId]: true }));
       toast({
         title: "Initiating call",
-        description: `Starting a call with ${creatorName}...`,
+        description: `Starting a call with ${creatorName} at ${phoneNumber}...`,
       });
 
-      const response = await fetch("https://api.elevenlabs.io//v1/convai/twilio/outbound-call", {
+      const response = await fetch("https://api.elevenlabs.io/v1/convai/twilio/outbound-call", {
         method: "POST",
         headers: {
           "Xi-Api-Key": "sk_97b3adae38c4d320bb4af66a35659213de2e129dc9546f84",
@@ -115,7 +125,7 @@ const DiscoverCreators = () => {
         body: JSON.stringify({
           "agent_id": "agent_01jwkpad6te50bmvfd8ax6xvqk",
           "agent_phone_number_id": "phnum_01jwkwbn2terqtgd2nzxedgz0z",
-          "to_number": "+918140030507"
+          "to_number": `+${phoneNumber}`
         }),
       });
 
@@ -195,6 +205,11 @@ const DiscoverCreators = () => {
       return `${(count / 1000).toFixed(0)}K`;
     }
     return count.toString();
+  };
+
+  const formatPhoneNumber = (phoneNumber: number | null) => {
+    if (!phoneNumber) return 'Not available';
+    return `+${phoneNumber}`;
   };
 
   // Get unique platforms and industries for filters
@@ -311,6 +326,12 @@ const DiscoverCreators = () => {
                       </div>
                     </div>
 
+                    {/* Phone Number Display */}
+                    <div className="bg-zinc-700/30 rounded-md p-3">
+                      <p className="text-snow/60 text-xs mb-1">Phone Number</p>
+                      <p className="text-snow text-sm font-medium">{formatPhoneNumber(creator.phone_no)}</p>
+                    </div>
+
                     {/* Gmail Response Display */}
                     {gmailResponses[creator.id] && (
                       <div className="bg-green-500/10 border border-green-500/30 rounded-md p-3 mt-3">
@@ -333,11 +354,13 @@ const DiscoverCreators = () => {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => handlePhoneCall(creator.id, creator.name)}
-                        disabled={isCallInProgress[creator.id]}
+                        onClick={() => handlePhoneCall(creator.id, creator.name, creator.phone_no)}
+                        disabled={isCallInProgress[creator.id] || !creator.phone_no}
                         className={`${
                           isCallInProgress[creator.id]
                             ? 'bg-green-500 border-green-500 text-white'
+                            : !creator.phone_no
+                            ? 'bg-gray-500 border-gray-500 text-gray-300 cursor-not-allowed'
                             : 'border-zinc-700 text-snow hover:bg-zinc-800'
                         }`}
                       >

@@ -294,6 +294,7 @@ export type Database = {
           industry: string
           language: string
           name: string
+          phone_no: number | null
           platform: string
           risk_flags: string[] | null
           roi_index: number
@@ -314,6 +315,7 @@ export type Database = {
           industry: string
           language?: string
           name: string
+          phone_no?: number | null
           platform: string
           risk_flags?: string[] | null
           roi_index?: number
@@ -334,6 +336,7 @@ export type Database = {
           industry?: string
           language?: string
           name?: string
+          phone_no?: number | null
           platform?: string
           risk_flags?: string[] | null
           roi_index?: number
