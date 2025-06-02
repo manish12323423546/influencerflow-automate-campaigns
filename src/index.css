@@ -1,0 +1,132 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 11 11 12; /* Carbon #0B0B0C */
+    --foreground: 247 247 247; /* Snow #F7F7F7 */
+
+    --card: 11 11 12;
+    --card-foreground: 247 247 247;
+
+    --popover: 11 11 12;
+    --popover-foreground: 247 247 247;
+
+    --primary: 255 98 67; /* Orange #FF6243 */
+    --primary-foreground: 11 11 12;
+
+    --secondary: 30 30 32;
+    --secondary-foreground: 247 247 247;
+
+    --muted: 30 30 32;
+    --muted-foreground: 163 163 163;
+
+    --accent: 255 98 67;
+    --accent-foreground: 11 11 12;
+
+    --destructive: 220 38 38;
+    --destructive-foreground: 247 247 247;
+
+    --border: 39 39 42;
+    --input: 39 39 42;
+    --ring: 255 98 67;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 11 11 12;
+    --sidebar-foreground: 247 247 247;
+    --sidebar-primary: 255 98 67;
+    --sidebar-primary-foreground: 11 11 12;
+    --sidebar-accent: 30 30 32;
+    --sidebar-accent-foreground: 247 247 247;
+    --sidebar-border: 39 39 42;
+    --sidebar-ring: 255 98 67;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-carbon text-snow font-inter;
+    scroll-behavior: smooth;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-space;
+  }
+
+  .font-kpi {
+    @apply font-unbounded;
+  }
+}
+
+@layer components {
+  .btn-orange {
+    @apply bg-coral hover:bg-coral/90 text-white font-semibold px-8 py-4 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg;
+  }
+
+  .btn-outline {
+    @apply border-2 border-coral text-coral hover:bg-coral hover:text-white font-semibold px-8 py-4 rounded-xl transition-all duration-300;
+  }
+
+  .gradient-border {
+    @apply relative before:absolute before:inset-0 before:p-[2px] before:bg-gradient-to-r before:from-coral before:to-orange-400 before:rounded-xl;
+  }
+
+  .gradient-border > * {
+    @apply relative bg-carbon rounded-xl;
+  }
+
+  .section-padding {
+    @apply py-20 lg:py-32;
+  }
+
+  .container-custom {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Updated gradient text for homepage sections */
+  .gradient-text {
+    @apply bg-gradient-to-r from-coral to-orange-400 bg-clip-text text-transparent;
+  }
+
+  /* Updated button styles for homepage */
+  .primary-button {
+    @apply bg-coral hover:bg-coral/90 text-white font-semibold px-8 py-4 rounded-xl transition-all duration-300 transform hover:scale-105;
+  }
+
+  .secondary-button {
+    @apply border-2 border-coral text-coral hover:bg-coral hover:text-white font-semibold px-8 py-4 rounded-xl transition-all duration-300;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+.animate-pulse {
+  animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-pulse-delay-200 {
+  animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation-delay: 200ms;
+}
+
+.animate-pulse-delay-400 {
+  animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation-delay: 400ms;
+}
