@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +9,7 @@ import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ArrowLeft, Edit, Users, BarChart3, FileText, MessageSquare, Plus, Phone, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Campaign {
   id: string;
@@ -26,6 +26,22 @@ interface Campaign {
   goals: string;
   target_audience: string;
   deliverables: string;
+  campaign_influencers?: Array<{
+    id: string;
+    fee: number;
+    status: string;
+    match_score: number;
+    match_reason: string;
+    influencer: {
+      id: string;
+      handle: string;
+      name: string;
+      avatar_url: string;
+      platform: string;
+      followers_count: number;
+      engagement_rate: number;
+    };
+  }>;
 }
 
 interface CampaignInfluencer {
@@ -72,7 +88,57 @@ const mockCampaign: Campaign = {
   end_date: '2024-02-15',
   goals: 'Increase brand awareness and drive product sales',
   target_audience: 'Tech enthusiasts aged 25-40',
-  deliverables: '10 posts, 5 reels, 20 stories across platforms'
+  deliverables: '10 posts, 5 reels, 20 stories across platforms',
+  campaign_influencers: [
+    {
+      id: '1',
+      fee: 2500,
+      status: 'confirmed',
+      match_score: 95,
+      match_reason: 'High match score',
+      influencer: {
+        id: '1',
+        handle: '@sarahj_tech',
+        name: 'Sarah Johnson',
+        avatar_url: '/placeholder.svg',
+        platform: 'Instagram',
+        followers_count: 125000,
+        engagement_rate: 4.8
+      }
+    },
+    {
+      id: '2',
+      fee: 1800,
+      status: 'shortlisted',
+      match_score: 85,
+      match_reason: 'High potential',
+      influencer: {
+        id: '2',
+        handle: '@mikefitness',
+        name: 'Mike Chen',
+        avatar_url: '/placeholder.svg',
+        platform: 'Instagram',
+        followers_count: 89000,
+        engagement_rate: 6.2
+      }
+    },
+    {
+      id: '3',
+      fee: 2200,
+      status: 'invited',
+      match_score: 75,
+      match_reason: 'Low engagement',
+      influencer: {
+        id: '3',
+        handle: '@emmastyle',
+        name: 'Emma Style',
+        avatar_url: '/placeholder.svg',
+        platform: 'Instagram',
+        followers_count: 95000,
+        engagement_rate: 5.5
+      }
+    }
+  ]
 };
 
 const mockInfluencers: CampaignInfluencer[] = [
@@ -136,187 +202,100 @@ const CampaignDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
-  const [campaign] = useState<Campaign>(mockCampaign);
-  const [influencers, setInfluencers] = useState<CampaignInfluencer[]>(mockInfluencers);
-  const [contracts] = useState<Contract[]>(mockContracts);
-  const [isCallInProgress, setIsCallInProgress] = useState<Record<string, boolean>>({});
-  const [isGmailInProgress, setIsGmailInProgress] = useState<Record<string, boolean>>({});
-  const [gmailResponses, setGmailResponses] = useState<Record<string, any>>({});
-  const [isGmailModalOpen, setIsGmailModalOpen] = useState(false);
-  const [selectedInfluencerForGmail, setSelectedInfluencerForGmail] = useState<CampaignInfluencer | null>(null);
+  const [campaign, setCampaign] = useState<Campaign | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCampaignDetails = async () => {
+      if (!id) return;
+
+      try {
+        setIsLoading(true);
+        
+        const { data, error } = await supabase
+          .from('campaigns')
+          .select(`
+            *,
+            campaign_influencers (
+              id,
+              fee,
+              status,
+              match_score,
+              match_reason,
+              influencer:influencers (
+                id,
+                handle,
+                name,
+                avatar_url,
+                platform,
+                followers_count,
+                engagement_rate
+              )
+            )
+          `)
+          .eq('id', id)
+          .single();
+
+        if (error) throw error;
+
+        if (!data) {
+          toast({
+            title: "Campaign not found",
+            description: "The requested campaign could not be found.",
+            variant: "destructive",
+          });
+          navigate('/dashboard');
+          return;
+        }
+
+        setCampaign(data);
+      } catch (error) {
+        console.error('Error fetching campaign details:', error);
+        toast({
+          title: "Error loading campaign",
+          description: "There was a problem loading the campaign details. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCampaignDetails();
+  }, [id, navigate, toast]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
-        return 'bg-green-500/20 text-green-400 border-green-500/30';
+        return 'text-green-500 bg-green-500/10';
       case 'completed':
-        return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+        return 'text-blue-500 bg-blue-500/10';
       case 'draft':
-        return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+        return 'text-yellow-500 bg-yellow-500/10';
       case 'paused':
-        return 'bg-red-500/20 text-red-400 border-red-500/30';
-      case 'shortlisted':
-        return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
-      case 'invited':
-        return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-      case 'confirmed':
-        return 'bg-green-500/20 text-green-400 border-green-500/30';
-      case 'declined':
-        return 'bg-red-500/20 text-red-400 border-red-500/30';
-      case 'signed':
-        return 'bg-green-500/20 text-green-400 border-green-500/30';
-      case 'sent':
-        return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+        return 'text-red-500 bg-red-500/10';
       default:
-        return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+        return 'text-gray-500 bg-gray-500/10';
     }
   };
 
-  const handleOutreach = (influencerId: string) => {
-    navigate('/dashboard', { state: { activeTab: 'outreach', influencerId } });
-  };
+  const budgetProgress = campaign ? (campaign.spent / campaign.budget) * 100 : 0;
 
-  const handleCreateContract = (influencerId: string) => {
-    toast({
-      title: "Contract created",
-      description: "Contract has been created and sent for signature.",
-    });
-  };
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-carbon flex items-center justify-center">
+        <div className="text-snow">Loading campaign details...</div>
+      </div>
+    );
+  }
 
-  const handleAddInfluencer = () => {
-    navigate('/dashboard', { state: { activeTab: 'discover' } });
-  };
-
-  const handleRemoveInfluencer = (influencerId: string) => {
-    setInfluencers(prev => prev.filter(inf => inf.id !== influencerId));
-    toast({
-      title: "Influencer removed",
-      description: "Influencer has been removed from the campaign.",
-    });
-  };
-
-  const handlePhoneCall = async (influencerId: string, influencerName: string, phoneNumber: number | null) => {
-    if (!phoneNumber) {
-      toast({
-        title: "Phone number not available",
-        description: `No phone number found for ${influencerName}.`,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      setIsCallInProgress(prev => ({ ...prev, [influencerId]: true }));
-      toast({
-        title: "Initiating call",
-        description: `Starting a call with ${influencerName} at ${phoneNumber}...`,
-      });
-
-      const response = await fetch("https://api.elevenlabs.io/v1/convai/twilio/outbound-call", {
-        method: "POST",
-        headers: {
-          "Xi-Api-Key": "sk_97b3adae38c4d320bb4af66a35659213de2e129dc9546f84",
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          "agent_id": "agent_01jwkpad6te50bmvfd8ax6xvqk",
-          "agent_phone_number_id": "phnum_01jwkwbn2terqtgd2nzxedgz0z",
-          "to_number": `+${phoneNumber}`
-        }),
-      });
-
-      const body = await response.json();
-      console.log(body);
-
-      if (response.ok) {
-        toast({
-          title: "Call initiated",
-          description: `Connected with ${influencerName}`,
-        });
-      } else {
-        throw new Error('Failed to initiate call');
-      }
-    } catch (error) {
-      console.error('Error initiating call:', error);
-      toast({
-        title: "Call failed",
-        description: "Unable to initiate the call. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsCallInProgress(prev => ({ ...prev, [influencerId]: false }));
-    }
-  };
-
-  const handleGmailClick = (influencer: CampaignInfluencer) => {
-    if (!influencer.gmail_gmail) {
-      toast({
-        title: "Gmail not available",
-        description: `No Gmail address found for ${influencer.name}.`,
-        variant: "destructive",
-      });
-      return;
-    }
-    setSelectedInfluencerForGmail(influencer);
-    setIsGmailModalOpen(true);
-  };
-
-  const handleGmailSend = async () => {
-    if (!selectedInfluencerForGmail) return;
-
-    try {
-      setIsGmailInProgress(prev => ({ ...prev, [selectedInfluencerForGmail.id]: true }));
-      
-      toast({
-        title: "Sending...",
-        description: `Sending Gmail workflow for ${selectedInfluencerForGmail.name}...`,
-      });
-
-      console.log('Sending Gmail workflow for influencer:', selectedInfluencerForGmail.name);
-
-      const requestBody = {
-        gmail: selectedInfluencerForGmail.gmail_gmail,
-        campaign: campaign,
-        creator: selectedInfluencerForGmail
-      };
-
-      console.log('Request body:', JSON.stringify(requestBody, null, 2));
-
-      const response = await fetch("https://varhhh.app.n8n.cloud/webhook/08b089ba-1617-4d04-a5c7-f9b7d8ca57c4", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
-
-      setGmailResponses(prev => ({ ...prev, [selectedInfluencerForGmail.id]: { status: 'sent', timestamp: new Date().toISOString() } }));
-      
-      toast({
-        title: "Request Sent Successfully",
-        description: `Gmail workflow request sent for ${selectedInfluencerForGmail.name}. JSON body sent in proper format.`,
-      });
-      setIsGmailModalOpen(false);
-      setSelectedInfluencerForGmail(null);
-
-    } catch (error) {
-      console.error('Error sending Gmail workflow:', error);
-      toast({
-        title: "Workflow Failed",
-        description: "Unable to send Gmail workflow. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGmailInProgress(prev => ({ ...prev, [selectedInfluencerForGmail.id]: false }));
-    }
-  };
-
-  const budgetProgress = (campaign.spent / campaign.budget) * 100;
+  if (!campaign) {
+    return (
+      <div className="min-h-screen bg-carbon flex items-center justify-center">
+        <div className="text-snow">Campaign not found</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-carbon">
@@ -358,55 +337,11 @@ const CampaignDetail = () => {
         </div>
       </header>
 
-      {/* Gmail Confirmation Modal */}
-      <Dialog open={isGmailModalOpen} onOpenChange={setIsGmailModalOpen}>
-        <DialogContent className="bg-zinc-800 border-zinc-700 text-snow">
-          <DialogHeader>
-            <DialogTitle>Send Gmail Workflow</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-snow/70">
-              Send Gmail workflow for {selectedInfluencerForGmail?.name} for campaign "{campaign.name}"?
-            </p>
-            <div className="flex gap-2 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setIsGmailModalOpen(false)}
-                className="border-zinc-700 text-snow hover:bg-zinc-700"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleGmailSend}
-                disabled={isGmailInProgress[selectedInfluencerForGmail?.id || '']}
-                className="bg-coral hover:bg-coral/90 text-white"
-              >
-                {isGmailInProgress[selectedInfluencerForGmail?.id || ''] ? 'Sending...' : 'Send Gmail'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
-            <TabsTrigger value="overview" className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="influencers" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Influencers
-            </TabsTrigger>
-            <TabsTrigger value="contracts" className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Contracts
-            </TabsTrigger>
-            <TabsTrigger value="performance" className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Performance
-            </TabsTrigger>
+          <TabsList className="bg-zinc-800/50 border-zinc-700">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-purple-500">Overview</TabsTrigger>
+            <TabsTrigger value="influencers" className="data-[state=active]:bg-purple-500">Influencers</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -476,241 +411,71 @@ const CampaignDetail = () => {
           </TabsContent>
 
           <TabsContent value="influencers" className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-semibold text-snow">Campaign Influencers</h2>
-              <Button 
-                onClick={handleAddInfluencer}
-                className="bg-coral hover:bg-coral/90 text-white"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add Influencer
-              </Button>
-            </div>
-
             <Card className="bg-zinc-800/50 border-zinc-700">
-              <CardContent className="p-0">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-snow">Campaign Influencers</CardTitle>
+                  <Button variant="outline" size="sm" className="border-zinc-700 text-snow hover:bg-zinc-800">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Influencer
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow className="border-zinc-700">
                       <TableHead className="text-snow/80">Influencer</TableHead>
-                      <TableHead className="text-snow/80">Handle</TableHead>
+                      <TableHead className="text-snow/80">Platform</TableHead>
                       <TableHead className="text-snow/80">Followers</TableHead>
                       <TableHead className="text-snow/80">Engagement</TableHead>
                       <TableHead className="text-snow/80">Fee</TableHead>
                       <TableHead className="text-snow/80">Status</TableHead>
+                      <TableHead className="text-snow/80">Match Score</TableHead>
                       <TableHead className="text-snow/80">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {influencers.map((influencer) => (
-                      <TableRow key={influencer.id} className="border-zinc-700 hover:bg-zinc-700/50">
-                        <TableCell className="font-medium text-snow">{influencer.name}</TableCell>
-                        <TableCell className="text-snow/80">{influencer.handle}</TableCell>
-                        <TableCell className="text-snow/80">{influencer.followers_count.toLocaleString()}</TableCell>
-                        <TableCell className="text-snow/80">{influencer.engagement_rate}%</TableCell>
-                        <TableCell className="text-snow/80">${influencer.fee.toLocaleString()}</TableCell>
-                        <TableCell>
-                          <Badge className={getStatusColor(influencer.status)}>
-                            {influencer.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            {influencer.status === 'shortlisted' && (
-                              <Button
-                                onClick={() => handleOutreach(influencer.id)}
-                                variant="ghost"
-                                size="sm"
-                                className="text-snow/70 hover:text-coral"
-                              >
-                                <MessageSquare className="h-4 w-4 mr-1" />
-                                Outreach
-                              </Button>
-                            )}
-                            {influencer.status === 'confirmed' && (
-                              <Button
-                                onClick={() => handleCreateContract(influencer.id)}
-                                variant="ghost"
-                                size="sm"
-                                className="text-snow/70 hover:text-coral"
-                              >
-                                Create Contract
-                              </Button>
-                            )}
-                            <Button
-                              onClick={() => handlePhoneCall(influencer.id, influencer.name, influencer.phone_no)}
-                              disabled={isCallInProgress[influencer.id] || !influencer.phone_no}
-                              variant="ghost"
-                              size="sm"
-                              className={`${
-                                isCallInProgress[influencer.id]
-                                  ? 'bg-green-500 border-green-500 text-white'
-                                  : !influencer.phone_no
-                                  ? 'text-gray-500 cursor-not-allowed'
-                                  : 'text-snow/70 hover:text-coral'
-                              }`}
-                            >
-                              <Phone className="h-4 w-4 mr-1" />
-                              {isCallInProgress[influencer.id] ? 'Calling...' : 'Call'}
-                            </Button>
-                            <Button
-                              onClick={() => handleGmailClick(influencer)}
-                              disabled={isGmailInProgress[influencer.id] || !influencer.gmail_gmail}
-                              variant="ghost"
-                              size="sm"
-                              className={`${
-                                isGmailInProgress[influencer.id]
-                                  ? 'bg-coral border-coral text-white'
-                                  : !influencer.gmail_gmail
-                                  ? 'text-gray-500 cursor-not-allowed'
-                                  : 'text-snow/70 hover:text-coral'
-                              }`}
-                            >
-                              <Mail className="h-4 w-4 mr-1" />
-                              {isGmailInProgress[influencer.id] ? 'Sending...' : 'Gmail'}
-                            </Button>
-                            <Button
-                              onClick={() => handleRemoveInfluencer(influencer.id)}
-                              variant="ghost"
-                              size="sm"
-                              className="text-snow/70 hover:text-red-500"
-                            >
-                              Remove
-                            </Button>
+                    {campaign.campaign_influencers?.map((ci) => (
+                      <TableRow key={ci.id} className="border-zinc-700">
+                        <TableCell className="font-medium text-snow">
+                          <div className="flex items-center space-x-3">
+                            <div className="flex-shrink-0">
+                              {ci.influencer.avatar_url ? (
+                                <img
+                                  src={ci.influencer.avatar_url}
+                                  alt={ci.influencer.name}
+                                  className="h-8 w-8 rounded-full"
+                                />
+                              ) : (
+                                <div className="h-8 w-8 rounded-full bg-zinc-700 flex items-center justify-center">
+                                  <span className="text-snow text-sm">{ci.influencer.name[0]}</span>
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <div className="font-medium text-snow">{ci.influencer.name}</div>
+                              <div className="text-sm text-snow/60">@{ci.influencer.handle}</div>
+                            </div>
                           </div>
+                        </TableCell>
+                        <TableCell className="text-snow/80">{ci.influencer.platform}</TableCell>
+                        <TableCell className="text-snow/80">{ci.influencer.followers_count.toLocaleString()}</TableCell>
+                        <TableCell className="text-snow/80">{ci.influencer.engagement_rate}%</TableCell>
+                        <TableCell className="text-snow/80">${ci.fee.toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Badge className={getStatusColor(ci.status)}>{ci.status}</Badge>
+                        </TableCell>
+                        <TableCell className="text-snow/80">{ci.match_score}%</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm" className="text-snow/70 hover:text-coral">
+                            View Details
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
-              </CardContent>
-            </Card>
-
-            {/* Gmail Response Display */}
-            {Object.keys(gmailResponses).length > 0 && (
-              <Card className="bg-zinc-800/50 border-zinc-700">
-                <CardHeader>
-                  <CardTitle className="text-snow">Gmail Workflow Responses</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {Object.entries(gmailResponses).map(([influencerId, response]) => {
-                    const influencer = influencers.find(inf => inf.id === influencerId);
-                    return (
-                      <div key={influencerId} className="bg-green-500/10 border border-green-500/30 rounded-md p-3 mb-3">
-                        <p className="text-green-500 text-sm font-medium mb-2">
-                          {influencer?.name} - Workflow Response (200 OK):
-                        </p>
-                        <pre className="text-xs text-green-400 overflow-auto max-h-20">
-                          {JSON.stringify(response, null, 2)}
-                        </pre>
-                      </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="contracts" className="space-y-6">
-            <h2 className="text-2xl font-semibold text-snow">Campaign Contracts</h2>
-            
-            <Card className="bg-zinc-800/50 border-zinc-700">
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-zinc-700">
-                      <TableHead className="text-snow/80">Influencer</TableHead>
-                      <TableHead className="text-snow/80">Amount</TableHead>
-                      <TableHead className="text-snow/80">Deliverables</TableHead>
-                      <TableHead className="text-snow/80">Status</TableHead>
-                      <TableHead className="text-snow/80">Signed Date</TableHead>
-                      <TableHead className="text-snow/80">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {contracts.map((contract) => {
-                      const influencer = influencers.find(inf => inf.id === contract.influencerId);
-                      return (
-                        <TableRow key={contract.id} className="border-zinc-700 hover:bg-zinc-700/50">
-                          <TableCell className="font-medium text-snow">{influencer?.name}</TableCell>
-                          <TableCell className="text-snow/80">${contract.amount.toLocaleString()}</TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {contract.deliverables.slice(0, 2).map((deliverable, index) => (
-                                <Badge key={index} variant="outline" className="border-zinc-600 text-snow/70 text-xs">
-                                  {deliverable}
-                                </Badge>
-                              ))}
-                              {contract.deliverables.length > 2 && (
-                                <Badge variant="outline" className="border-zinc-600 text-snow/70 text-xs">
-                                  +{contract.deliverables.length - 2} more
-                                </Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={getStatusColor(contract.status)}>
-                              {contract.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-snow/80">{contract.signedDate || '-'}</TableCell>
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-snow/70 hover:text-coral"
-                            >
-                              View Details
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="performance" className="space-y-6">
-            <h2 className="text-2xl font-semibold text-snow">Performance Metrics</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {mockPerformanceMetrics.map((metric, index) => (
-                <Card key={index} className="bg-zinc-800/50 border-zinc-700">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-snow/80">{metric.metric}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-snow">{metric.value}</div>
-                    <p className={`text-xs mt-1 ${
-                      metric.trend === 'up' ? 'text-green-500' : 
-                      metric.trend === 'down' ? 'text-red-500' : 
-                      'text-neutral-400'
-                    }`}>
-                      {metric.change} vs last period
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            <Card className="bg-zinc-800/50 border-zinc-700">
-              <CardHeader>
-                <CardTitle className="text-snow">Campaign Performance Summary</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="text-snow/80">
-                    <h4 className="font-medium mb-2">Key Insights</h4>
-                    <ul className="space-y-1 text-sm text-snow/60">
-                      <li>• Campaign reach exceeded initial targets by 25%</li>
-                      <li>• Engagement rate is performing above industry average</li>
-                      <li>• Cost per engagement is within budget expectations</li>
-                      <li>• Sarah Johnson's content is driving the highest engagement</li>
-                    </ul>
-                  </div>
-                </div>
               </CardContent>
             </Card>
           </TabsContent>

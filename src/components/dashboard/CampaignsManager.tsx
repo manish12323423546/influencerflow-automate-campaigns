@@ -1,30 +1,94 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search } from 'lucide-react';
+import { Search, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import type { Campaign } from '@/types/campaign';
 
 interface CampaignsManagerProps {
   campaigns: Campaign[];
 }
 
-const CampaignsManager = ({ campaigns }: CampaignsManagerProps) => {
+const CampaignsManager = ({ campaigns: initialCampaigns }: CampaignsManagerProps) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [campaigns, setCampaigns] = useState<Campaign[]>(initialCampaigns);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [brandFilter, setBrandFilter] = useState<string>('all');
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingCampaignId, setLoadingCampaignId] = useState<string | null>(null);
+
+  // Fetch campaign details from Supabase
+  const fetchCampaignDetails = async (campaignId: string) => {
+    try {
+      setLoadingCampaignId(campaignId);
+      
+      // Fetch campaign with related data using existing relationships
+      const { data: campaign, error: campaignError } = await supabase
+        .from('campaigns')
+        .select(`
+          *,
+          campaign_influencers (
+            id,
+            fee,
+            status,
+            match_score,
+            match_reason,
+            influencer:influencers (
+              id,
+              handle,
+              name,
+              avatar_url,
+              platform,
+              followers_count,
+              engagement_rate
+            )
+          )
+        `)
+        .eq('id', campaignId)
+        .single();
+
+      if (campaignError) throw campaignError;
+
+      if (!campaign) {
+        toast({
+          title: "Campaign not found",
+          description: "The requested campaign could not be found.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Navigate to view page with the data
+      navigate(`/campaigns/${campaignId}`, {
+        state: { campaignData: campaign }
+      });
+
+    } catch (error) {
+      console.error('Error fetching campaign details:', error);
+      toast({
+        title: "Error loading campaign",
+        description: "There was a problem loading the campaign details. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingCampaignId(null);
+    }
+  };
 
   // Enhanced filtering logic
   const filteredCampaigns = campaigns.filter(campaign => {
     // Search filter
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
-      if (!campaign.name.toLowerCase().includes(searchLower) && 
-          !campaign.brand.toLowerCase().includes(searchLower)) {
+      if (!campaign.name?.toLowerCase().includes(searchLower) && 
+          !campaign.brand?.toLowerCase().includes(searchLower)) {
         return false;
       }
     }
@@ -43,7 +107,7 @@ const CampaignsManager = ({ campaigns }: CampaignsManagerProps) => {
   });
 
   // Get unique brands for filter
-  const uniqueBrands = [...new Set(campaigns.map(campaign => campaign.brand))];
+  const uniqueBrands = [...new Set(campaigns.filter(c => c.brand).map(campaign => campaign.brand))];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -58,6 +122,10 @@ const CampaignsManager = ({ campaigns }: CampaignsManagerProps) => {
       default:
         return 'text-gray-500 bg-gray-500/10';
     }
+  };
+
+  const handleViewCampaign = async (campaignId: string) => {
+    await fetchCampaignDetails(campaignId);
   };
 
   return (
@@ -144,26 +212,32 @@ const CampaignsManager = ({ campaigns }: CampaignsManagerProps) => {
                         {campaign.status}
                       </span>
                     </TableCell>
-                    <TableCell className="text-snow/80">${campaign.budget.toLocaleString()}</TableCell>
-                    <TableCell className="text-snow/80">${campaign.spent.toLocaleString()}</TableCell>
-                    <TableCell className="text-snow/80">{campaign.influencer_count}</TableCell>
-                    <TableCell className="text-snow/80">{campaign.reach.toLocaleString()}</TableCell>
-                    <TableCell className="text-snow/80">{campaign.engagement_rate.toFixed(1)}%</TableCell>
+                    <TableCell className="text-snow/80">${campaign.budget?.toLocaleString() ?? 0}</TableCell>
+                    <TableCell className="text-snow/80">${campaign.spent?.toLocaleString() ?? 0}</TableCell>
+                    <TableCell className="text-snow/80">{campaign.influencer_count ?? 0}</TableCell>
+                    <TableCell className="text-snow/80">{campaign.reach?.toLocaleString() ?? 0}</TableCell>
+                    <TableCell className="text-snow/80">{campaign.engagement_rate?.toFixed(1) ?? 0}%</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button
-                          onClick={() => navigate(`/campaigns/${campaign.id}`)}
+                          onClick={() => handleViewCampaign(campaign.id)}
                           variant="ghost"
                           size="sm"
                           className="text-snow/70 hover:text-coral"
+                          disabled={loadingCampaignId === campaign.id}
                         >
-                          View
+                          {loadingCampaignId === campaign.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          ) : (
+                            'View'
+                          )}
                         </Button>
                         <Button
                           onClick={() => navigate(`/campaigns/${campaign.id}/edit`)}
                           variant="ghost"
                           size="sm"
                           className="text-snow/70 hover:text-coral"
+                          disabled={loadingCampaignId === campaign.id}
                         >
                           Edit
                         </Button>

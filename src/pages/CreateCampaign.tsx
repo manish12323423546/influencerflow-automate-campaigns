@@ -343,11 +343,11 @@ const CreateCampaign = () => {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
               <Link 
-                to="/campaigns" 
+                to="/dashboard" 
                 className="inline-flex items-center text-snow/70 hover:text-purple-500 transition-colors group"
               >
                 <ArrowLeft className="h-4 w-4 mr-2 transition-transform group-hover:-translate-x-1" />
-                Back to Campaigns
+                Back to Dashboard
               </Link>
               <h1 className="text-2xl font-space font-bold text-snow">
                 Create New Campaign
