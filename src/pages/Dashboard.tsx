@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +26,7 @@ const Dashboard = () => {
   const [totalInfluencers, setTotalInfluencers] = useState(0);
   const [totalContracts, setTotalContracts] = useState(0);
   const [totalPayments, setTotalPayments] = useState(0);
+  const widgetRef = useRef<HTMLElement>(null);
 
   // Fetch all data from Supabase
   useEffect(() => {
@@ -80,6 +81,51 @@ const Dashboard = () => {
 
     fetchDashboardData();
   }, [toast]);
+
+  useEffect(() => {
+    const widget = document.querySelector('elevenlabs-convai');
+    
+    if (widget) {
+      // Listen for widget initialization
+      widget.addEventListener('elevenlabs-convai:ready', () => {
+        console.log('Widget is ready');
+      });
+
+      // Listen for conversation start
+      widget.addEventListener('elevenlabs-convai:call', (event: any) => {
+        console.log('Starting conversation');
+        
+        // Configure client tools and initial conversation
+        event.detail.config.clientTools = {
+          testConversation: ({ message }) => {
+            console.log('Test conversation message:', message);
+            return { success: true };
+          }
+        };
+
+        // Send initial greeting after widget loads
+        setTimeout(() => {
+          const message = "Hi! I'm your campaign assistant. I can help you manage campaigns, find creators, and more. Would you like to try a test conversation?";
+          widget.dispatchEvent(new CustomEvent('elevenlabs-convai:message', { 
+            detail: { message } 
+          }));
+        }, 1000);
+      });
+
+      // Listen for conversation end
+      widget.addEventListener('elevenlabs-convai:end', () => {
+        console.log('Conversation ended');
+      });
+    }
+
+    return () => {
+      if (widget) {
+        widget.removeEventListener('elevenlabs-convai:ready', () => {});
+        widget.removeEventListener('elevenlabs-convai:call', () => {});
+        widget.removeEventListener('elevenlabs-convai:end', () => {});
+      }
+    };
+  }, []);
 
   // Calculate KPI data from real campaigns
   const kpiData = {
@@ -281,6 +327,15 @@ const Dashboard = () => {
           {activeTab === 'knowledge' && <KnowledgeBaseManager />}
         </div>
       </div>
+
+      {/* ElevenLabs AI Assistant Widget */}
+      <elevenlabs-convai
+        ref={widgetRef}
+        agent-id="agent_01jwkpad6te50bmvfd8ax6xvqk"
+        variant="expanded"
+        action-text="Need help with campaigns?"
+        className="fixed bottom-4 left-4 z-50"
+      />
     </div>
   );
 };
