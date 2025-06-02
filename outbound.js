@@ -5,7 +5,23 @@ import twilio from 'twilio';
 import dotenv from 'dotenv';
 import WebSocket from 'ws';
 
+// Load environment variables
 dotenv.config();
+
+// Validate required environment variables
+const requiredEnvVars = [
+  'TWILIO_ACCOUNT_SID',
+  'TWILIO_AUTH_TOKEN',
+  'TWILIO_PHONE_NUMBER',
+  'ELEVENLABS_API_KEY',
+  'ELEVENLABS_AGENT_ID'
+];
+
+const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+if (missingEnvVars.length > 0) {
+  console.error('Missing required environment variables:', missingEnvVars.join(', '));
+  process.exit(1);
+}
 
 const fastify = Fastify({ logger: true });
 

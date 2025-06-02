@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -216,12 +215,12 @@ const CampaignDetail = () => {
       const response = await fetch("https://api.elevenlabs.io/v1/convai/twilio/outbound-call", {
         method: "POST",
         headers: {
-          "Xi-Api-Key": "sk_97b3adae38c4d320bb4af66a35659213de2e129dc9546f84",
+          "Xi-Api-Key": import.meta.env.VITE_ELEVENLABS_API_KEY || '',
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          "agent_id": "agent_01jwkpad6te50bmvfd8ax6xvqk",
-          "agent_phone_number_id": "phnum_01jwkwbn2terqtgd2nzxedgz0z",
+          "agent_id": import.meta.env.VITE_ELEVENLABS_AGENT_ID || '',
+          "agent_phone_number_id": import.meta.env.VITE_ELEVENLABS_PHONE_NUMBER_ID || '',
           "to_number": `+${phoneNumber}`
         }),
       });
