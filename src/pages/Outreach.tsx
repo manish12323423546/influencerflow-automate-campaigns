@@ -4,6 +4,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -15,6 +16,8 @@ import {
   ChevronLeft,
   Clock,
   Check,
+  Mail,
+  Target,
 } from 'lucide-react';
 
 interface Conversation {
@@ -45,6 +48,10 @@ export default function Outreach() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [selectedCampaign, setSelectedCampaign] = useState<string>('');
+  const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false);
+  const [webhookResponses, setWebhookResponses] = useState<Record<string, any>>({});
   const { toast } = useToast();
 
   useEffect(() => {

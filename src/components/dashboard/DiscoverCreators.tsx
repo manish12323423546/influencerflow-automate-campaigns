@@ -294,28 +294,131 @@ const DiscoverCreators = () => {
   const handleGmailSend = async (campaignId: string) => {
     if (!selectedCreatorForGmail) return;
 
-    const selectedCampaign = campaigns.find(c => c.id === campaignId);
-    if (!selectedCampaign) return;
+    const creator = selectedCreatorForGmail;
+    const campaign = campaigns.find(c => c.id === campaignId);
+
+    if (!campaign) {
+      toast({
+        title: "Campaign not found",
+        description: "Selected campaign could not be found.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
-      setIsGmailInProgress(prev => ({ ...prev, [selectedCreatorForGmail.id]: true }));
-      
+      setIsGmailInProgress(prev => ({ ...prev, [creator.id]: true }));
+      setIsGmailModalOpen(false);
+
       toast({
         title: "Sending...",
-        description: `Sending Gmail workflow for ${selectedCreatorForGmail.name}...`,
+        description: `Sending Gmail workflow for ${creator.name}...`,
       });
 
-      console.log('Sending Gmail workflow for creator:', selectedCreatorForGmail.name);
+      // Get contract data from Supabase if available
+      const { data: contractData } = await supabase
+        .from('contracts')
+        .select('*')
+        .eq('influencer_id', creator.id)
+        .eq('brand_user_id', (await supabase.auth.getUser()).data.user?.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
 
-      const requestBody = {
-        gmail: selectedCreatorForGmail.gmail_gmail,
-        campaign: selectedCampaign,
-        creator: selectedCreatorForGmail
+      // Parse timeline to get start and end dates, or use defaults
+      const parseTimelineDate = (timeline: string | null) => {
+        if (!timeline) return null;
+        // Try to extract dates from timeline string (assuming format like "2025-01-01 to 2025-01-31")
+        const dateMatch = timeline.match(/(\d{4}-\d{2}-\d{2})/g);
+        return dateMatch || null;
       };
 
-      console.log('Request body:', JSON.stringify(requestBody, null, 2));
+      const timelineDates = parseTimelineDate(campaign.timeline);
+      const defaultStartDate = new Date().toISOString().slice(0, 10);
+      const defaultEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const startDate = timelineDates?.[0] || defaultStartDate;
+      const endDate = timelineDates?.[1] || defaultEndDate;
 
-      const response = await fetch("https://varhhh.app.n8n.cloud/webhook/08b089ba-1617-4d04-a5c7-f9b7d8ca57c4", {
+      // Get campaign influencer data for fee information
+      const { data: campaignInfluencerData } = await supabase
+        .from('campaign_influencers')
+        .select('fee')
+        .eq('campaign_id', campaignId)
+        .eq('influencer_id', creator.id)
+        .single();
+
+      const fee = campaignInfluencerData?.fee || 15000;
+
+      // Prepare the request body in the exact format from CampaignDetail
+      const requestBody = {
+        competitionData: {
+          campaignId: campaign.id || `cmp_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}_${campaign.name?.replace(/\s+/g, '').slice(0, 3).toUpperCase()}`,
+          campaignName: campaign.name || "Campaign",
+          competitorBrands: [
+            {
+              brandName: campaign.brand || "Brand",
+              campaignBudget: campaign.budget || 0,
+              startDate: startDate,
+              endDate: endDate
+            }
+          ]
+        },
+        influencerDetail: {
+          influencerId: creator.id,
+          name: creator.name,
+          gmail: creator.gmail_gmail,
+          socialHandles: {
+            [creator.platform]: creator.handle || `@${creator.name.toLowerCase().replace(/\s+/g, '')}`
+          },
+          followers: {
+            [creator.platform]: creator.followers_count
+          },
+          engagementRate: creator.engagement_rate,
+          category: creator.platform === 'instagram' ? 'Social Media' :
+                   creator.platform === 'youtube' ? 'Video Content' :
+                   creator.platform === 'tiktok' ? 'Short Form Video' : 'Content Creation'
+        },
+        contract: {
+          contractId: contractData?.id || `ctr_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}_${creator.id.slice(0, 3).toUpperCase()}`,
+          contractType: "Fixed-Fee",
+          startDate: startDate,
+          endDate: endDate,
+          deliverables: campaign.deliverables ? campaign.deliverables.split(',').map((item, index) => ({
+            type: item.trim(),
+            count: 1,
+            dueDate: endDate
+          })) : [
+            {
+              type: "Social Media Post",
+              count: 1,
+              dueDate: endDate
+            }
+          ],
+          paymentTerms: {
+            totalFee: fee,
+            currency: "INR",
+            paymentSchedule: [
+              {
+                milestone: "After Content Delivery",
+                amount: fee,
+                dueOn: endDate
+              }
+            ]
+          },
+          terminationClause: "Either party may terminate with 7 days' notice; refund or prorated payment applies if terminated early.",
+          exclusivity: {
+            applicable: true,
+            category: creator.platform === 'instagram' ? 'Social Media' :
+                     creator.platform === 'youtube' ? 'Video Content' :
+                     creator.platform === 'tiktok' ? 'Short Form Video' : 'Content Creation',
+            duration: `${startDate} to ${endDate}`
+          }
+        }
+      };
+
+      console.log('Sending Gmail workflow with data:', JSON.stringify(requestBody, null, 2));
+
+      const response = await fetch("https://sdsd12.app.n8n.cloud/webhook/08b089ba-1617-4d04-a5c7-f9b7d8ca57c4", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -324,27 +427,43 @@ const DiscoverCreators = () => {
         body: JSON.stringify(requestBody)
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
+      if (!response.ok) {
+        throw new Error(`Failed to send email: ${response.statusText}`);
+      }
 
-      setGmailResponses(prev => ({ ...prev, [selectedCreatorForGmail.id]: { status: 'sent', timestamp: new Date().toISOString() } }));
-      
+      const responseData = await response.json();
+      setGmailResponses(prev => ({
+        ...prev,
+        [creator.id]: {
+          status: 'success',
+          timestamp: new Date().toISOString(),
+          response: responseData
+        }
+      }));
+
       toast({
-        title: "Request Sent Successfully",
-        description: `Gmail workflow request sent for ${selectedCreatorForGmail.name}. JSON body sent in proper format.`,
+        title: "Email Sent Successfully",
+        description: `Gmail workflow completed for ${creator.name}.`,
       });
-      setIsGmailModalOpen(false);
-      setSelectedCreatorForGmail(null);
 
     } catch (error) {
       console.error('Error sending Gmail workflow:', error);
+      setGmailResponses(prev => ({
+        ...prev,
+        [creator.id]: {
+          status: 'error',
+          timestamp: new Date().toISOString(),
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
+      }));
       toast({
-        title: "Workflow Failed",
+        title: "Failed to Send Email",
         description: "Unable to send Gmail workflow. Please try again.",
         variant: "destructive",
       });
     } finally {
-      setIsGmailInProgress(prev => ({ ...prev, [selectedCreatorForGmail.id]: false }));
+      setIsGmailInProgress(prev => ({ ...prev, [creator.id]: false }));
+      setSelectedCreatorForGmail(null);
     }
   };
 

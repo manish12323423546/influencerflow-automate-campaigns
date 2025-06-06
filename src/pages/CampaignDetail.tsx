@@ -642,7 +642,7 @@ const CampaignDetail = () => {
             description: "The requested campaign could not be found.",
             variant: "destructive",
           });
-          navigate('/campaigns');
+          navigate('/dashboard');
           return;
         }
 
@@ -850,11 +850,11 @@ const CampaignDetail = () => {
         <h2 className="text-xl font-semibold text-gray-900 mb-2">Campaign Not Found</h2>
         <p className="text-gray-600 mb-4">The campaign you're looking for doesn't exist or has been removed.</p>
         <Button
-          onClick={() => navigate('/campaigns')}
+          onClick={() => navigate('/dashboard')}
           className="bg-coral hover:bg-coral/90 text-white"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Campaigns
+          Back to Dashboard
         </Button>
       </div>
     );
@@ -866,10 +866,11 @@ const CampaignDetail = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
             <Button
-              onClick={() => navigate('/campaigns')}
+              onClick={() => navigate('/dashboard')}
               variant="ghost"
               size="icon"
               className="text-gray-600 hover:text-coral hover:bg-coral/10"
+              title="Back to Dashboard"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>

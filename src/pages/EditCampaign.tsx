@@ -85,7 +85,7 @@ const EditCampaign = () => {
         description: "Your campaign has been saved.",
       });
       setIsLoading(false);
-      navigate(`/campaigns/${id}`);
+      navigate('/dashboard');
     }, 1000);
   };
 
@@ -114,11 +114,11 @@ const EditCampaign = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate(`/campaigns/${id}`)}
+                onClick={() => navigate('/dashboard')}
                 className="text-gray-600 hover:text-coral hover:bg-coral/10"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Campaign
+                Back to Dashboard
               </Button>
               <div>
                 <h1 className="text-lg font-semibold text-gray-900">Edit Campaign</h1>
