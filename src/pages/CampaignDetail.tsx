@@ -164,12 +164,12 @@ const AddInfluencerDialog = ({ campaignId, onInfluencerAdded }: AddInfluencerDia
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-purple-500 hover:bg-purple-600">
+        <Button className="bg-coral hover:bg-coral/90 text-white">
           <Plus className="h-4 w-4 mr-2" />
           Add Influencer
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] bg-zinc-900 text-snow">
+      <DialogContent className="sm:max-w-[425px] bg-white text-gray-900 border-gray-200">
         <DialogHeader>
           <DialogTitle>Add Influencer to Campaign</DialogTitle>
           <DialogDescription>
@@ -185,14 +185,14 @@ const AddInfluencerDialog = ({ campaignId, onInfluencerAdded }: AddInfluencerDia
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Type to search influencers..."
-              className="bg-zinc-800 border-zinc-700"
+              className="bg-white border-gray-200"
             />
           </div>
           <div className="max-h-[300px] overflow-y-auto">
             {influencers.map((influencer) => (
               <div
                 key={influencer.id}
-                className="flex items-center justify-between p-2 hover:bg-zinc-800 rounded-lg cursor-pointer"
+                className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg cursor-pointer"
                 onClick={() => handleAddInfluencer(influencer.id)}
               >
                 <div className="flex items-center gap-2">
@@ -202,13 +202,13 @@ const AddInfluencerDialog = ({ campaignId, onInfluencerAdded }: AddInfluencerDia
                   </Avatar>
                   <div>
                     <p className="font-medium">{influencer.name}</p>
-                    <p className="text-sm text-snow/60">@{influencer.handle}</p>
+                    <p className="text-sm text-gray-600">@{influencer.handle}</p>
                   </div>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-purple-500"
+                  className="text-coral hover:bg-coral/10"
                   disabled={loading}
                 >
                   Add
@@ -236,7 +236,7 @@ const InfluencerProfileDialog = ({ influencer, onClose, open }: InfluencerProfil
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] bg-zinc-900 text-snow">
+      <DialogContent className="sm:max-w-[600px] bg-white text-gray-900 border-gray-200">
         <DialogHeader>
           <DialogTitle>Influencer Profile</DialogTitle>
         </DialogHeader>
@@ -248,38 +248,38 @@ const InfluencerProfileDialog = ({ influencer, onClose, open }: InfluencerProfil
             </Avatar>
             <div>
               <h3 className="text-xl font-semibold">{influencer.name}</h3>
-              <p className="text-snow/60">@{influencer.handle}</p>
+              <p className="text-gray-600">@{influencer.handle}</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-snow/70">Platform</p>
+              <p className="text-sm text-gray-600">Platform</p>
               <p className="font-medium">{influencer.platform}</p>
             </div>
             <div>
-              <p className="text-sm text-snow/70">Followers</p>
+              <p className="text-sm text-gray-600">Followers</p>
               <p className="font-medium">{influencer.followers_count.toLocaleString()}</p>
             </div>
             <div>
-              <p className="text-sm text-snow/70">Engagement Rate</p>
+              <p className="text-sm text-gray-600">Engagement Rate</p>
               <p className="font-medium">{influencer.engagement_rate}%</p>
             </div>
             <div>
-              <p className="text-sm text-snow/70">Industry</p>
+              <p className="text-sm text-gray-600">Industry</p>
               <p className="font-medium">{influencer.industry}</p>
             </div>
           </div>
           {(influencer.phone_no || influencer.gmail_gmail) && (
-            <div className="border-t border-zinc-800 pt-4">
+            <div className="border-t border-gray-200 pt-4">
               <h4 className="text-sm font-medium mb-2">Contact Information</h4>
               {influencer.phone_no && (
-                <div className="flex items-center gap-2 text-snow/70">
+                <div className="flex items-center gap-2 text-gray-600">
                   <Phone className="h-4 w-4" />
                   <span>{influencer.phone_no}</span>
                 </div>
               )}
               {influencer.gmail_gmail && (
-                <div className="flex items-center gap-2 text-snow/70 mt-1">
+                <div className="flex items-center gap-2 text-gray-600 mt-1">
                   <Mail className="h-4 w-4" />
                   <span>{influencer.gmail_gmail}</span>
                 </div>
@@ -837,21 +837,21 @@ const CampaignDetail = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-coral"></div>
       </div>
     );
   }
 
   if (!campaign) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
         <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-        <h2 className="text-xl font-semibold text-snow mb-2">Campaign Not Found</h2>
-        <p className="text-snow/60 mb-4">The campaign you're looking for doesn't exist or has been removed.</p>
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">Campaign Not Found</h2>
+        <p className="text-gray-600 mb-4">The campaign you're looking for doesn't exist or has been removed.</p>
         <Button
           onClick={() => navigate('/campaigns')}
-          className="bg-purple-500 hover:bg-purple-600"
+          className="bg-coral hover:bg-coral/90 text-white"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Campaigns
@@ -861,338 +861,340 @@ const CampaignDetail = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        <div className="flex items-center gap-4">
-          <Button
-            onClick={() => navigate('/campaigns')}
-            variant="ghost"
-            size="icon"
-            className="text-snow/70 hover:text-snow"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            {isEditing ? (
-              <Input
-                value={editedCampaign.name || ''}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-                className="text-2xl font-bold text-snow bg-zinc-800 border-zinc-700"
-                placeholder="Campaign Name"
-              />
-            ) : (
-              <h1 className="text-2xl font-bold text-snow">{campaign.name}</h1>
-            )}
-            <p className="text-snow/60">{campaign.brand}</p>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <div className="flex items-center gap-4">
+            <Button
+              onClick={() => navigate('/campaigns')}
+              variant="ghost"
+              size="icon"
+              className="text-gray-600 hover:text-coral hover:bg-coral/10"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              {isEditing ? (
+                <Input
+                  value={editedCampaign.name || ''}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  className="text-2xl font-bold text-gray-900 bg-white border-gray-200"
+                  placeholder="Campaign Name"
+                />
+              ) : (
+                <h1 className="text-2xl font-bold text-gray-900">{campaign.name}</h1>
+              )}
+              <p className="text-gray-600">{campaign.brand}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge className={getStatusColor(campaign.status)}>
+              {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
+            </Badge>
+            <Button
+              onClick={handleEditToggle}
+              className={isEditing ? "bg-green-500 hover:bg-green-600 text-white" : "bg-coral hover:bg-coral/90 text-white"}
+            >
+              {isEditing ? (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Changes
+                </>
+              ) : (
+                <>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Campaign
+                </>
+              )}
+            </Button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge className={getStatusColor(campaign.status)}>
-            {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
-          </Badge>
-          <Button
-            onClick={handleEditToggle}
-            className={isEditing ? "bg-green-500 hover:bg-green-600" : "bg-purple-500 hover:bg-purple-600"}
-          >
-            {isEditing ? (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Save Changes
-              </>
-            ) : (
-              <>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Campaign
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <Card className="bg-zinc-900 border-zinc-800">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <Card className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Budget</p>
+                  {isEditing ? (
+                    <Input
+                      type="number"
+                      value={editedCampaign.budget || ''}
+                      onChange={(e) => handleInputChange('budget', parseFloat(e.target.value))}
+                      className="text-2xl font-bold text-gray-900 bg-white border-gray-200"
+                      placeholder="Enter budget"
+                    />
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900">${campaign.budget?.toLocaleString()}</p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">
+                    Spent: ${campaign.spent?.toLocaleString() || 0}
+                  </p>
+                </div>
+                <DollarSign className="h-8 w-8 text-coral" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Timeline</p>
+                  {isEditing ? (
+                    <Input
+                      value={editedCampaign.timeline || ''}
+                      onChange={(e) => handleInputChange('timeline', e.target.value)}
+                      className="text-sm text-gray-900 bg-white border-gray-200"
+                      placeholder="e.g., 2025-01-01 to 2025-01-31"
+                    />
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900">
+                      {campaign.timeline || 'Not set'}
+                    </p>
+                  )}
+                </div>
+                <Calendar className="h-8 w-8 text-coral" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Reach</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {campaign.reach?.toLocaleString() || 0}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {campaign.engagement_rate}% engagement
+                  </p>
+                </div>
+                <Share2 className="h-8 w-8 text-coral" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Progress</p>
+                  <p className="text-2xl font-bold text-gray-900">{calculateProgress()}%</p>
+                  <Progress value={calculateProgress()} className="mt-2" />
+                </div>
+                <CheckCircle2 className="h-8 w-8 text-coral" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-8">
+          <Card className="bg-white border-gray-200 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-gray-900">Campaign Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
               <div>
-                <p className="text-sm font-medium text-snow/70">Budget</p>
+                <h3 className="text-sm font-medium text-gray-600 mb-2">Description</h3>
                 {isEditing ? (
                   <Input
-                    type="number"
-                    value={editedCampaign.budget || ''}
-                    onChange={(e) => handleInputChange('budget', parseFloat(e.target.value))}
-                    className="text-2xl font-bold text-snow bg-zinc-800 border-zinc-700"
-                    placeholder="Enter budget"
+                    value={editedCampaign.description || ''}
+                    onChange={(e) => handleInputChange('description', e.target.value)}
+                    className="text-gray-900 bg-white border-gray-200"
+                    placeholder="Campaign description"
                   />
                 ) : (
-                  <p className="text-2xl font-bold text-snow">${campaign.budget?.toLocaleString()}</p>
+                  <p className="text-gray-900">{campaign.description}</p>
                 )}
-                <p className="text-xs text-snow/50 mt-1">
-                  Spent: ${campaign.spent?.toLocaleString() || 0}
-                </p>
               </div>
-              <DollarSign className="h-8 w-8 text-purple-500" />
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card className="bg-zinc-900 border-zinc-800">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-snow/70">Timeline</p>
+                <h3 className="text-sm font-medium text-gray-600 mb-2">Goals</h3>
+                {isEditing ? (
+                  <Input
+                    value={editedCampaign.goals || ''}
+                    onChange={(e) => handleInputChange('goals', e.target.value)}
+                    className="text-gray-900 bg-white border-gray-200"
+                    placeholder="Campaign goals"
+                  />
+                ) : (
+                  <p className="text-gray-900">{campaign.goals}</p>
+                )}
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium text-gray-600 mb-2">Target Audience</h3>
+                {isEditing ? (
+                  <Input
+                    value={editedCampaign.target_audience || ''}
+                    onChange={(e) => handleInputChange('target_audience', e.target.value)}
+                    className="text-gray-900 bg-white border-gray-200"
+                    placeholder="Target audience"
+                  />
+                ) : (
+                  <p className="text-gray-900">{campaign.target_audience}</p>
+                )}
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium text-gray-600 mb-2">Deliverables</h3>
+                {isEditing ? (
+                  <Input
+                    value={editedCampaign.deliverables || ''}
+                    onChange={(e) => handleInputChange('deliverables', e.target.value)}
+                    className="text-gray-900 bg-white border-gray-200"
+                    placeholder="Campaign deliverables"
+                  />
+                ) : (
+                  <p className="text-gray-900">{campaign.deliverables}</p>
+                )}
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium text-gray-600 mb-2">Timeline</h3>
                 {isEditing ? (
                   <Input
                     value={editedCampaign.timeline || ''}
                     onChange={(e) => handleInputChange('timeline', e.target.value)}
-                    className="text-sm text-snow bg-zinc-800 border-zinc-700"
+                    className="text-gray-900 bg-white border-gray-200"
                     placeholder="e.g., 2025-01-01 to 2025-01-31"
                   />
                 ) : (
-                  <p className="text-2xl font-bold text-snow">
-                    {campaign.timeline || 'Not set'}
-                  </p>
+                  <p className="text-gray-900">{campaign.timeline || 'Not set'}</p>
                 )}
               </div>
-              <Calendar className="h-8 w-8 text-purple-500" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card className="bg-zinc-900 border-zinc-800">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-snow/70">Reach</p>
-                <p className="text-2xl font-bold text-snow">
-                  {campaign.reach?.toLocaleString() || 0}
-                </p>
-                <p className="text-xs text-snow/50 mt-1">
-                  {campaign.engagement_rate}% engagement
-                </p>
-              </div>
-              <Share2 className="h-8 w-8 text-purple-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-zinc-900 border-zinc-800">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-snow/70">Progress</p>
-                <p className="text-2xl font-bold text-snow">{calculateProgress()}%</p>
-                <Progress value={calculateProgress()} className="mt-2" />
-              </div>
-              <CheckCircle2 className="h-8 w-8 text-purple-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="space-y-8">
-        <Card className="bg-zinc-900 border-zinc-800">
-          <CardHeader>
-            <CardTitle className="text-snow">Campaign Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <h3 className="text-sm font-medium text-snow/70 mb-2">Description</h3>
-              {isEditing ? (
-                <Input
-                  value={editedCampaign.description || ''}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
-                  className="text-snow bg-zinc-800 border-zinc-700"
-                  placeholder="Campaign description"
-                />
-              ) : (
-                <p className="text-snow">{campaign.description}</p>
-              )}
-            </div>
-
-            <div>
-              <h3 className="text-sm font-medium text-snow/70 mb-2">Goals</h3>
-              {isEditing ? (
-                <Input
-                  value={editedCampaign.goals || ''}
-                  onChange={(e) => handleInputChange('goals', e.target.value)}
-                  className="text-snow bg-zinc-800 border-zinc-700"
-                  placeholder="Campaign goals"
-                />
-              ) : (
-                <p className="text-snow">{campaign.goals}</p>
-              )}
-            </div>
-            
-            <div>
-              <h3 className="text-sm font-medium text-snow/70 mb-2">Target Audience</h3>
-              {isEditing ? (
-                <Input
-                  value={editedCampaign.target_audience || ''}
-                  onChange={(e) => handleInputChange('target_audience', e.target.value)}
-                  className="text-snow bg-zinc-800 border-zinc-700"
-                  placeholder="Target audience"
-                />
-              ) : (
-                <p className="text-snow">{campaign.target_audience}</p>
-              )}
-            </div>
-
-            <div>
-              <h3 className="text-sm font-medium text-snow/70 mb-2">Deliverables</h3>
-              {isEditing ? (
-                <Input
-                  value={editedCampaign.deliverables || ''}
-                  onChange={(e) => handleInputChange('deliverables', e.target.value)}
-                  className="text-snow bg-zinc-800 border-zinc-700"
-                  placeholder="Campaign deliverables"
-                />
-              ) : (
-                <p className="text-snow">{campaign.deliverables}</p>
-              )}
-            </div>
-
-            <div>
-              <h3 className="text-sm font-medium text-snow/70 mb-2">Timeline</h3>
-              {isEditing ? (
-                <Input
-                  value={editedCampaign.timeline || ''}
-                  onChange={(e) => handleInputChange('timeline', e.target.value)}
-                  className="text-snow bg-zinc-800 border-zinc-700"
-                  placeholder="e.g., 2025-01-01 to 2025-01-31"
-                />
-              ) : (
-                <p className="text-snow">{campaign.timeline || 'Not set'}</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-zinc-900 border-zinc-800">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-snow">Campaign Influencers</CardTitle>
-            <AddInfluencerDialog
-              campaignId={campaign.id}
-              onInfluencerAdded={() => {
-                window.location.reload();
-              }}
-            />
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow className="border-zinc-800">
-                  <TableHead className="text-snow/70">Influencer</TableHead>
-                  <TableHead className="text-snow/70">Platform</TableHead>
-                  <TableHead className="text-snow/70">Status</TableHead>
-                  <TableHead className="text-snow/70">Followers</TableHead>
-                  <TableHead className="text-snow/70">Engagement</TableHead>
-                  <TableHead className="text-snow/70">Contact</TableHead>
-                  {isEditing && <TableHead className="text-snow/70">Actions</TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {campaign.campaign_influencers?.map((ci) => (
-                  <TableRow key={ci.id} className="border-zinc-800">
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarImage src={ci.influencer.avatar_url} />
-                          <AvatarFallback>{ci.influencer.name[0]}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="text-snow font-medium">{ci.influencer.name}</p>
-                          <p className="text-snow/60 text-sm">{ci.influencer.handle}</p>
+          <Card className="bg-white border-gray-200 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-gray-900">Campaign Influencers</CardTitle>
+              <AddInfluencerDialog
+                campaignId={campaign.id}
+                onInfluencerAdded={() => {
+                  window.location.reload();
+                }}
+              />
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-gray-200">
+                    <TableHead className="text-gray-600">Influencer</TableHead>
+                    <TableHead className="text-gray-600">Platform</TableHead>
+                    <TableHead className="text-gray-600">Status</TableHead>
+                    <TableHead className="text-gray-600">Followers</TableHead>
+                    <TableHead className="text-gray-600">Engagement</TableHead>
+                    <TableHead className="text-gray-600">Contact</TableHead>
+                    {isEditing && <TableHead className="text-gray-600">Actions</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {campaign.campaign_influencers?.map((ci) => (
+                    <TableRow key={ci.id} className="border-gray-200">
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-3">
+                          <Avatar>
+                            <AvatarImage src={ci.influencer.avatar_url} />
+                            <AvatarFallback>{ci.influencer.name[0]}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="text-gray-900 font-medium">{ci.influencer.name}</p>
+                            <p className="text-gray-600 text-sm">{ci.influencer.handle}</p>
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-snow/70">{ci.influencer.platform}</TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(ci.status)}>
-                        {ci.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-snow/70">
-                      {ci.influencer.followers_count.toLocaleString()}
-                    </TableCell>
-                    <TableCell className="text-snow/70">
-                      {ci.influencer.engagement_rate}%
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {ci.influencer.phone_no && (
+                      </TableCell>
+                      <TableCell className="text-gray-700">{ci.influencer.platform}</TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(ci.status)}>
+                          {ci.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-gray-700">
+                        {ci.influencer.followers_count.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-gray-700">
+                        {ci.influencer.engagement_rate}%
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {ci.influencer.phone_no && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={`text-gray-600 hover:text-green-500 hover:bg-green-50 ${
+                                isCallInProgress[ci.influencer.id] ? 'bg-green-500/10' : ''
+                              }`}
+                              onClick={() => handlePhoneCall(ci.influencer.id, ci.influencer.name, ci.influencer.phone_no)}
+                              disabled={isCallInProgress[ci.influencer.id]}
+                            >
+                              {isCallInProgress[ci.influencer.id] ? (
+                                <span className="loading loading-spinner loading-xs" />
+                              ) : (
+                                <Phone className="h-4 w-4" />
+                              )}
+                            </Button>
+                          )}
+                          {ci.influencer.gmail_gmail && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-gray-600 hover:text-coral hover:bg-coral/10"
+                              onClick={() => handleGmail(ci.influencer.id, ci.influencer.name, ci.influencer.gmail_gmail)}
+                            >
+                              <Mail className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                      {isEditing && (
+                        <TableCell>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className={`text-snow/70 hover:text-green-500 ${
-                              isCallInProgress[ci.influencer.id] ? 'bg-green-500/10' : ''
-                            }`}
-                            onClick={() => handlePhoneCall(ci.influencer.id, ci.influencer.name, ci.influencer.phone_no)}
-                            disabled={isCallInProgress[ci.influencer.id]}
+                            className="text-red-400 hover:text-red-500 hover:bg-red-500/10"
+                            onClick={() => handleRemoveInfluencer(ci.id)}
+                            disabled={removingInfluencerId === ci.id}
                           >
-                            {isCallInProgress[ci.influencer.id] ? (
+                            {removingInfluencerId === ci.id ? (
                               <span className="loading loading-spinner loading-xs" />
                             ) : (
-                              <Phone className="h-4 w-4" />
+                              <XCircle className="h-4 w-4" />
                             )}
                           </Button>
-                        )}
-                        {ci.influencer.gmail_gmail && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-snow/70 hover:text-red-500"
-                            onClick={() => handleGmail(ci.influencer.id, ci.influencer.name, ci.influencer.gmail_gmail)}
-                          >
-                            <Mail className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                    {isEditing && (
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-400 hover:text-red-500 hover:bg-red-500/10"
-                          onClick={() => handleRemoveInfluencer(ci.id)}
-                          disabled={removingInfluencerId === ci.id}
-                        >
-                          {removingInfluencerId === ci.id ? (
-                            <span className="loading loading-spinner loading-xs" />
-                          ) : (
-                            <XCircle className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
 
-        <InfluencerProfileDialog
-          influencer={selectedInfluencer}
-          open={!!selectedInfluencer}
-          onClose={() => setSelectedInfluencer(null)}
-        />
+          <InfluencerProfileDialog
+            influencer={selectedInfluencer}
+            open={!!selectedInfluencer}
+            onClose={() => setSelectedInfluencer(null)}
+          />
 
-        <Card className="bg-zinc-900 border-zinc-800">
-          <CardHeader>
-            <CardTitle className="text-snow">Campaign Analytics</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-12">
-              <BarChart3 className="h-12 w-12 mx-auto text-snow/30 mb-4" />
-              <h3 className="text-lg font-medium text-snow mb-2">Analytics Coming Soon</h3>
-              <p className="text-snow/60">
-                We're working on bringing you detailed campaign analytics.
-                Check back soon for insights and performance metrics.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+          <Card className="bg-white border-gray-200 shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-gray-900">Campaign Analytics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-12">
+                <BarChart3 className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Analytics Coming Soon</h3>
+                <p className="text-gray-600">
+                  We're working on bringing you detailed campaign analytics.
+                  Check back soon for insights and performance metrics.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

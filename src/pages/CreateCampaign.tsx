@@ -336,20 +336,20 @@ const CreateCampaign = () => {
   };
 
   return (
-    <div className="min-h-screen bg-carbon">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-zinc-900 border-b border-zinc-800">
+      <header className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
-              <Link 
-                to="/dashboard" 
-                className="inline-flex items-center text-snow/70 hover:text-purple-500 transition-colors group"
+              <Link
+                to="/dashboard"
+                className="inline-flex items-center text-gray-600 hover:text-coral transition-colors group"
               >
                 <ArrowLeft className="h-4 w-4 mr-2 transition-transform group-hover:-translate-x-1" />
                 Back to Dashboard
               </Link>
-              <h1 className="text-2xl font-space font-bold text-snow">
+              <h1 className="text-2xl font-space font-bold text-gray-900">
                 Create New Campaign
               </h1>
             </div>
@@ -361,10 +361,10 @@ const CreateCampaign = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Campaign Mode Selection */}
           <div className="lg:col-span-3 mb-8">
-            <Card className="bg-zinc-900 border-zinc-800">
+            <Card className="bg-white border-gray-200 shadow-sm">
               <CardHeader>
-                <CardTitle className="text-snow flex items-center">
-                  <Bot className="h-5 w-5 mr-2 text-purple-500" />
+                <CardTitle className="text-gray-900 flex items-center">
+                  <Bot className="h-5 w-5 mr-2 text-coral" />
                   Campaign Mode
                 </CardTitle>
               </CardHeader>
@@ -372,7 +372,11 @@ const CreateCampaign = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <Button
                     variant={mode === 'AUTOMATIC' ? 'default' : 'outline'}
-                    className="h-auto p-4 flex flex-col items-start space-y-2"
+                    className={`h-auto p-4 flex flex-col items-start space-y-2 ${
+                      mode === 'AUTOMATIC'
+                        ? 'bg-coral hover:bg-coral/90 text-white'
+                        : 'border-gray-200 text-gray-900 hover:bg-coral/5 hover:border-coral/50'
+                    }`}
                     onClick={() => {
                       setMode('AUTOMATIC');
                       // Ensure we have a campaign ID for automatic mode
@@ -393,7 +397,11 @@ const CreateCampaign = () => {
                   </Button>
                   <Button
                     variant={mode === 'MANUAL' ? 'default' : 'outline'}
-                    className="h-auto p-4 flex flex-col items-start space-y-2"
+                    className={`h-auto p-4 flex flex-col items-start space-y-2 ${
+                      mode === 'MANUAL'
+                        ? 'bg-coral hover:bg-coral/90 text-white'
+                        : 'border-gray-200 text-gray-900 hover:bg-coral/5 hover:border-coral/50'
+                    }`}
                     onClick={() => {
                       setMode('MANUAL');
                       // Reset campaign ID for manual mode if needed
@@ -419,24 +427,24 @@ const CreateCampaign = () => {
           {/* Main Form */}
           <div className="lg:col-span-2 space-y-6">
             {/* Basic Information */}
-            <Card className="bg-zinc-900 border-zinc-800">
+            <Card className="bg-white border-gray-200 shadow-sm">
               <CardHeader>
-                <CardTitle className="text-snow flex items-center">
-                  <Target className="h-5 w-5 mr-2 text-purple-500" />
+                <CardTitle className="text-gray-900 flex items-center">
+                  <Target className="h-5 w-5 mr-2 text-coral" />
                   Campaign Information
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-snow mb-2">
+                    <label className="block text-sm font-medium text-gray-900 mb-2">
                       Campaign Name *
                     </label>
                     <Input
                       value={formData.name}
                       onChange={(e) => handleInputChange('name', e.target.value)}
                       placeholder="Enter campaign name"
-                      className={`bg-zinc-800 border-zinc-700 text-snow ${errors.name ? 'border-red-500' : ''}`}
+                      className={`bg-white border-gray-200 text-gray-900 ${errors.name ? 'border-red-500' : ''}`}
                     />
                     {errors.name && (
                       <p className="text-red-400 text-sm mt-1 flex items-center">
@@ -447,14 +455,14 @@ const CreateCampaign = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-snow mb-2">
+                    <label className="block text-sm font-medium text-gray-900 mb-2">
                       Brand Name *
                     </label>
                     <Input
                       value={formData.brand}
                       onChange={(e) => handleInputChange('brand', e.target.value)}
                       placeholder="Enter brand name"
-                      className={`bg-zinc-800 border-zinc-700 text-snow ${errors.brand ? 'border-red-500' : ''}`}
+                      className={`bg-white border-gray-200 text-gray-900 ${errors.brand ? 'border-red-500' : ''}`}
                     />
                     {errors.brand && (
                       <p className="text-red-400 text-sm mt-1 flex items-center">

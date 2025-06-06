@@ -238,18 +238,18 @@ export default function OutreachManager() {
   };
 
   return (
-    <Card className="bg-zinc-900 border-zinc-800">
-      <CardHeader className="border-b border-zinc-800">
+    <Card className="bg-white border-gray-200 shadow-sm">
+      <CardHeader className="border-b border-gray-200">
         <div className="flex flex-col space-y-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-snow">Influencer Outreach</CardTitle>
+            <CardTitle className="text-gray-900">Influencer Outreach</CardTitle>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-snow/50 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
                 placeholder="Search influencers..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 w-[300px] bg-zinc-800 border-zinc-700 text-snow"
+                className="pl-10 w-[300px] bg-white border-gray-200 text-gray-900 shadow-sm"
               />
             </div>
           </div>
@@ -261,11 +261,11 @@ export default function OutreachManager() {
           <div className="flex-1">
             <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full h-full">
               <div className="flex items-center justify-between mb-4">
-                <TabsList className="h-9">
-                  <TabsTrigger value="outreaches" className="text-sm">
+                <TabsList className="h-9 bg-gray-100 border border-gray-200">
+                  <TabsTrigger value="outreaches" className="text-sm data-[state=active]:bg-coral data-[state=active]:text-white">
                     Outreaches
                   </TabsTrigger>
-                  <TabsTrigger value="conversations" className="text-sm">
+                  <TabsTrigger value="conversations" className="text-sm data-[state=active]:bg-coral data-[state=active]:text-white">
                     Conversations
                   </TabsTrigger>
                 </TabsList>
@@ -275,10 +275,10 @@ export default function OutreachManager() {
                 <div className="flex flex-col h-full">
                   <div className="flex items-center gap-2 mb-4">
                     <div className="relative flex-1">
-                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
                       <Input
                         placeholder="Search influencers..."
-                        className="pl-8"
+                        className="pl-8 bg-white border-gray-200 shadow-sm"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                       />
@@ -286,7 +286,7 @@ export default function OutreachManager() {
                   </div>
 
                   <ScrollArea className="flex-1">
-                    <div className="grid grid-cols-[1fr_1fr_100px_100px_100px_120px] gap-4 px-4 py-3 bg-muted text-sm font-medium">
+                    <div className="grid grid-cols-[1fr_1fr_100px_100px_100px_120px] gap-4 px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">
                       <div>Influencer</div>
                       <div>Details</div>
                       <div>Status</div>
@@ -296,11 +296,11 @@ export default function OutreachManager() {
                     </div>
 
                     {isLoading ? (
-                      <div className="flex items-center justify-center py-8">
+                      <div className="flex items-center justify-center py-8 text-gray-600">
                         Loading influencers...
                       </div>
                     ) : filteredInfluencers.length === 0 ? (
-                      <div className="flex items-center justify-center py-8 text-muted-foreground">
+                      <div className="flex items-center justify-center py-8 text-gray-500">
                         No influencers found
                       </div>
                     ) : (
@@ -308,7 +308,7 @@ export default function OutreachManager() {
                         {filteredInfluencers.map((influencer) => (
                           <div
                             key={influencer.id}
-                            className="grid grid-cols-[1fr_1fr_100px_100px_100px_120px] gap-4 items-center px-4 py-3 hover:bg-muted/50 rounded-lg"
+                            className="grid grid-cols-[1fr_1fr_100px_100px_100px_120px] gap-4 items-center px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors duration-200"
                           >
                             <div className="flex items-center gap-2">
                               <img
@@ -317,27 +317,27 @@ export default function OutreachManager() {
                                 className="w-8 h-8 rounded-full object-cover"
                               />
                               <div>
-                                <div className="font-medium">{influencer.name}</div>
-                                <div className="text-sm text-muted-foreground">
+                                <div className="font-medium text-gray-900">{influencer.name}</div>
+                                <div className="text-sm text-gray-500">
                                   {influencer.handle}
                                 </div>
                               </div>
                             </div>
                             <div>
-                              <div className="text-sm">
+                              <div className="text-sm text-gray-900">
                                 {influencer.platform}
                               </div>
-                              <div className="text-sm text-muted-foreground">
+                              <div className="text-sm text-gray-500">
                                 {influencer.campaigns.map(c => c.name).join(', ')}
                               </div>
                             </div>
-                            <div className="text-sm">
+                            <div className="text-sm text-gray-600">
                               {influencer.campaigns[0]?.status || 'N/A'}
                             </div>
-                            <div className="text-sm">
+                            <div className="text-sm text-gray-600">
                               {influencer.engagement_rate}%
                             </div>
-                            <div className="text-sm">
+                            <div className="text-sm text-gray-600">
                               {new Intl.NumberFormat().format(influencer.followers_count)}
                             </div>
                             <div className="flex items-center gap-2">
@@ -346,6 +346,7 @@ export default function OutreachManager() {
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => handleCall(influencer.phone_no)}
+                                  className="text-gray-600 hover:text-coral hover:bg-coral/10"
                                 >
                                   <Phone className="h-4 w-4" />
                                 </Button>
@@ -355,6 +356,7 @@ export default function OutreachManager() {
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => handleEmail(influencer.gmail_gmail)}
+                                  className="text-gray-600 hover:text-coral hover:bg-coral/10"
                                 >
                                   <Mail className="h-4 w-4" />
                                 </Button>
@@ -363,6 +365,7 @@ export default function OutreachManager() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => setActiveTab('conversations')}
+                                className="text-gray-600 hover:text-coral hover:bg-coral/10"
                               >
                                 <MessageSquare className="h-4 w-4" />
                               </Button>
@@ -383,7 +386,7 @@ export default function OutreachManager() {
 
           {/* Right side: Messaging Panel */}
           {showMessaging && selectedInfluencer && (
-            <div className="w-[400px] border-l border-zinc-800 relative">
+            <div className="w-[400px] border-l border-gray-200 relative bg-white">
               <div className="absolute top-4 right-4 z-10">
                 <Button
                   variant="ghost"
@@ -393,7 +396,7 @@ export default function OutreachManager() {
                     setSelectedInfluencer(null);
                     setActiveConversationId(null);
                   }}
-                  className="text-snow/70 hover:text-purple-500"
+                  className="text-gray-600 hover:text-coral hover:bg-coral/10"
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -401,7 +404,7 @@ export default function OutreachManager() {
               <iframe
                 src={`/outreach?influencer=${selectedInfluencer.id}&conversation=${activeConversationId}`}
                 className="w-full h-[calc(100vh-20rem)]"
-                style={{ backgroundColor: '#18181B' }}
+                style={{ backgroundColor: '#FFFFFF' }}
               />
             </div>
           )}

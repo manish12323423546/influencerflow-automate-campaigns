@@ -117,41 +117,41 @@ const ContractsList = () => {
   };
 
   return (
-    <Card className="bg-zinc-800/50 border-zinc-700">
+    <Card className="bg-white border-gray-200 shadow-sm">
       <CardHeader>
-        <CardTitle className="text-snow flex items-center">
-          <FileText className="mr-2 h-5 w-5" />
+        <CardTitle className="text-gray-900 flex items-center">
+          <FileText className="mr-2 h-5 w-5 text-coral" />
           Local Contracts ({contracts.length})
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         <Table>
           <TableHeader>
-            <TableRow className="border-zinc-700">
-              <TableHead className="text-snow/80">Contract Name</TableHead>
-              <TableHead className="text-snow/80">Created</TableHead>
-              <TableHead className="text-snow/80">Status</TableHead>
-              <TableHead className="text-snow/80 text-right">Actions</TableHead>
+            <TableRow className="border-gray-200">
+              <TableHead className="text-gray-600">Contract Name</TableHead>
+              <TableHead className="text-gray-600">Created</TableHead>
+              <TableHead className="text-gray-600">Status</TableHead>
+              <TableHead className="text-gray-600 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {contracts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-snow/60 py-8">
+                <TableCell colSpan={4} className="text-center text-gray-500 py-8">
                   No contracts found. Create your first contract to get started.
                 </TableCell>
               </TableRow>
             ) : (
               contracts.map((contract) => (
-                <TableRow key={contract.contract.id} className="border-zinc-700">
-                  <TableCell className="text-snow">
+                <TableRow key={contract.contract.id} className="border-gray-200 hover:bg-gray-50">
+                  <TableCell className="text-gray-900 font-medium">
                     {contract.fileName}
                   </TableCell>
-                  <TableCell className="text-snow">
+                  <TableCell className="text-gray-600">
                     {new Date(contract.timestamp).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
+                    <Badge variant="outline" className="bg-yellow-100 text-yellow-700 border-yellow-300">
                       {contract.contract.status}
                     </Badge>
                   </TableCell>
@@ -160,7 +160,7 @@ const ContractsList = () => {
                       size="sm"
                       variant="ghost"
                       onClick={() => handleView(contract)}
-                      className="hover:bg-purple-500/20 hover:text-purple-500"
+                      className="text-gray-600 hover:text-coral hover:bg-coral/10"
                     >
                       View
                     </Button>
@@ -168,7 +168,7 @@ const ContractsList = () => {
                       size="sm"
                       variant="ghost"
                       onClick={() => handleDownload(contract)}
-                      className="hover:bg-purple-500/20 hover:text-purple-500"
+                      className="text-gray-600 hover:text-coral hover:bg-coral/10"
                     >
                       <Download className="h-4 w-4" />
                     </Button>

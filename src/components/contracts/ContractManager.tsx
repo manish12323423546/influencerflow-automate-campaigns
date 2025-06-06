@@ -270,12 +270,12 @@ export const ContractManager = ({ campaignId: initialCampaignId }: ContractManag
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold text-snow">Contract Management</h2>
-          <p className="text-snow/60">Create and manage influencer contracts</p>
+          <h2 className="text-2xl font-semibold text-gray-900">Contract Management</h2>
+          <p className="text-gray-600">Create and manage influencer contracts</p>
         </div>
         <Button
           onClick={() => setCreateModalOpen(true)}
-          className="bg-coral hover:bg-coral/90 text-white"
+          className="bg-coral hover:bg-coral/90 text-white shadow-md hover:shadow-lg transition-all duration-300"
         >
           <Plus className="mr-2 h-4 w-4" />
           Create Contract
@@ -286,7 +286,7 @@ export const ContractManager = ({ campaignId: initialCampaignId }: ContractManag
 
       {/* Create Contract Modal */}
       <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
-        <DialogContent className="bg-zinc-900 border-zinc-800 text-snow sm:max-w-[600px]">
+        <DialogContent className="bg-white border-gray-200 text-gray-900 sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Create Contract</DialogTitle>
           </DialogHeader>
@@ -300,27 +300,27 @@ export const ContractManager = ({ campaignId: initialCampaignId }: ContractManag
                   <Loader2 className="h-6 w-6 animate-spin text-purple-500" />
                 </div>
               ) : campaigns.length === 0 ? (
-                <div className="text-center py-4 text-snow/60">
+                <div className="text-center py-4 text-gray-500">
                   No campaigns found. Please create a campaign first.
                 </div>
               ) : (
                 <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
-                  <SelectTrigger className="bg-zinc-800 border-zinc-700">
+                  <SelectTrigger className="bg-white border-gray-200 shadow-sm">
                     <SelectValue placeholder="Select a campaign" />
                   </SelectTrigger>
-                  <SelectContent className="bg-zinc-800 border-zinc-700">
+                  <SelectContent className="bg-white border-gray-200">
                     {campaigns.map((campaign) => (
-                      <SelectItem 
-                        key={campaign.id} 
+                      <SelectItem
+                        key={campaign.id}
                         value={campaign.id}
-                        className="focus:bg-purple-500/20"
+                        className="focus:bg-coral/10"
                       >
                         <div className="flex flex-col gap-1">
-                          <div className="font-medium">{campaign.name}</div>
-                          <div className="text-sm text-snow/60">
+                          <div className="font-medium text-gray-900">{campaign.name}</div>
+                          <div className="text-sm text-gray-600">
                             {campaign.brand} • ${campaign.budget.toLocaleString()}
                           </div>
-                          <div className="flex items-center gap-2 text-xs text-snow/40">
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
                             <Badge className={getStatusBadgeColor(campaign.status)}>
                               {campaign.status}
                             </Badge>
@@ -346,7 +346,7 @@ export const ContractManager = ({ campaignId: initialCampaignId }: ContractManag
                         className={`flex items-center space-x-4 p-4 rounded-lg border transition-colors ${
                           selectedInfluencer === influencer.id
                             ? 'bg-coral/10 border-coral'
-                            : 'bg-zinc-800 border-zinc-700 hover:border-coral/50'
+                            : 'bg-gray-50 border-gray-200 hover:border-coral/50'
                         }`}
                       >
                         <RadioGroupItem value={influencer.id} id={influencer.id} />
@@ -356,12 +356,12 @@ export const ContractManager = ({ campaignId: initialCampaignId }: ContractManag
                             <AvatarFallback>{influencer.name.charAt(0)}</AvatarFallback>
                           </Avatar>
                           <Label htmlFor={influencer.id} className="flex-1 cursor-pointer">
-                            <div className="font-medium">{influencer.name}</div>
-                            <div className="text-sm text-snow/60">
+                            <div className="font-medium text-gray-900">{influencer.name}</div>
+                            <div className="text-sm text-gray-600">
                               {influencer.handle} • {formatFollowers(influencer.followers_count)} followers
                             </div>
                           </Label>
-                          <Badge variant="outline" className="ml-auto">
+                          <Badge variant="outline" className="ml-auto border-gray-300 text-gray-600">
                             {influencer.platform}
                           </Badge>
                         </div>
@@ -384,13 +384,13 @@ export const ContractManager = ({ campaignId: initialCampaignId }: ContractManag
                         className={`flex items-center space-x-4 p-4 rounded-lg border transition-colors ${
                           selectedTemplate === template.id
                             ? 'bg-coral/10 border-coral'
-                            : 'bg-zinc-800 border-zinc-700 hover:border-coral/50'
+                            : 'bg-gray-50 border-gray-200 hover:border-coral/50'
                         }`}
                       >
                         <RadioGroupItem value={template.id} id={template.id} />
                         <Label htmlFor={template.id} className="flex-1 cursor-pointer">
                           <div className="font-medium">{template.name}</div>
-                          <div className="text-sm text-snow/60">
+                          <div className="text-sm text-gray-500">
                             {template.template_type}
                           </div>
                         </Label>
@@ -402,9 +402,10 @@ export const ContractManager = ({ campaignId: initialCampaignId }: ContractManag
             )}
 
             <div className="flex justify-end">
-              <Button 
+              <Button
                 onClick={handleCreateContract}
                 disabled={isCreating || !selectedCampaign || !selectedInfluencer || !selectedTemplate}
+                className="bg-coral hover:bg-coral/90 text-white shadow-md hover:shadow-lg transition-all duration-300"
               >
                 {isCreating ? (
                   <>

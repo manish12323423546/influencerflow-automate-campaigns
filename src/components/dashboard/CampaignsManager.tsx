@@ -134,21 +134,21 @@ const CampaignsManager = ({ campaigns: initialCampaigns }: CampaignsManagerProps
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div className="flex flex-wrap items-center gap-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-snow/50" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               placeholder="Search campaigns..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-zinc-800 border-zinc-700 text-snow placeholder:text-snow/50 focus:border-coral pl-10 w-64"
+              className="bg-white border-gray-200 text-gray-900 placeholder:text-gray-400 focus:border-coral pl-10 w-64 shadow-sm"
             />
           </div>
 
           {/* Status Filter */}
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40 bg-zinc-800 border-zinc-700 text-snow">
+            <SelectTrigger className="w-40 bg-white border-gray-200 text-gray-900 shadow-sm">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
-            <SelectContent className="bg-zinc-800 border-zinc-700">
+            <SelectContent className="bg-white border-gray-200">
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
@@ -159,10 +159,10 @@ const CampaignsManager = ({ campaigns: initialCampaigns }: CampaignsManagerProps
 
           {/* Brand Filter */}
           <Select value={brandFilter} onValueChange={setBrandFilter}>
-            <SelectTrigger className="w-40 bg-zinc-800 border-zinc-700 text-snow">
+            <SelectTrigger className="w-40 bg-white border-gray-200 text-gray-900 shadow-sm">
               <SelectValue placeholder="Brand" />
             </SelectTrigger>
-            <SelectContent className="bg-zinc-800 border-zinc-700">
+            <SelectContent className="bg-white border-gray-200">
               <SelectItem value="all">All Brands</SelectItem>
               {uniqueBrands.map(brand => (
                 <SelectItem key={brand} value={brand}>{brand}</SelectItem>
@@ -173,27 +173,27 @@ const CampaignsManager = ({ campaigns: initialCampaigns }: CampaignsManagerProps
       </div>
 
       {/* Campaigns Table */}
-      <Card className="bg-zinc-800/50 border-zinc-700">
+      <Card className="bg-white border-gray-200 shadow-sm">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow className="border-zinc-700">
-                <TableHead className="text-snow/80">Campaign</TableHead>
-                <TableHead className="text-snow/80">Brand</TableHead>
-                <TableHead className="text-snow/80">Status</TableHead>
-                <TableHead className="text-snow/80">Budget</TableHead>
-                <TableHead className="text-snow/80">Spent</TableHead>
-                <TableHead className="text-snow/80">Influencers</TableHead>
-                <TableHead className="text-snow/80">Reach</TableHead>
-                <TableHead className="text-snow/80">Engagement</TableHead>
-                <TableHead className="text-snow/80">Actions</TableHead>
+              <TableRow className="border-gray-200">
+                <TableHead className="text-gray-600">Campaign</TableHead>
+                <TableHead className="text-gray-600">Brand</TableHead>
+                <TableHead className="text-gray-600">Status</TableHead>
+                <TableHead className="text-gray-600">Budget</TableHead>
+                <TableHead className="text-gray-600">Spent</TableHead>
+                <TableHead className="text-gray-600">Influencers</TableHead>
+                <TableHead className="text-gray-600">Reach</TableHead>
+                <TableHead className="text-gray-600">Engagement</TableHead>
+                <TableHead className="text-gray-600">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredCampaigns.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-snow/60">
-                    {campaigns.length === 0 
+                  <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                    {campaigns.length === 0
                       ? "No campaigns found. Create your first campaign to get started."
                       : "No campaigns match your current filters. Try adjusting your search criteria."
                     }
@@ -201,29 +201,29 @@ const CampaignsManager = ({ campaigns: initialCampaigns }: CampaignsManagerProps
                 </TableRow>
               ) : (
                 filteredCampaigns.map((campaign) => (
-                  <TableRow 
-                    key={campaign.id} 
-                    className="border-zinc-700 hover:bg-zinc-700/50"
+                  <TableRow
+                    key={campaign.id}
+                    className="border-gray-200 hover:bg-gray-50"
                   >
-                    <TableCell className="font-medium text-snow">{campaign.name}</TableCell>
-                    <TableCell className="text-snow/80">{campaign.brand}</TableCell>
+                    <TableCell className="font-medium text-gray-900">{campaign.name}</TableCell>
+                    <TableCell className="text-gray-600">{campaign.brand}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(campaign.status)}`}>
                         {campaign.status}
                       </span>
                     </TableCell>
-                    <TableCell className="text-snow/80">${campaign.budget?.toLocaleString() ?? 0}</TableCell>
-                    <TableCell className="text-snow/80">${campaign.spent?.toLocaleString() ?? 0}</TableCell>
-                    <TableCell className="text-snow/80">{campaign.influencer_count ?? 0}</TableCell>
-                    <TableCell className="text-snow/80">{campaign.reach?.toLocaleString() ?? 0}</TableCell>
-                    <TableCell className="text-snow/80">{campaign.engagement_rate?.toFixed(1) ?? 0}%</TableCell>
+                    <TableCell className="text-gray-600">${campaign.budget?.toLocaleString() ?? 0}</TableCell>
+                    <TableCell className="text-gray-600">${campaign.spent?.toLocaleString() ?? 0}</TableCell>
+                    <TableCell className="text-gray-600">{campaign.influencer_count ?? 0}</TableCell>
+                    <TableCell className="text-gray-600">{campaign.reach?.toLocaleString() ?? 0}</TableCell>
+                    <TableCell className="text-gray-600">{campaign.engagement_rate?.toFixed(1) ?? 0}%</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button
                           onClick={() => handleViewCampaign(campaign.id)}
                           variant="ghost"
                           size="sm"
-                          className="text-snow/70 hover:text-coral"
+                          className="text-gray-600 hover:text-coral hover:bg-coral/10"
                           disabled={loadingCampaignId === campaign.id}
                         >
                           {loadingCampaignId === campaign.id ? (
@@ -236,7 +236,7 @@ const CampaignsManager = ({ campaigns: initialCampaigns }: CampaignsManagerProps
                           onClick={() => navigate(`/campaigns/${campaign.id}/edit`)}
                           variant="ghost"
                           size="sm"
-                          className="text-snow/70 hover:text-coral"
+                          className="text-gray-600 hover:text-coral hover:bg-coral/10"
                           disabled={loadingCampaignId === campaign.id}
                         >
                           Edit

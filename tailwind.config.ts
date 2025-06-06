@@ -67,7 +67,13 @@ export default {
 				carbon: '#0B0B0C',
 				coral: '#FF6243',
 				snow: '#F7F7F7',
-				sunrise: '#FFD166'
+				sunrise: '#FFD166',
+				// New white theme colors
+				'light-bg': '#FFFFFF',
+				'light-surface': '#F9FAFB',
+				'light-border': '#E5E7EB',
+				'dark-text': '#111827',
+				'medium-text': '#6B7280'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',

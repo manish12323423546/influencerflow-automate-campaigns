@@ -98,16 +98,16 @@ const EditCampaign = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-carbon flex items-center justify-center">
-        <div className="text-snow">Loading campaign...</div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-900">Loading campaign...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-carbon">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-zinc-900 border-b border-zinc-800">
+      <header className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4">
@@ -115,21 +115,21 @@ const EditCampaign = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate(`/campaigns/${id}`)}
-                className="text-snow/70 hover:text-coral"
+                className="text-gray-600 hover:text-coral hover:bg-coral/10"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Campaign
               </Button>
               <div>
-                <h1 className="text-lg font-semibold text-snow">Edit Campaign</h1>
-                <p className="text-sm text-snow/60">{mockCampaign.name}</p>
+                <h1 className="text-lg font-semibold text-gray-900">Edit Campaign</h1>
+                <p className="text-sm text-gray-600">{mockCampaign.name}</p>
               </div>
             </div>
-            
+
             <Button
               onClick={handleSubmit}
               disabled={isLoading}
-              className="bg-coral hover:bg-coral/90 text-white"
+              className="bg-coral hover:bg-coral/90 text-white shadow-md hover:shadow-lg transition-all duration-300"
             >
               <Save className="h-4 w-4 mr-2" />
               {isLoading ? 'Saving...' : 'Save Changes'}
@@ -140,34 +140,34 @@ const EditCampaign = () => {
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <Card className="bg-zinc-900 border-zinc-800">
+          <Card className="bg-white border-gray-200 shadow-sm">
             <CardHeader>
-              <CardTitle className="text-snow">Campaign Details</CardTitle>
+              <CardTitle className="text-gray-900">Campaign Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-snow mb-2">
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
                     Campaign Name *
                   </label>
                   <Input
                     value={formData.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
                     placeholder="Enter campaign name"
-                    className="bg-zinc-800 border-zinc-700 text-snow"
+                    className="bg-white border-gray-200 text-gray-900"
                     required
                   />
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium text-snow mb-2">
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
                     Brand *
                   </label>
                   <Input
                     value={formData.brand}
                     onChange={(e) => handleInputChange('brand', e.target.value)}
                     placeholder="Enter brand name"
-                    className="bg-zinc-800 border-zinc-700 text-snow"
+                    className="bg-white border-gray-200 text-gray-900"
                     required
                   />
                 </div>
@@ -175,7 +175,7 @@ const EditCampaign = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-snow mb-2">
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
                     Budget *
                   </label>
                   <Input
@@ -183,20 +183,20 @@ const EditCampaign = () => {
                     value={formData.budget}
                     onChange={(e) => handleInputChange('budget', parseFloat(e.target.value) || 0)}
                     placeholder="Enter budget amount"
-                    className="bg-zinc-800 border-zinc-700 text-snow"
+                    className="bg-white border-gray-200 text-gray-900"
                     required
                   />
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium text-snow mb-2">
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
                     Status
                   </label>
                   <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
-                    <SelectTrigger className="bg-zinc-800 border-zinc-700 text-snow">
+                    <SelectTrigger className="bg-white border-gray-200 text-gray-900">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-zinc-800 border-zinc-700">
+                    <SelectContent className="bg-white border-gray-200">
                       <SelectItem value="draft">Draft</SelectItem>
                       <SelectItem value="active">Active</SelectItem>
                       <SelectItem value="paused">Paused</SelectItem>
@@ -207,66 +207,66 @@ const EditCampaign = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-snow mb-2">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
                   Description
                 </label>
                 <Textarea
                   value={formData.description}
                   onChange={(e) => handleInputChange('description', e.target.value)}
                   placeholder="Describe your campaign"
-                  className="bg-zinc-800 border-zinc-700 text-snow"
+                  className="bg-white border-gray-200 text-gray-900"
                   rows={3}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-snow mb-2">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
                   Goals
                 </label>
                 <Textarea
                   value={formData.goals}
                   onChange={(e) => handleInputChange('goals', e.target.value)}
                   placeholder="What are your campaign goals?"
-                  className="bg-zinc-800 border-zinc-700 text-snow"
+                  className="bg-white border-gray-200 text-gray-900"
                   rows={3}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-snow mb-2">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
                   Target Audience
                 </label>
                 <Textarea
                   value={formData.target_audience}
                   onChange={(e) => handleInputChange('target_audience', e.target.value)}
                   placeholder="Describe your target audience"
-                  className="bg-zinc-800 border-zinc-700 text-snow"
+                  className="bg-white border-gray-200 text-gray-900"
                   rows={3}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-snow mb-2">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
                   Deliverables
                 </label>
                 <Textarea
                   value={formData.deliverables}
                   onChange={(e) => handleInputChange('deliverables', e.target.value)}
                   placeholder="What deliverables do you expect?"
-                  className="bg-zinc-800 border-zinc-700 text-snow"
+                  className="bg-white border-gray-200 text-gray-900"
                   rows={3}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-snow mb-2">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
                   Timeline
                 </label>
                 <Input
                   value={formData.timeline}
                   onChange={(e) => handleInputChange('timeline', e.target.value)}
                   placeholder="e.g., 4 weeks, Q1 2024"
-                  className="bg-zinc-800 border-zinc-700 text-snow"
+                  className="bg-white border-gray-200 text-gray-900"
                 />
               </div>
             </CardContent>

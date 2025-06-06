@@ -155,15 +155,15 @@ const MyCampaigns = () => {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
         <div>
-          <h2 className="text-xl sm:text-2xl font-semibold text-snow">My Campaigns</h2>
-          <p className="text-sm sm:text-base text-snow/60">Track your active campaigns and deliverables</p>
+          <h2 className="text-xl sm:text-2xl font-semibold text-gray-900">My Campaigns</h2>
+          <p className="text-sm sm:text-base text-gray-600">Track your active campaigns and deliverables</p>
         </div>
         <div className="flex flex-wrap gap-1 sm:gap-2">
           <Button
             onClick={() => setFilter('all')}
             variant={filter === 'all' ? 'default' : 'outline'}
             size="sm"
-            className={`text-xs sm:text-sm ${filter === 'all' ? 'bg-purple-500 hover:bg-purple-600' : 'border-zinc-700 text-snow hover:bg-zinc-800'}`}
+            className={`text-xs sm:text-sm ${filter === 'all' ? 'bg-coral hover:bg-coral/90 text-white' : 'border-gray-200 text-gray-900 hover:bg-coral/5 hover:border-coral/50'}`}
           >
             All ({campaigns.length})
           </Button>
@@ -171,7 +171,7 @@ const MyCampaigns = () => {
             onClick={() => setFilter('active')}
             variant={filter === 'active' ? 'default' : 'outline'}
             size="sm"
-            className={`text-xs sm:text-sm ${filter === 'active' ? 'bg-purple-500 hover:bg-purple-600' : 'border-zinc-700 text-snow hover:bg-zinc-800'}`}
+            className={`text-xs sm:text-sm ${filter === 'active' ? 'bg-coral hover:bg-coral/90 text-white' : 'border-gray-200 text-gray-900 hover:bg-coral/5 hover:border-coral/50'}`}
           >
             Active ({getActiveCampaigns()})
           </Button>
@@ -179,7 +179,7 @@ const MyCampaigns = () => {
             onClick={() => setFilter('completed')}
             variant={filter === 'completed' ? 'default' : 'outline'}
             size="sm"
-            className={`text-xs sm:text-sm ${filter === 'completed' ? 'bg-purple-500 hover:bg-purple-600' : 'border-zinc-700 text-snow hover:bg-zinc-800'}`}
+            className={`text-xs sm:text-sm ${filter === 'completed' ? 'bg-coral hover:bg-coral/90 text-white' : 'border-gray-200 text-gray-900 hover:bg-coral/5 hover:border-coral/50'}`}
           >
             Completed ({campaigns.filter(c => c.status === 'completed').length})
           </Button>
@@ -188,20 +188,20 @@ const MyCampaigns = () => {
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 sm:p-6">
-          <h3 className="text-snow/70 text-xs sm:text-sm font-medium mb-2">Total Earnings</h3>
-          <p className="text-2xl sm:text-3xl font-bold text-snow">${getTotalEarnings().toLocaleString()}</p>
+        <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-300">
+          <h3 className="text-gray-600 text-xs sm:text-sm font-medium mb-2">Total Earnings</h3>
+          <p className="text-2xl sm:text-3xl font-bold text-gray-900">${getTotalEarnings().toLocaleString()}</p>
           <p className="text-green-500 text-xs sm:text-sm mt-1">From {campaigns.length} campaigns</p>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 sm:p-6">
-          <h3 className="text-snow/70 text-xs sm:text-sm font-medium mb-2">Active Campaigns</h3>
-          <p className="text-2xl sm:text-3xl font-bold text-snow">{getActiveCampaigns()}</p>
+        <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-300">
+          <h3 className="text-gray-600 text-xs sm:text-sm font-medium mb-2">Active Campaigns</h3>
+          <p className="text-2xl sm:text-3xl font-bold text-gray-900">{getActiveCampaigns()}</p>
           <p className="text-blue-500 text-xs sm:text-sm mt-1">In progress</p>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 sm:p-6">
-          <h3 className="text-snow/70 text-xs sm:text-sm font-medium mb-2">Completed</h3>
-          <p className="text-2xl sm:text-3xl font-bold text-snow">{campaigns.filter(c => c.status === 'completed').length}</p>
-          <p className="text-purple-500 text-xs sm:text-sm mt-1">Successfully delivered</p>
+        <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-300">
+          <h3 className="text-gray-600 text-xs sm:text-sm font-medium mb-2">Completed</h3>
+          <p className="text-2xl sm:text-3xl font-bold text-gray-900">{campaigns.filter(c => c.status === 'completed').length}</p>
+          <p className="text-coral text-xs sm:text-sm mt-1">Successfully delivered</p>
         </div>
       </div>
 
@@ -210,14 +210,14 @@ const MyCampaigns = () => {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-coral"></div>
         </div>
       ) : filteredCampaigns.length === 0 ? (
-        <Card className="bg-zinc-900 border-zinc-800">
+        <Card className="bg-white border-gray-200 shadow-sm">
           <CardContent className="text-center py-8 sm:py-12">
-            <Briefcase className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-4 text-snow/30" />
-            <h3 className="text-base sm:text-lg font-medium text-snow mb-2">
+            <Briefcase className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-4 text-gray-400" />
+            <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">
               {filter === 'all' ? 'No campaigns yet' : `No ${filter} campaigns`}
             </h3>
-            <p className="text-sm sm:text-base text-snow/60 max-w-md mx-auto">
-              {filter === 'all' 
+            <p className="text-sm sm:text-base text-gray-600 max-w-md mx-auto">
+              {filter === 'all'
                 ? 'Start by accepting campaign opportunities to see them here.'
                 : `You don't have any ${filter} campaigns at the moment.`
               }
@@ -233,25 +233,25 @@ const MyCampaigns = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
             >
-              <Card className="bg-zinc-900 border-zinc-800 hover:border-purple-500/50 transition-colors">
+              <Card className="bg-white border-gray-200 hover:border-coral/50 transition-colors shadow-sm hover:shadow-md">
                 <CardHeader className="p-4 sm:p-6">
                   <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between space-y-3 lg:space-y-0">
                     <div className="flex items-start space-x-3 sm:space-x-4 flex-1">
                       <Avatar className="h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0">
                         <AvatarImage src={campaign.brand_logo} alt={campaign.brand_name} />
-                        <AvatarFallback className="bg-purple-500 text-white text-sm">
+                        <AvatarFallback className="bg-coral text-white text-sm">
                           {campaign.brand_name.split(' ').map(n => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-base sm:text-lg font-semibold text-snow truncate">{campaign.campaign_name}</h3>
-                        <p className="text-snow/60 text-sm sm:text-base">{campaign.brand_name}</p>
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">{campaign.campaign_name}</h3>
+                        <p className="text-gray-600 text-sm sm:text-base">{campaign.brand_name}</p>
                         <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2">
-                          <span className="text-xs sm:text-sm text-snow/50 flex items-center">
+                          <span className="text-xs sm:text-sm text-gray-500 flex items-center">
                             <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                             ${campaign.rate.toLocaleString()}
                           </span>
-                          <span className="text-xs sm:text-sm text-snow/50 flex items-center">
+                          <span className="text-xs sm:text-sm text-gray-500 flex items-center">
                             <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                             {formatDeadline(campaign.deadline)}
                           </span>
@@ -272,14 +272,14 @@ const MyCampaigns = () => {
                 
                 <CardContent className="p-4 sm:p-6 pt-0 space-y-3 sm:space-y-4">
                   <div>
-                    <p className="text-snow/80 text-xs sm:text-sm leading-relaxed">{campaign.brief}</p>
+                    <p className="text-gray-700 text-xs sm:text-sm leading-relaxed">{campaign.brief}</p>
                   </div>
-                  
+
                   {campaign.status !== 'completed' && (
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs sm:text-sm font-medium text-snow">Deliverables Progress</span>
-                        <span className="text-xs sm:text-sm text-snow/60">
+                        <span className="text-xs sm:text-sm font-medium text-gray-900">Deliverables Progress</span>
+                        <span className="text-xs sm:text-sm text-gray-600">
                           {campaign.completed_deliverables}/{campaign.deliverables_count}
                         </span>
                       </div>
@@ -293,18 +293,18 @@ const MyCampaigns = () => {
                         {campaign.platform}
                       </Badge>
                       {campaign.next_deliverable_due && campaign.status !== 'completed' && (
-                        <span className="text-xs text-snow/50 flex items-center">
+                        <span className="text-xs text-gray-500 flex items-center">
                           <AlertCircle className="h-3 w-3 mr-1" />
                           Next due: {new Date(campaign.next_deliverable_due).toLocaleDateString()}
                         </span>
                       )}
                     </div>
-                    
+
                     <Link to={`/creator-campaigns/${campaign.id}`} className="w-full sm:w-auto">
                       <Button
                         variant="outline"
                         size="sm"
-                        className="w-full sm:w-auto border-purple-500 text-purple-500 hover:bg-purple-500/10 text-xs sm:text-sm"
+                        className="w-full sm:w-auto border-coral text-coral hover:bg-coral/10 text-xs sm:text-sm"
                       >
                         <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                         View Details
