@@ -242,7 +242,7 @@ const CampaignsManager = ({ campaigns: initialCampaigns }: CampaignsManagerProps
                           )}
                         </Button>
                         <Button
-                          onClick={() => navigate(`/campaigns/${campaign.id}/edit`)}
+                          onClick={() => navigate(`/campaigns/${campaign.id}`, { state: { isEditing: true } })}
                           variant="ghost"
                           size="sm"
                           className="text-gray-600 hover:text-coral hover:bg-coral/10"

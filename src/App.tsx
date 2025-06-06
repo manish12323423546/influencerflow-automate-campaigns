@@ -13,7 +13,6 @@ import InfluencerProfile from "./pages/InfluencerProfile";
 import Campaigns from "./pages/Campaigns";
 import CreateCampaign from "./pages/CreateCampaign";
 import CampaignDetail from "./pages/CampaignDetail";
-import EditCampaign from "./pages/EditCampaign";
 import CreatorCampaignDetail from "./pages/CreatorCampaignDetail";
 import BrandProfile from "./pages/BrandProfile";
 import Settings from "./pages/Settings";
@@ -39,7 +38,6 @@ const App = () => (
             <Route path="/campaigns" element={<Campaigns />} />
             <Route path="/campaigns/create" element={<CreateCampaign />} />
             <Route path="/campaigns/:id" element={<CampaignDetail />} />
-            <Route path="/campaigns/:id/edit" element={<EditCampaign />} />
             <Route path="/creator-campaigns/:id" element={<CreatorCampaignDetail />} />
             <Route path="/brand-profile" element={<BrandProfile />} />
             <Route path="/settings" element={<Settings />} />

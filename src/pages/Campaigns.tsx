@@ -329,7 +329,7 @@ const Campaigns = () => {
                             View
                           </Button>
                           <Button
-                            onClick={() => navigate(`/campaigns/${campaign.id}/edit`)}
+                            onClick={() => navigate(`/campaigns/${campaign.id}`, { state: { isEditing: true } })}
                             variant="ghost"
                             size="sm"
                             className="text-gray-600 hover:text-blue-500 hover:bg-blue-50"

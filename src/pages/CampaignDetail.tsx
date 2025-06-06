@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { 
   ArrowLeft, Edit, Users, BarChart3, FileText, MessageSquare, 
   Plus, Phone, Mail, Calendar, DollarSign, Target, 
-  CheckCircle2, AlertCircle, Clock, Share2, Download, Save, Eye, XCircle 
+  CheckCircle2, AlertCircle, Clock, Share2, Download, Save, Eye, XCircle, Trash2 
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -69,15 +69,12 @@ interface Campaign {
 
 interface CampaignInfluencer {
   id: string;
-  name: string;
-  handle: string;
-  avatar_url: string;
+  campaign_id: string;
+  influencer_id: string;
   status: 'shortlisted' | 'invited' | 'confirmed' | 'declined' | 'completed';
-  followers_count: number;
-  engagement_rate: number;
   fee: number;
-  phone_no?: number | null;
-  gmail_gmail?: string | null;
+  match_score: number;
+  match_reason: string;
 }
 
 interface Contract {
@@ -101,10 +98,22 @@ interface AddInfluencerDialogProps {
   onInfluencerAdded: () => void;
 }
 
+interface InfluencerProfile {
+  id: string;
+  name: string;
+  handle: string;
+  avatar_url: string;
+  platform: string;
+  followers_count: number;
+  engagement_rate: number;
+  phone_no?: string | null;
+  gmail_gmail?: string | null;
+}
+
 const AddInfluencerDialog = ({ campaignId, onInfluencerAdded }: AddInfluencerDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [influencers, setInfluencers] = useState<any[]>([]);
+  const [influencers, setInfluencers] = useState<InfluencerProfile[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedInfluencer, setSelectedInfluencer] = useState<string>('');
   const { toast } = useToast();
@@ -295,15 +304,21 @@ const InfluencerProfileDialog = ({ influencer, onClose, open }: InfluencerProfil
 const CampaignDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(location.state?.isEditing || false);
   const [editedCampaign, setEditedCampaign] = useState<Partial<Campaign>>({});
-  const [selectedInfluencer, setSelectedInfluencer] = useState<any>(null);
+  const [selectedInfluencer, setSelectedInfluencer] = useState<InfluencerProfile | null>(null);
   const [removingInfluencerId, setRemovingInfluencerId] = useState<string | null>(null);
   const [isCallInProgress, setIsCallInProgress] = useState<Record<string, boolean>>({});
-  const [gmailResponses, setGmailResponses] = useState<Record<string, any>>({});
+  const [gmailResponses, setGmailResponses] = useState<Record<string, { 
+    status: 'sending' | 'success' | 'error';
+    timestamp?: string;
+    response?: unknown;
+    error?: string;
+  }>>({});
 
   const validateEnvVariables = () => {
     const requiredVars = {
@@ -642,7 +657,7 @@ const CampaignDetail = () => {
             description: "The requested campaign could not be found.",
             variant: "destructive",
           });
-          navigate('/dashboard');
+          navigate('/campaigns');
           return;
         }
 
@@ -651,7 +666,7 @@ const CampaignDetail = () => {
           spent: data.campaign_influencers?.reduce((total, ci) => total + (ci.fee || 0), 0) || 0,
           reach: data.campaign_influencers?.reduce((total, ci) => 
             total + (ci.influencer?.followers_count || 0), 0) || 0,
-          engagement_rate: data.campaign_influencers?.reduce((total, ci, index) => 
+          engagement_rate: data.campaign_influencers?.reduce((total, ci) => 
             total + (ci.influencer?.engagement_rate || 0), 0) / 
             (data.campaign_influencers?.length || 1) || 0
         };
@@ -671,6 +686,24 @@ const CampaignDetail = () => {
 
     fetchCampaignDetails();
   }, [id, navigate, toast]);
+
+  useEffect(() => {
+    // Update isEditing when location state changes
+    setIsEditing(location.state?.isEditing || false);
+    // Initialize editedCampaign when isEditing is true
+    if (location.state?.isEditing && campaign) {
+      setEditedCampaign({
+        name: campaign.name,
+        description: campaign.description,
+        goals: campaign.goals,
+        target_audience: campaign.target_audience,
+        deliverables: campaign.deliverables,
+        timeline: campaign.timeline,
+        budget: campaign.budget,
+        status: campaign.status
+      });
+    }
+  }, [location.state, campaign]);
 
   const handleEditToggle = () => {
     if (isEditing) {
@@ -703,7 +736,8 @@ const CampaignDetail = () => {
           target_audience: editedCampaign.target_audience,
           deliverables: editedCampaign.deliverables,
           timeline: editedCampaign.timeline,
-          budget: editedCampaign.budget
+          budget: editedCampaign.budget,
+          status: editedCampaign.status || campaign.status
         })
         .eq('id', campaign.id);
 
@@ -711,6 +745,8 @@ const CampaignDetail = () => {
 
       setCampaign(prev => prev ? { ...prev, ...editedCampaign } : null);
       setIsEditing(false);
+      // Clear the location state to remove isEditing flag
+      navigate(`/campaigns/${campaign.id}`, { replace: true });
       toast({
         title: "Changes saved",
         description: "Campaign details have been updated successfully.",
@@ -725,7 +761,7 @@ const CampaignDetail = () => {
     }
   };
 
-  const handleInputChange = (field: keyof Campaign, value: any) => {
+  const handleInputChange = (field: keyof Campaign, value: string | number) => {
     setEditedCampaign(prev => ({ ...prev, [field]: value }));
   };
 
@@ -743,8 +779,6 @@ const CampaignDetail = () => {
         return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
     }
   };
-
-
 
   const calculateProgress = () => {
     if (!campaign?.campaign_influencers?.length) return 0;
@@ -835,6 +869,44 @@ const CampaignDetail = () => {
     }
   };
 
+  useEffect(() => {
+    const widget = document.querySelector('elevenlabs-convai');
+    
+    const handleReady = () => {
+      console.log('Widget is ready');
+    };
+
+    const handleCall = (event: CustomEvent) => {
+      console.log('Starting conversation');
+      if (event.detail?.config) {
+        event.detail.config.clientTools = {
+          testConversation: ({ message }: { message: string }) => {
+            console.log('Test conversation message:', message);
+            return { success: true };
+          }
+        };
+      }
+    };
+
+    const handleEnd = () => {
+      console.log('Conversation ended');
+    };
+
+    if (widget) {
+      widget.addEventListener('elevenlabs-convai:ready', handleReady);
+      widget.addEventListener('elevenlabs-convai:call', handleCall as EventListener);
+      widget.addEventListener('elevenlabs-convai:end', handleEnd);
+    }
+
+    return () => {
+      if (widget) {
+        widget.removeEventListener('elevenlabs-convai:ready', handleReady);
+        widget.removeEventListener('elevenlabs-convai:call', handleCall as EventListener);
+        widget.removeEventListener('elevenlabs-convai:end', handleEnd);
+      }
+    };
+  }, []);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -889,9 +961,26 @@ const CampaignDetail = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Badge className={getStatusColor(campaign.status)}>
-              {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
-            </Badge>
+            {isEditing ? (
+              <Select
+                value={editedCampaign.status || campaign.status}
+                onValueChange={(value) => handleInputChange('status', value)}
+              >
+                <SelectTrigger className="w-[140px] bg-white border-gray-200 text-gray-900 shadow-sm">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-gray-200">
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="paused">Paused</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <Badge className={getStatusColor(campaign.status)}>
+                {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
+              </Badge>
+            )}
             <Button
               onClick={handleEditToggle}
               className={isEditing ? "bg-green-500 hover:bg-green-600 text-white" : "bg-coral hover:bg-coral/90 text-white"}
@@ -908,6 +997,62 @@ const CampaignDetail = () => {
                 </>
               )}
             </Button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="bg-white">
+                <DialogHeader>
+                  <DialogTitle>Delete Campaign</DialogTitle>
+                  <DialogDescription>
+                    Are you sure you want to delete this campaign? This action cannot be undone.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="flex justify-end gap-3 mt-4">
+                  <Button variant="outline" onClick={() => {}}>Cancel</Button>
+                  <Button 
+                    variant="destructive" 
+                    className="bg-red-500 hover:bg-red-600 text-white"
+                    onClick={async () => {
+                      try {
+                        // First delete all campaign_influencers
+                        const { error: influencersError } = await supabase
+                          .from('campaign_influencers')
+                          .delete()
+                          .eq('campaign_id', campaign.id);
+
+                        if (influencersError) throw influencersError;
+
+                        // Then delete the campaign
+                        const { error: campaignError } = await supabase
+                          .from('campaigns')
+                          .delete()
+                          .eq('id', campaign.id);
+
+                        if (campaignError) throw campaignError;
+
+                        toast({
+                          title: "Campaign deleted",
+                          description: "The campaign has been successfully deleted.",
+                        });
+                        navigate('/dashboard');
+                      } catch (error) {
+                        console.error('Error deleting campaign:', error);
+                        toast({
+                          title: "Error",
+                          description: "Failed to delete campaign. Please try again.",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                  >
+                    Delete Campaign
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
@@ -1182,17 +1327,66 @@ const CampaignDetail = () => {
 
           <Card className="bg-white border-gray-200 shadow-sm">
             <CardHeader>
-              <CardTitle className="text-gray-900">Campaign Analytics</CardTitle>
+              <CardTitle className="text-gray-900">Active Contracts</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12">
-                <BarChart3 className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Analytics Coming Soon</h3>
-                <p className="text-gray-600">
-                  We're working on bringing you detailed campaign analytics.
-                  Check back soon for insights and performance metrics.
-                </p>
-              </div>
+              {campaign.campaign_influencers?.some(ci => ci.status === 'confirmed' || ci.status === 'completed') ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-gray-200">
+                      <TableHead className="text-gray-600">Influencer</TableHead>
+                      <TableHead className="text-gray-600">Status</TableHead>
+                      <TableHead className="text-gray-600">Fee</TableHead>
+                      <TableHead className="text-gray-600">Deliverables</TableHead>
+                      <TableHead className="text-gray-600">Timeline</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {campaign.campaign_influencers
+                      .filter(ci => ci.status === 'confirmed' || ci.status === 'completed')
+                      .map((ci) => (
+                        <TableRow key={ci.id} className="border-gray-200">
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar>
+                                <AvatarImage src={ci.influencer.avatar_url} />
+                                <AvatarFallback>{ci.influencer.name[0]}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium text-gray-900">{ci.influencer.name}</p>
+                                <p className="text-sm text-gray-600">@{ci.influencer.handle}</p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getStatusColor(ci.status)}>
+                              {ci.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-gray-900">
+                            ${ci.fee?.toLocaleString() || 0}
+                          </TableCell>
+                          <TableCell className="text-gray-600">
+                            {campaign.deliverables?.split(',').map((item, index) => (
+                              <div key={index} className="text-sm">{item.trim()}</div>
+                            ))}
+                          </TableCell>
+                          <TableCell className="text-gray-600">
+                            {campaign.timeline || 'Not set'}
+                          </TableCell>
+                        </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-12">
+                  <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Active Contracts</h3>
+                  <p className="text-gray-600">
+                    There are no confirmed or completed contracts in this campaign yet.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

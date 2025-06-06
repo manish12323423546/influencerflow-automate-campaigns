@@ -70,6 +70,7 @@ const DiscoverCreators = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [nicheFilter, setNicheFilter] = useState<string>('all');
+  const [showShortlisted, setShowShortlisted] = useState(false);
   const [isCallInProgress, setIsCallInProgress] = useState<Record<string, boolean>>({});
   const [isGmailInProgress, setIsGmailInProgress] = useState<Record<string, boolean>>({});
   const [gmailResponses, setGmailResponses] = useState<Record<string, any>>({});
@@ -142,6 +143,10 @@ const DiscoverCreators = () => {
   }, [toast]);
 
   const filteredCreators = creators.filter(creator => {
+    // First filter by shortlist if enabled
+    if (showShortlisted && !creator.isShortlisted) return false;
+    
+    // Then apply other filters
     const matchesSearch = creator.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          creator.handle.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPlatform = platformFilter === 'all' || creator.platform.toLowerCase() === platformFilter.toLowerCase();
@@ -450,6 +455,15 @@ const DiscoverCreators = () => {
             ))}
           </SelectContent>
         </Select>
+
+        <Button
+          variant={showShortlisted ? "default" : "outline"}
+          className={showShortlisted ? "bg-coral hover:bg-coral/90 text-white" : "border-gray-200 text-gray-600 hover:bg-gray-50"}
+          onClick={() => setShowShortlisted(!showShortlisted)}
+        >
+          <Heart className={`h-4 w-4 mr-2 ${showShortlisted ? 'fill-current' : ''}`} />
+          {showShortlisted ? 'Show All' : 'View Shortlisted'}
+        </Button>
       </div>
 
       {/* Campaign Selection Modal */}
@@ -482,7 +496,9 @@ const DiscoverCreators = () => {
 
       {/* Influencer Leaderboard */}
       <div>
-        <h2 className="text-2xl font-semibold text-gray-900 mb-4">Influencer Leaderboard</h2>
+        <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+          {showShortlisted ? 'Shortlisted Influencers' : 'Influencer Leaderboard'}
+        </h2>
         {filteredCreators.length === 0 ? (
           <Card className="bg-white border-gray-200 shadow-sm">
             <CardContent className="py-8">
