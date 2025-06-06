@@ -42,8 +42,7 @@ interface Campaign {
   spent: number;
   reach: number;
   engagement_rate: number;
-  start_date: string;
-  end_date: string;
+  timeline: string | null;
   goals: string;
   target_audience: string;
   deliverables: string;
@@ -446,50 +445,117 @@ const CampaignDetail = () => {
 
     try {
       setGmailResponses(prev => ({ ...prev, [influencerId]: { status: 'sending' } }));
-      
+
       toast({
         title: "Sending...",
         description: `Sending Gmail workflow for ${influencerName}...`,
       });
 
       // Get the influencer data from the campaign
-      const influencerData = campaign?.campaign_influencers?.find(
+      const campaignInfluencer = campaign?.campaign_influencers?.find(
         ci => ci.influencer.id === influencerId
-      )?.influencer;
+      );
 
-      if (!influencerData) {
+      if (!campaignInfluencer) {
         throw new Error('Influencer data not found');
       }
 
-      // Prepare the request body with current campaign context
+      const influencerData = campaignInfluencer.influencer;
+
+      // Get contract data from Supabase if available
+      const { data: contractData } = await supabase
+        .from('contracts')
+        .select('*')
+        .eq('influencer_id', influencerId)
+        .eq('brand_user_id', (await supabase.auth.getUser()).data.user?.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      // Parse timeline to get start and end dates, or use defaults
+      const parseTimelineDate = (timeline: string | null) => {
+        if (!timeline) return null;
+        // Try to extract dates from timeline string (assuming format like "2025-01-01 to 2025-01-31")
+        const dateMatch = timeline.match(/(\d{4}-\d{2}-\d{2})/g);
+        return dateMatch || null;
+      };
+
+      const timelineDates = parseTimelineDate(campaign?.timeline);
+      const defaultStartDate = new Date().toISOString().slice(0, 10);
+      const defaultEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const startDate = timelineDates?.[0] || defaultStartDate;
+      const endDate = timelineDates?.[1] || defaultEndDate;
+
+      // Prepare the request body in the exact format you specified
       const requestBody = {
-        gmail: gmailAddress,
-        campaign: {
-          id: campaign?.id,
-          name: campaign?.name,
-          brand: campaign?.brand,
-          description: campaign?.description,
-          goals: campaign?.goals,
-          deliverables: campaign?.deliverables,
-          budget: campaign?.budget,
-          start_date: campaign?.start_date,
-          end_date: campaign?.end_date
+        competitionData: {
+          campaignId: campaign?.id || `cmp_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}_${campaign?.name?.replace(/\s+/g, '').slice(0, 3).toUpperCase()}`,
+          campaignName: campaign?.name || "Campaign",
+          competitorBrands: [
+            {
+              brandName: campaign?.brand || "Brand",
+              campaignBudget: campaign?.budget || 0,
+              startDate: startDate,
+              endDate: endDate
+            }
+          ]
         },
-        creator: {
-          id: influencerId,
+        influencerDetail: {
+          influencerId: influencerId,
           name: influencerName,
-          platform: influencerData.platform,
-          handle: influencerData.handle,
-          metrics: {
-            followers: influencerData.followers_count,
-            engagement: influencerData.engagement_rate
+          gmail: gmailAddress,
+          socialHandles: {
+            [influencerData.platform]: influencerData.handle || `@${influencerName.toLowerCase().replace(/\s+/g, '')}`
+          },
+          followers: {
+            [influencerData.platform]: influencerData.followers_count
+          },
+          engagementRate: influencerData.engagement_rate,
+          category: influencerData.platform === 'instagram' ? 'Social Media' :
+                   influencerData.platform === 'youtube' ? 'Video Content' :
+                   influencerData.platform === 'tiktok' ? 'Short Form Video' : 'Content Creation'
+        },
+        contract: {
+          contractId: contractData?.id || `ctr_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}_${influencerId.slice(0, 3).toUpperCase()}`,
+          contractType: "Fixed-Fee",
+          startDate: startDate,
+          endDate: endDate,
+          deliverables: campaign?.deliverables ? campaign.deliverables.split(',').map((item, index) => ({
+            type: item.trim(),
+            count: 1,
+            dueDate: endDate
+          })) : [
+            {
+              type: "Social Media Post",
+              count: 1,
+              dueDate: endDate
+            }
+          ],
+          paymentTerms: {
+            totalFee: campaignInfluencer.fee || 15000,
+            currency: "INR",
+            paymentSchedule: [
+              {
+                milestone: "After Content Delivery",
+                amount: campaignInfluencer.fee || 15000,
+                dueOn: endDate
+              }
+            ]
+          },
+          terminationClause: "Either party may terminate with 7 days' notice; refund or prorated payment applies if terminated early.",
+          exclusivity: {
+            applicable: true,
+            category: influencerData.platform === 'instagram' ? 'Social Media' :
+                     influencerData.platform === 'youtube' ? 'Video Content' :
+                     influencerData.platform === 'tiktok' ? 'Short Form Video' : 'Content Creation',
+            duration: `${startDate} to ${endDate}`
           }
         }
       };
 
       console.log('Sending Gmail workflow with data:', JSON.stringify(requestBody, null, 2));
 
-      const response = await fetch("https://varhhh.app.n8n.cloud/webhook/08b089ba-1617-4d04-a5c7-f9b7d8ca57c4", {
+      const response = await fetch("https://sdsd12.app.n8n.cloud/webhook/08b089ba-1617-4d04-a5c7-f9b7d8ca57c4", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -503,13 +569,13 @@ const CampaignDetail = () => {
       }
 
       const responseData = await response.json();
-      setGmailResponses(prev => ({ 
-        ...prev, 
-        [influencerId]: { 
-          status: 'success', 
+      setGmailResponses(prev => ({
+        ...prev,
+        [influencerId]: {
+          status: 'success',
           timestamp: new Date().toISOString(),
-          response: responseData 
-        } 
+          response: responseData
+        }
       }));
 
       toast({
@@ -519,13 +585,13 @@ const CampaignDetail = () => {
 
     } catch (error) {
       console.error('Error sending Gmail workflow:', error);
-      setGmailResponses(prev => ({ 
-        ...prev, 
-        [influencerId]: { 
-          status: 'error', 
+      setGmailResponses(prev => ({
+        ...prev,
+        [influencerId]: {
+          status: 'error',
           timestamp: new Date().toISOString(),
           error: error instanceof Error ? error.message : 'Unknown error'
-        } 
+        }
       }));
       toast({
         title: "Failed to Send Email",
@@ -618,8 +684,7 @@ const CampaignDetail = () => {
         goals: campaign.goals,
         target_audience: campaign.target_audience,
         deliverables: campaign.deliverables,
-        start_date: campaign.start_date,
-        end_date: campaign.end_date,
+        timeline: campaign.timeline,
         budget: campaign.budget
       });
     }
@@ -637,8 +702,7 @@ const CampaignDetail = () => {
           goals: editedCampaign.goals,
           target_audience: editedCampaign.target_audience,
           deliverables: editedCampaign.deliverables,
-          start_date: editedCampaign.start_date,
-          end_date: editedCampaign.end_date,
+          timeline: editedCampaign.timeline,
           budget: editedCampaign.budget
         })
         .eq('id', campaign.id);
@@ -680,13 +744,7 @@ const CampaignDetail = () => {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
+
 
   const calculateProgress = () => {
     if (!campaign?.campaign_influencers?.length) return 0;
@@ -883,29 +941,16 @@ const CampaignDetail = () => {
               <div>
                 <p className="text-sm font-medium text-snow/70">Timeline</p>
                 {isEditing ? (
-                  <div className="space-y-2">
-                    <Input
-                      type="date"
-                      value={editedCampaign.start_date || ''}
-                      onChange={(e) => handleInputChange('start_date', e.target.value)}
-                      className="text-sm text-snow bg-zinc-800 border-zinc-700"
-                    />
-                    <Input
-                      type="date"
-                      value={editedCampaign.end_date || ''}
-                      onChange={(e) => handleInputChange('end_date', e.target.value)}
-                      className="text-sm text-snow bg-zinc-800 border-zinc-700"
-                    />
-                  </div>
+                  <Input
+                    value={editedCampaign.timeline || ''}
+                    onChange={(e) => handleInputChange('timeline', e.target.value)}
+                    className="text-sm text-snow bg-zinc-800 border-zinc-700"
+                    placeholder="e.g., 2025-01-01 to 2025-01-31"
+                  />
                 ) : (
-                  <>
-                    <p className="text-2xl font-bold text-snow">
-                      {formatDate(campaign.start_date)}
-                    </p>
-                    <p className="text-xs text-snow/50 mt-1">
-                      to {formatDate(campaign.end_date)}
-                    </p>
-                  </>
+                  <p className="text-2xl font-bold text-snow">
+                    {campaign.timeline || 'Not set'}
+                  </p>
                 )}
               </div>
               <Calendar className="h-8 w-8 text-purple-500" />
@@ -1003,6 +1048,20 @@ const CampaignDetail = () => {
                 />
               ) : (
                 <p className="text-snow">{campaign.deliverables}</p>
+              )}
+            </div>
+
+            <div>
+              <h3 className="text-sm font-medium text-snow/70 mb-2">Timeline</h3>
+              {isEditing ? (
+                <Input
+                  value={editedCampaign.timeline || ''}
+                  onChange={(e) => handleInputChange('timeline', e.target.value)}
+                  className="text-snow bg-zinc-800 border-zinc-700"
+                  placeholder="e.g., 2025-01-01 to 2025-01-31"
+                />
+              ) : (
+                <p className="text-snow">{campaign.timeline || 'Not set'}</p>
               )}
             </div>
           </CardContent>

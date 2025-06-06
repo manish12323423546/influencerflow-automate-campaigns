@@ -1,0 +1,386 @@
+{
+  "name": "My workflow 2",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -2420,
+        -180
+      ],
+      "id": "70d53974-b41b-4ddb-a55c-9ca47be21d61",
+      "name": "Telegram Trigger",
+      "webhookId": "2a338632-9d96-4ff6-a01c-c0f0160e414e",
+      "credentials": {
+        "telegramApi": {
+          "id": "enk2UuwRsIE7eO2z",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message.text }} or {{ $json.text }}",
+        "options": {
+          "systemMessage": "=You are a negotiation agent representing the brand **CogentX**. Your role is to initiate and carry out a negotiation with **Varun Israni**, a gaming content creator, regarding a brand deal. The campaign is focused on **PUBG gameplay** content.\n\nYour objective:\n- Pitch a deal for **5 PUBG gameplay videos**.\n- Your maximum budget is **₹1 lakh (one leg)** for all 5 videos.\n- Start by explaining the vision of CogentX and the opportunity for Varun Israni.\n- Be respectful and professional but persuasive.\n- Aim to negotiate the pricing, and if needed, justify the cost constraints by emphasizing long-term partnership and reach.\n- Try to **close the deal within ₹1 lakh**. Be firm on the cap.\n- If Varun counters, respond smartly and attempt to bring the deal within budget while maintaining mutual respect.\n\nYou will communicate naturally, as a human negotiator would.\n\nTask: Reach out to Varun Israni, pitch the 5-video PUBG gameplay brand deal under ₹1 lakh, negotiate if needed, and try to close the agreement.\n {{ $json.message.text }} or {{ $json.text }} \n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -1440,
+        -320
+      ],
+      "id": "ed574af3-7ea5-4e3f-a526-876b2a83bceb",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "sessionKey": "={{ $json.message.chat.id || $json.chat.id }}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memorySimple",
+      "typeVersion": 1,
+      "position": [
+        -1540,
+        -320
+      ],
+      "id": "memory-simple-1",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "operation": "sendAudio",
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "binaryData": true,
+        "additionalFields": {
+          "fileName": "audio.textToSpeech.mp3"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -500,
+        -140
+      ],
+      "id": "553926b6-a9c1-4d43-9486-fc6476ee9876",
+      "name": "Telegram",
+      "webhookId": "02060527-77bb-4d74-9f7a-bb414f5727d3",
+      "credentials": {
+        "telegramApi": {
+          "id": "enk2UuwRsIE7eO2z",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -1660,
+        160
+      ],
+      "id": "10ef5b14-fc91-4e3e-a4a9-aea3524fe65a",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "WafVPv5tcKel5tMT",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -1600,
+        -160
+      ],
+      "id": "cce8e830-91f9-4268-bc2a-0eb1f3f9ceb3",
+      "name": "OpenAI1",
+      "credentials": {
+        "openAiApi": {
+          "id": "WafVPv5tcKel5tMT",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $('Telegram Trigger').item.json.message.voice.file_id }}"
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1820,
+        -160
+      ],
+      "id": "47ed8555-c23d-4bbf-a918-a3c569fbbb1e",
+      "name": "Telegram1",
+      "webhookId": "b2ba3ba6-9ff8-44e2-888f-7f0aef207b06",
+      "credentials": {
+        "telegramApi": {
+          "id": "enk2UuwRsIE7eO2z",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9b615849-0400-4340-9446-584a5d366704",
+              "name": "message.text",
+              "value": "={{ $json.message.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1860,
+        -360
+      ],
+      "id": "3fef7817-7145-4ae8-bb2f-b09e024be0e0",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message.text }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "6c50b50c-110a-4417-a28e-fad6d3097510",
+                    "leftValue": "={{ $json.message.voice.file_id }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -2120,
+        -180
+      ],
+      "id": "04602594-748c-4b36-8f1a-cf1549263284",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "resource": "speech",
+        "voice": {
+          "__rl": true,
+          "value": "2EiwWnXFnvU5JabPnv8n",
+          "mode": "list",
+          "cachedResultName": "Clyde"
+        },
+        "text": "={{ $json.output }}",
+        "additionalOptions": {
+          "outputFormat": "opus_48000_128"
+        },
+        "requestOptions": {}
+      },
+      "type": "@elevenlabs/n8n-nodes-elevenlabs.elevenLabs",
+      "typeVersion": 1,
+      "position": [
+        -920,
+        -260
+      ],
+      "id": "7e46c9ff-9233-4249-91c4-93502bcec030",
+      "name": "ElevenLabs",
+      "credentials": {
+        "elevenLabsApi": {
+          "id": "SVOxJ3xJaVUYMzhP",
+          "name": "ElevenLabs account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "ElevenLabs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "ai_memory": [
+        [
+          {
+            "node": "Simple Memory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram1": {
+      "main": [
+        [
+          {
+            "node": "OpenAI1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ElevenLabs": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "main": []
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "21b8348f-8698-4dd9-b8f5-d90de2deaae3",
+  "meta": {
+    "instanceId": "c066f988ab3eeea1bcfc1b0381234cb8c3b13f1f17dde9a760d4835c28b0fcfb"
+  },
+  "id": "pXglggNbBy6aA08X",
+  "tags": []
+}

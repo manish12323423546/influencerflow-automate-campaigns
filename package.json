@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@convostack/langchain-memory": "^0.0.56",
+    "@langchain": "link:@langchain",
     "@langchain/core": "^0.3.57",
     "@langchain/openai": "^0.5.11",
     "@radix-ui/react-avatar": "^1.0.4",
