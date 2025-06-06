@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -19,6 +18,7 @@ import CreatorCampaignDetail from "./pages/CreatorCampaignDetail";
 import BrandProfile from "./pages/BrandProfile";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import Outreach from "./pages/Outreach";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +43,7 @@ const App = () => (
             <Route path="/creator-campaigns/:id" element={<CreatorCampaignDetail />} />
             <Route path="/brand-profile" element={<BrandProfile />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/outreach" element={<Outreach />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

@@ -4,14 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   Users, TrendingUp, DollarSign, Target, Bell, Activity, Settings, Plus,
-  BarChart3, FileText, CreditCard, Search, Headphones, Database
+  BarChart3, FileText, CreditCard, Search, Headphones, Database, MessageSquare
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import CampaignsManager from '@/components/dashboard/CampaignsManager';
 import DiscoverCreators from '@/components/dashboard/DiscoverCreators';
 import ContractsManager from '@/components/dashboard/ContractsManager';
 import PaymentsManager from '@/components/dashboard/PaymentsManager';
-import ConversationsManager from '@/components/dashboard/ConversationsManager';
+import OutreachManager from '@/components/dashboard/OutreachManager';
 import KnowledgeBaseManager from '@/components/dashboard/KnowledgeBaseManager';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -20,7 +20,7 @@ import type { Campaign } from '@/types/campaign';
 const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'campaigns' | 'discover' | 'contracts' | 'payments' | 'conversations' | 'knowledge'>('campaigns');
+  const [activeTab, setActiveTab] = useState<'campaigns' | 'discover' | 'contracts' | 'payments' | 'outreach' | 'knowledge'>('campaigns');
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [totalInfluencers, setTotalInfluencers] = useState(0);
@@ -154,7 +154,7 @@ const Dashboard = () => {
     { id: 'discover', label: 'Discover Creators', icon: Users, description: 'Find perfect influencers' },
     { id: 'contracts', label: 'Contracts', icon: FileText, description: 'Manage contracts' },
     { id: 'payments', label: 'Payments', icon: CreditCard, description: 'Handle payments' },
-    { id: 'conversations', label: 'Conversations', icon: Headphones, description: 'Manage AI conversations' },
+    { id: 'outreach', label: 'Outreach', icon: MessageSquare, description: 'Manage influencer outreach' },
     { id: 'knowledge', label: 'Knowledge Base', icon: Database, description: 'Manage AI knowledge' },
   ];
 
@@ -306,16 +306,6 @@ const Dashboard = () => {
           ))}
         </div>
 
-        {/* Create Campaign Button */}
-        <div className="flex justify-end mb-8">
-          <Button
-            onClick={handleCreateCampaign}
-            className="bg-coral hover:bg-coral/90 text-white"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Campaign
-          </Button>
-        </div>
 
         {/* Active Tab Content */}
         <div className="space-y-6">
@@ -323,7 +313,7 @@ const Dashboard = () => {
           {activeTab === 'discover' && <DiscoverCreators />}
           {activeTab === 'contracts' && <ContractsManager />}
           {activeTab === 'payments' && <PaymentsManager />}
-          {activeTab === 'conversations' && <ConversationsManager />}
+          {activeTab === 'outreach' && <OutreachManager />}
           {activeTab === 'knowledge' && <KnowledgeBaseManager />}
         </div>
       </div>
