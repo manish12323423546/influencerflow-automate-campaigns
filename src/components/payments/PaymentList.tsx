@@ -1,136 +1,110 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { DollarSign, Calendar, User, Building } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 interface Payment {
   id: string;
   amount: number;
   status: string;
-  payment_type: string;
   created_at: string;
-  campaigns?: {
-    name: string;
-    brand: string;
-  };
-  influencers?: {
-    name: string;
-    handle: string;
-    platform: string;
-  };
+  milestone_description: string;
+  campaigns: { name: string; brand: string; };
+  influencers: { name: string; handle: string; };
 }
 
-export const PaymentList = () => {
-  // Fetch payments with campaign and influencer details
-  const { data: payments = [], isLoading } = useQuery({
-    queryKey: ['payments-with-details'],
-    queryFn: async () => {
+export const PaymentList: React.FC = () => {
+  const { user } = useAuth();
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchPayments();
+  }, [user]);
+
+  const fetchPayments = async () => {
+    if (!user) return;
+
+    try {
       const { data, error } = await supabase
         .from('payments')
         .select(`
           *,
-          campaigns (
-            name,
-            brand
-          ),
-          influencers (
-            name,
-            handle,
-            platform
-          )
+          campaigns!inner(name, brand),
+          influencers!inner(name, handle)
         `)
+        .eq('brand_user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as Payment[];
-    },
-  });
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'INR'
-    }).format(amount);
-  };
+      // Transform the data to handle potential array responses
+      const transformedPayments = data?.map(payment => ({
+        ...payment,
+        campaigns: Array.isArray(payment.campaigns) ? payment.campaigns[0] : payment.campaigns,
+        influencers: Array.isArray(payment.influencers) ? payment.influencers[0] : payment.influencers
+      })) || [];
 
-  const getStatusBadgeColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'completed':
-        return 'bg-green-500/10 text-green-500 border-green-500/20';
-      case 'processing':
-        return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-      case 'pending':
-        return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
-      case 'failed':
-        return 'bg-red-500/10 text-red-500 border-red-500/20';
-      default:
-        return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
+      setPayments(transformedPayments as Payment[]);
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+      toast.error('Failed to fetch payments');
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
-      </div>
-    );
+  if (loading) {
+    return <div>Loading payments...</div>;
   }
 
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900">
-      <Table>
-        <TableHeader>
-          <TableRow className="border-zinc-800">
-            <TableHead>Campaign</TableHead>
-            <TableHead>Influencer</TableHead>
-            <TableHead>Amount</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Date</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {payments.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={6} className="text-center text-snow/60 py-8">
-                No payments found
-              </TableCell>
-            </TableRow>
-          ) : (
-            payments.map((payment) => (
-              <TableRow key={payment.id} className="border-zinc-800">
-                <TableCell>
-                  <div className="font-medium">{payment.campaigns?.name}</div>
-                  <div className="text-sm text-snow/60">{payment.campaigns?.brand}</div>
-                </TableCell>
-                <TableCell>
-                  <div className="font-medium">{payment.influencers?.name}</div>
-                  <div className="text-sm text-snow/60">
-                    {payment.influencers?.handle} • {payment.influencers?.platform}
-                  </div>
-                </TableCell>
-                <TableCell className="font-medium">
-                  {formatCurrency(payment.amount)}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline">
-                    {payment.payment_type}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge className={getStatusBadgeColor(payment.status)}>
-                    {payment.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-snow/60">
-                  {new Date(payment.created_at).toLocaleDateString()}
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Recent Payments</h2>
+          <p className="text-muted-foreground">View and manage your payment history</p>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {payments.map((payment) => (
+          <Card key={payment.id}>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <DollarSign className="w-4 h-4" />
+                <span>Payment #{payment.id.substring(0, 8)}</span>
+              </CardTitle>
+              <CardDescription>{payment.milestone_description}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <User className="w-4 h-4" />
+                <span>{payment.influencers?.name} (@{payment.influencers?.handle})</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Building className="w-4 h-4" />
+                <span>{payment.campaigns?.name} ({payment.campaigns?.brand})</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Calendar className="w-4 h-4" />
+                <span>{new Date(payment.created_at).toLocaleDateString()}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <DollarSign className="w-4 h-4" />
+                <span>Amount: ${payment.amount}</span>
+              </div>
+              <div>
+                <Badge variant="secondary">{payment.status}</Badge>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
-}; 
+};

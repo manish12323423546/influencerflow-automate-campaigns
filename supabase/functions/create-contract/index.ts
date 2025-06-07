@@ -1,16 +1,6 @@
-// @ts-ignore - Deno imports
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-// @ts-ignore - Deno imports
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-// @ts-ignore - Deno imports
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
-
-// Declare Deno namespace
-declare const Deno: {
-  env: {
-    get(key: string): string | undefined;
-  };
-};
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,21 +13,43 @@ serve(async (req) => {
   }
 
   try {
-    // ─── 1. Parse incoming JSON body ──────────────────────────────────────────────
-    const { campaignId, influencerId, templateId, fee, deadline } = await req.json();
+    // ─── 1. authClient: check the incoming Bearer <jwt> and get user ──────────────
+    const authClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      {
+        global: {
+          headers: {
+            Authorization: req.headers.get("Authorization")!,
+          },
+        },
+      }
+    );
 
-    console.log("Creating contract with:", { campaignId, influencerId, templateId, fee, deadline });
+    const {
+      data: { user },
+      error: authError,
+    } = await authClient.auth.getUser();
+    if (authError || !user) {
+      console.error("Auth error:", authError);
+      throw new Error("Unauthorized");
+    }
 
-    // ─── 2. Create Supabase client ────────────────────────────────────────────────
-    const supabase = createClient(
+    // ─── 2. serviceClient: use service‐role key for all DB/storage operations ──────
+    const serviceClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // ─── 3. Fetch the contract template ────────────────────────────────────────────
-    const { data: template, error: templateError } = await supabase
+    // ─── 3. Parse incoming JSON body ──────────────────────────────────────────────
+    const { campaignId, influencerId, templateId, fee, deadline } = await req.json();
+
+    console.log("Creating contract with:", { campaignId, influencerId, templateId, fee, deadline });
+
+    // ─── 4. Fetch the contract template from public.contract_templates ────────────
+    const { data: template, error: templateError } = await serviceClient
       .from("contract_templates")
-      .select("content_md, name")
+      .select("content_md")
       .eq("id", templateId)
       .single();
 
@@ -46,10 +58,8 @@ serve(async (req) => {
       throw new Error("Template not found");
     }
 
-    console.log("Found template:", template.name);
-
-    // ─── 4. Fetch campaign data ───────────────────────────────────────────────────
-    const { data: campaign, error: campaignError } = await supabase
+    // ─── 5. Fetch campaign data ───────────────────────────────────────────────────
+    const { data: campaign, error: campaignError } = await serviceClient
       .from("campaigns")
       .select("name, brand, deliverables")
       .eq("id", campaignId)
@@ -60,12 +70,10 @@ serve(async (req) => {
       throw new Error("Campaign not found");
     }
 
-    console.log("Found campaign:", campaign.name);
-
-    // ─── 5. Fetch influencer data ─────────────────────────────────────────────────
-    const { data: influencer, error: influencerError } = await supabase
+    // ─── 6. Fetch influencer data ─────────────────────────────────────────────────
+    const { data: influencer, error: influencerError } = await serviceClient
       .from("influencers")
-      .select("name, handle, platform")
+      .select("name, handle")
       .eq("id", influencerId)
       .single();
 
@@ -74,31 +82,19 @@ serve(async (req) => {
       throw new Error("Influencer not found");
     }
 
-    console.log("Found influencer:", influencer.name);
-
-    // ─── 6. Replace placeholders in the template ─────────────────────────────────
+    // ─── 7. Replace placeholders in the Markdown template ─────────────────────────
     let contractContent = template.content_md;
-    const replacements = {
-      "{{brandName}}": campaign.brand || "N/A",
-      "{{influencerName}}": influencer.name || "N/A",
-      "{{influencerHandle}}": influencer.handle || "N/A",
-      "{{campaignName}}": campaign.name || "N/A",
-      "{{deliverables}}": campaign.deliverables || "See campaign details",
-      "{{fee}}": fee?.toString() || "0",
-      "{{deadline}}": deadline || "TBD",
-      "{{platform}}": influencer.platform || "N/A",
-      "{{contentType}}": campaign.deliverables?.split(',')[0] || "Content",
-      "{{contentDueDate}}": deadline || "TBD",
-      "{{current_date}}": new Date().toLocaleDateString()
-    };
+    contractContent = contractContent
+      .replace(/{{campaignName}}/g, campaign.name || "N/A")
+      .replace(/{{brandName}}/g, campaign.brand || "N/A")
+      .replace(/{{influencerName}}/g, influencer.name || "N/A")
+      .replace(/{{influencerHandle}}/g, influencer.handle || "N/A")
+      .replace(/{{deliverables}}/g, campaign.deliverables || "See campaign details")
+      .replace(/{{fee}}/g, fee?.toString() || "0")
+      .replace(/{{deadline}}/g, deadline || "TBD")
+      .replace(/{{contentDueDate}}/g, deadline || "TBD");
 
-    for (const [placeholder, value] of Object.entries(replacements)) {
-      contractContent = contractContent.replace(new RegExp(placeholder, 'g'), value);
-    }
-
-    console.log("Replaced placeholders in template");
-
-    // ─── 7. Generate PDF ────────────────────────────────────────────────────────
+    // ─── 8. Generate a PDF with pdf-lib ────────────────────────────────────────────
     const pdfDoc = await PDFDocument.create();
     let page = pdfDoc.addPage([612, 792]);
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -127,6 +123,13 @@ serve(async (req) => {
         currentFont = boldFont;
         fontSize = 14;
         text = line.substring(3);
+      } else if (line.startsWith("### ")) {
+        currentFont = boldFont;
+        fontSize = 12;
+        text = line.substring(4);
+      } else if (line.startsWith("**") && line.endsWith("**")) {
+        currentFont = boldFont;
+        text = line.substring(2, line.length - 2);
       }
 
       page.drawText(text, {
@@ -141,39 +144,67 @@ serve(async (req) => {
     }
 
     const pdfBytes = await pdfDoc.save();
-    console.log("Generated PDF document");
 
-    // ─── 8. Create contract record ────────────────────────────────────────────────
-    const { data: contract, error: contractError } = await supabase
+    // ─── 9. Upload PDF to the private "contracts" bucket ───────────────────────────
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const storagePath = `${campaignId}/${influencerId}_${timestamp}.pdf`;
+
+    const { error: uploadError } = await serviceClient.storage
       .from("contracts")
-      .insert({
-        campaign_id: campaignId,
-        influencer_id: influencerId,
-        contract_data: {
-          fee,
-          deadline,
-          template_id: templateId,
-          generated_at: new Date().toISOString(),
-        },
-        status: "DRAFT",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .select()
+      .upload(storagePath, pdfBytes, {
+        contentType: "application/pdf",
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error("Upload error:", uploadError);
+      throw new Error("Failed to upload PDF");
+    }
+
+    // ─── 10. Create a 60-second signed URL (download: true) ────────────────────────
+    const { data: signedData, error: signedError } = await serviceClient.storage
+      .from("contracts")
+      .createSignedUrl(storagePath, 60, { download: true });
+
+    if (signedError || !signedData) {
+      console.error("Signed URL error:", signedError);
+      throw new Error("Failed to create signed URL");
+    }
+
+    // ─── 11. Insert a new row into public.contracts (store raw storagePath) ───────
+    const contractRow = {
+      brand_user_id: user.id,
+      campaign_id: campaignId,
+      influencer_id: influencerId,
+      template_id: templateId,
+      pdf_url: storagePath,   // <-- store only the raw path
+      status: "drafted",
+      contract_data: {
+        fee,
+        deadline,
+        generated_at: new Date().toISOString(),
+      },
+    };
+
+    const { data: inserted, error: contractError } = await serviceClient
+      .from("contracts")
+      .insert(contractRow)
+      .select("*")
       .single();
 
-    if (contractError) {
-      console.error("Contract creation error:", contractError);
+    if (contractError || !inserted) {
+      console.error("Contract insert error:", contractError);
       throw new Error("Failed to create contract record");
     }
 
-    // ─── 9. Return PDF and contract data ──────────────────────────────────────────
+    console.log("Contract created successfully:", inserted.id);
+
+    // ─── 12. Respond with success + the signed download URL ───────────────────────
     return new Response(
       JSON.stringify({
         success: true,
-        contract,
-        pdfBase64: btoa(String.fromCharCode(...pdfBytes)),
-        fileName: `contract_${campaign.name}_${influencer.name}.pdf`.replace(/[^a-z0-9_.]/gi, '_'),
+        contract: inserted,
+        downloadUrl: signedData.signedUrl,
         message: "Contract PDF generated successfully!",
       }),
       {
@@ -186,7 +217,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : "Failed to create contract",
+        error: (error as Error).message || "Failed to create contract",
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -194,4 +225,4 @@ serve(async (req) => {
       }
     );
   }
-}); 
+});

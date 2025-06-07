@@ -1,289 +1,216 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Loader2 } from 'lucide-react';
-import { PaymentList } from './PaymentList';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DollarSign, CreditCard, FileText, TrendingUp } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
+
+interface ContractData {
+  fee: number;
+  deadline: string;
+  template_id: string;
+  generated_at: string;
+}
 
 interface Contract {
   id: string;
   campaign_id: string;
   influencer_id: string;
-  contract_data: {
-    fee: number;
-    deadline: string;
-    template_id: string;
-    generated_at: string;
-  };
-  status: string;
-  campaign?: {
-    name: string;
-    brand: string;
-  };
-  influencer?: {
-    name: string;
-    handle: string;
-    platform: string;
-    avatar_url?: string;
-  };
+  contract_data: ContractData;
+  status: 'DRAFT' | 'SENT' | 'ACCEPTED' | 'REJECTED' | 'COMPLETED';
+  created_at: string;
+  updated_at: string;
+  campaign: { name: string; brand: string; };
+  influencer: { name: string; handle: string; platform: string; avatar_url: string; };
 }
 
-interface PaymentManagerProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
+export const PaymentManager: React.FC = () => {
+  const { user } = useAuth();
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [payments, setPayments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-export const PaymentManager = ({ isOpen, onClose }: PaymentManagerProps) => {
-  const { toast } = useToast();
-  const [selectedContract, setSelectedContract] = useState<string>('');
-  const [isCreating, setIsCreating] = useState(false);
-  const [amount, setAmount] = useState<string>('');
-  const [paymentType, setPaymentType] = useState<string>('milestone');
+  useEffect(() => {
+    fetchData();
+  }, [user]);
 
-  // Fetch contracts with campaign and influencer details
-  const { data: contracts = [], isLoading: contractsLoading } = useQuery({
-    queryKey: ['contracts-with-details'],
-    queryFn: async () => {
-      // First fetch contracts
+  const fetchData = async () => {
+    if (!user) return;
+
+    try {
+      // Fetch contracts
       const { data: contractsData, error: contractsError } = await supabase
         .from('contracts')
-        .select('*')
+        .select(`
+          *,
+          campaigns!inner(name, brand),
+          influencers!inner(name, handle, platform, avatar_url)
+        `)
+        .eq('brand_user_id', user.id)
         .eq('status', 'ACCEPTED');
 
       if (contractsError) throw contractsError;
-      if (!contractsData) return [];
 
-      // Fetch related data for each contract
-      const contractsWithDetails = await Promise.all(
-        contractsData.map(async (contract) => {
-          // Get campaign details
-          const { data: campaignData } = await supabase
-            .from('campaigns')
-            .select('name, brand')
-            .eq('id', contract.campaign_id)
-            .single();
+      // Transform contracts data
+      const transformedContracts = contractsData?.map(contract => ({
+        ...contract,
+        contract_data: contract.contract_data as ContractData || {
+          fee: 0,
+          deadline: '',
+          template_id: '',
+          generated_at: contract.created_at
+        },
+        campaign: Array.isArray(contract.campaigns) ? contract.campaigns[0] : contract.campaigns,
+        influencer: Array.isArray(contract.influencers) ? contract.influencers[0] : contract.influencers
+      })) || [];
 
-          // Get influencer details
-          const { data: influencerData } = await supabase
-            .from('influencers')
-            .select('name, handle, platform, avatar_url')
-            .eq('id', contract.influencer_id)
-            .single();
+      setContracts(transformedContracts as Contract[]);
 
-          return {
-            ...contract,
-            campaign: campaignData || { name: 'Unknown Campaign', brand: 'Unknown Brand' },
-            influencer: influencerData || { name: 'Unknown Influencer', handle: '', platform: '', avatar_url: '' }
-          };
-        })
-      );
-
-      return contractsWithDetails as Contract[];
-    },
-  });
-
-  const handleContractSelect = (contractId: string) => {
-    setSelectedContract(contractId);
-    const contract = contracts.find(c => c.id === contractId);
-    if (contract) {
-      setAmount(contract.contract_data.fee.toString());
-    }
-  };
-
-  const handleCreatePayment = async () => {
-    if (!selectedContract || !amount) {
-      toast({
-        title: "Required Fields Missing",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsCreating(true);
-
-    try {
-      const contract = contracts.find(c => c.id === selectedContract);
-      if (!contract) throw new Error('Contract not found');
-
-      const { data: payment, error } = await supabase
+      // Fetch payments
+      const { data: paymentsData, error: paymentsError } = await supabase
         .from('payments')
-        .insert({
-          campaign_id: contract.campaign_id,
-          influencer_id: contract.influencer_id,
-          brand_user_id: "d0d7d0d7-d0d7-d0d7-d0d7-d0d7d0d7d0d7",
-          amount: parseFloat(amount),
-          payment_type: paymentType,
-          status: 'pending',
-          milestone_description: `Payment for campaign: ${contract.campaign?.name}`,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
+        .select('*')
+        .eq('brand_user_id', user.id);
 
-      if (error) throw error;
-
-      toast({
-        title: "Payment Created",
-        description: "The payment has been created successfully",
-      });
-
-      setSelectedContract('');
-      setAmount('');
-      setPaymentType('milestone');
-      onClose();
+      if (paymentsError) throw paymentsError;
+      setPayments(paymentsData || []);
 
     } catch (error) {
-      console.error('Error creating payment:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create payment",
-        variant: "destructive",
-      });
+      console.error('Error fetching data:', error);
+      toast.error('Failed to fetch payment data');
     } finally {
-      setIsCreating(false);
+      setLoading(false);
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'INR'
-    }).format(amount);
+  const calculateTotalRevenue = () => {
+    return payments.reduce((total, payment) => total + payment.amount, 0);
   };
 
+  const calculatePendingPayments = () => {
+    return contracts.filter(contract => contract.status === 'SENT').length;
+  };
+
+  const calculateCompletedContracts = () => {
+    return contracts.filter(contract => contract.status === 'COMPLETED').length;
+  };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-zinc-900 border-zinc-800 text-snow sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>Create Payment</DialogTitle>
-          <DialogDescription className="text-snow/60">
-            Select a contract and enter payment details.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-6">
-          {/* Contract Selection */}
-          <div className="space-y-2">
-            <Label>Select Contract</Label>
-            {contractsLoading ? (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="h-6 w-6 animate-spin text-purple-500" />
-              </div>
-            ) : contracts.length === 0 ? (
-              <div className="text-center py-4 text-snow/60">
-                No accepted contracts found. Please wait for influencers to accept contracts.
-              </div>
-            ) : (
-              <RadioGroup value={selectedContract} onValueChange={handleContractSelect}>
-                <div className="space-y-4">
-                  {contracts.map((contract) => (
-                    <div
-                      key={contract.id}
-                      className={`flex items-center space-x-4 p-4 rounded-lg border transition-colors ${
-                        selectedContract === contract.id
-                          ? 'bg-coral/10 border-coral'
-                          : 'bg-zinc-800 border-zinc-700 hover:border-coral/50'
-                      }`}
-                    >
-                      <RadioGroupItem value={contract.id} id={contract.id} />
-                      <div className="flex items-center flex-1 space-x-4">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={contract.influencer?.avatar_url} />
-                          <AvatarFallback>{contract.influencer?.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <Label htmlFor={contract.id} className="flex-1 cursor-pointer">
-                          <div className="font-medium">{contract.influencer?.name}</div>
-                          <div className="text-sm text-snow/60">
-                            {contract.campaign?.name}
-                          </div>
-                        </Label>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </RadioGroup>
-            )}
-          </div>
-
-          {selectedContract && (
-            <>
-              <div className="space-y-2">
-                <Label>Amount (₹)</Label>
-                <Input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="bg-zinc-800 border-zinc-700"
-                  placeholder="Enter amount"
-                />
-                {contracts.find(c => c.id === selectedContract)?.contract_data.fee && (
-                  <div className="text-sm text-snow/60">
-                    Default amount: {formatCurrency(contracts.find(c => c.id === selectedContract)?.contract_data.fee || 0)}
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label>Currency</Label>
-                <Select disabled value="INR">
-                  <SelectTrigger className="bg-zinc-800 border-zinc-700">
-                    <SelectValue>INR (₹)</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="INR">INR (₹)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Payment Type</Label>
-                <Select value={paymentType} onValueChange={setPaymentType}>
-                  <SelectTrigger className="bg-zinc-800 border-zinc-700">
-                    <SelectValue placeholder="Select payment type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="milestone">Milestone Payment</SelectItem>
-                    <SelectItem value="full">Full Payment</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex justify-end gap-3">
-                <Button
-                  variant="outline"
-                  onClick={onClose}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={handleCreatePayment}
-                  disabled={isCreating || !amount}
-                >
-                  {isCreating ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    'Create Payment'
-                  )}
-                </Button>
-              </div>
-            </>
-          )}
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Payment Management</h1>
+          <p className="text-muted-foreground">Manage payments and milestones for your campaigns</p>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="contracts">Contracts</TabsTrigger>
+          <TabsTrigger value="payments">Payments</TabsTrigger>
+        </TabsList>
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <DollarSign className="w-4 h-4" />
+                  <span>Total Revenue</span>
+                </CardTitle>
+                <CardDescription>Total payments received</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">${calculateTotalRevenue().toFixed(2)}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <FileText className="w-4 h-4" />
+                  <span>Pending Payments</span>
+                </CardTitle>
+                <CardDescription>Contracts awaiting payment</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{calculatePendingPayments()}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <TrendingUp className="w-4 h-4" />
+                  <span>Completed Contracts</span>
+                </CardTitle>
+                <CardDescription>Contracts successfully completed</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{calculateCompletedContracts()}</div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+        <TabsContent value="contracts" className="space-y-4">
+          {contracts.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {contracts.map((contract) => (
+                <Card key={contract.id}>
+                  <CardHeader>
+                    <CardTitle>{contract.campaign?.name}</CardTitle>
+                    <CardDescription>
+                      Contract with {contract.influencer?.name} ({contract.influencer?.handle})
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-sm text-muted-foreground">
+                      Fee: ${contract.contract_data?.fee}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Deadline: {contract.contract_data?.deadline}
+                    </div>
+                    <Badge variant="secondary">{contract.status}</Badge>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <p>No contracts found.</p>
+          )}
+        </TabsContent>
+        <TabsContent value="payments" className="space-y-4">
+          {payments.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {payments.map((payment) => (
+                <Card key={payment.id}>
+                  <CardHeader>
+                    <CardTitle>Payment for {payment.milestone_description}</CardTitle>
+                    <CardDescription>
+                      Payment of ${payment.amount}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-sm text-muted-foreground">
+                      Created At: {payment.created_at}
+                    </div>
+                    <Badge variant="outline">{payment.status}</Badge>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <p>No payments found.</p>
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
   );
-} 
+};

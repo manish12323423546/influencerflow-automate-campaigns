@@ -1,251 +1,203 @@
-
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Download, Filter, Search, Receipt } from 'lucide-react';
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { Search, Download, Filter, ArrowUpDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 interface Transaction {
   id: string;
   amount: number;
-  currency: string;
-  status: string; // Changed to string to match database
-  payment_type: string; // Changed to string to match database
-  milestone_description: string;
-  razorpay_payment_id?: string;
-  razorpay_order_id?: string;
+  status: string;
   created_at: string;
-  paid_at?: string;
-  campaigns?: { name: string };
-  influencers?: { name: string };
+  milestone_description: string;
+  payment_type: string;
+  campaigns: { name: string; };
+  influencers: { name: string; handle: string; };
 }
 
-const TransactionHistory = () => {
+export const TransactionHistory: React.FC = () => {
+  const { user } = useAuth();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('created_at');
 
-  const { data: transactions, isLoading } = useQuery({
-    queryKey: ['transactions'],
-    queryFn: async (): Promise<Transaction[]> => {
+  useEffect(() => {
+    fetchTransactions();
+  }, [user]);
+
+  const fetchTransactions = async () => {
+    if (!user) return;
+
+    try {
       const { data, error } = await supabase
         .from('payments')
         .select(`
           *,
-          campaigns(name),
-          influencers(name)
+          campaigns!inner(name),
+          influencers!inner(name, handle)
         `)
+        .eq('brand_user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
-    }
-  });
 
-  const filteredTransactions = transactions?.filter(transaction => {
-    const matchesSearch = transaction.milestone_description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         transaction.campaigns?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         transaction.influencers?.name?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || transaction.status === statusFilter;
-    const matchesType = typeFilter === 'all' || transaction.payment_type === typeFilter;
-    
-    return matchesSearch && matchesStatus && matchesType;
-  });
+      // Transform the data to handle potential array responses
+      const transformedTransactions = data?.map(transaction => ({
+        ...transaction,
+        campaigns: Array.isArray(transaction.campaigns) ? transaction.campaigns[0] : transaction.campaigns,
+        influencers: Array.isArray(transaction.influencers) ? transaction.influencers[0] : transaction.influencers
+      })) || [];
 
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'default';
-      case 'failed':
-        return 'destructive';
-      case 'processing':
-        return 'secondary';
-      default:
-        return 'outline';
+      setTransactions(transformedTransactions as Transaction[]);
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      toast.error('Failed to fetch transaction history');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'text-green-600 bg-green-100';
-      case 'failed':
-        return 'text-red-600 bg-red-100';
-      case 'processing':
-        return 'text-blue-600 bg-blue-100';
-      default:
-        return 'text-yellow-600 bg-yellow-100';
+  const filteredTransactions = transactions.filter(transaction => {
+    // Apply search filter
+    const searchMatch = 
+      transaction.campaigns?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      transaction.influencers?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      transaction.milestone_description?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Apply status filter
+    const statusMatch = statusFilter === 'all' || transaction.status === statusFilter;
+    
+    return searchMatch && statusMatch;
+  });
+
+  // Sort transactions
+  const sortedTransactions = [...filteredTransactions].sort((a, b) => {
+    if (sortBy === 'amount') {
+      return b.amount - a.amount;
+    } else if (sortBy === 'created_at') {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     }
+    return 0;
+  });
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
   };
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-snow">Transaction History</h2>
-        </div>
-        <Card className="bg-zinc-800/50 border-zinc-700">
-          <CardContent className="p-6">
-            <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="animate-pulse flex justify-between items-center p-4 border-b border-zinc-700">
-                  <div className="space-y-2">
-                    <div className="h-4 bg-zinc-700 rounded w-48"></div>
-                    <div className="h-3 bg-zinc-700 rounded w-32"></div>
-                  </div>
-                  <div className="h-4 bg-zinc-700 rounded w-24"></div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+  };
+
+  const handleExport = () => {
+    // Implementation for exporting transaction data
+    toast.success('Exporting transaction data');
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-snow">Transaction History</h2>
-          <p className="text-snow/60">View and manage all payment transactions</p>
+          <h2 className="text-2xl font-bold">Transaction History</h2>
+          <p className="text-muted-foreground">View and filter your payment transactions</p>
         </div>
-        
-        <Button className="bg-green-600 hover:bg-green-700">
-          <Download className="h-4 w-4 mr-2" />
+        <Button onClick={handleExport} variant="outline">
+          <Download className="w-4 h-4 mr-2" />
           Export
         </Button>
       </div>
 
-      {/* Filters */}
-      <Card className="bg-zinc-800/50 border-zinc-700">
-        <CardContent className="p-6">
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[200px]">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-snow/50" />
-                <Input
-                  placeholder="Search transactions..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="bg-zinc-700 border-zinc-600 text-snow pl-10"
-                />
-              </div>
-            </div>
-            
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[150px] bg-zinc-700 border-zinc-600 text-snow">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent className="bg-zinc-700 border-zinc-600">
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="processing">Processing</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="failed">Failed</SelectItem>
-                <SelectItem value="refunded">Refunded</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-[150px] bg-zinc-700 border-zinc-600 text-snow">
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent className="bg-zinc-700 border-zinc-600">
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="milestone">Milestone</SelectItem>
-                <SelectItem value="full">Full Payment</SelectItem>
-                <SelectItem value="advance">Advance</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search transactions..."
+            className="pl-8"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="failed">Failed</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="created_at">Date (newest)</SelectItem>
+            <SelectItem value="amount">Amount (highest)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-      {/* Transactions List */}
-      <Card className="bg-zinc-800/50 border-zinc-700">
-        <CardHeader>
-          <CardTitle className="text-snow">Recent Transactions</CardTitle>
-          <CardDescription className="text-snow/60">
-            {filteredTransactions?.length || 0} transactions found
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {filteredTransactions?.map((transaction) => (
-              <div
-                key={transaction.id}
-                className="flex items-center justify-between p-4 border border-zinc-700 rounded-lg hover:bg-zinc-700/30 transition-colors"
-              >
-                <div className="flex items-center space-x-4">
-                  <div className="p-2 bg-purple-600/20 rounded-lg">
-                    <Receipt className="h-5 w-5 text-purple-400" />
-                  </div>
-                  
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-medium text-snow">
-                        {transaction.milestone_description || `${transaction.payment_type} Payment`}
+      {loading ? (
+        <div className="flex justify-center p-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      ) : sortedTransactions.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center p-8">
+            <p className="text-muted-foreground mb-2">No transactions found</p>
+            <p className="text-sm text-muted-foreground">Try adjusting your filters or search term</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {sortedTransactions.map((transaction) => (
+            <Card key={transaction.id}>
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium">
+                        {transaction.campaigns?.name || 'Unknown Campaign'}
                       </h3>
-                      <Badge variant={getStatusBadgeVariant(transaction.status)} className={getStatusColor(transaction.status)}>
+                      <Badge variant={
+                        transaction.status === 'completed' ? 'default' :
+                        transaction.status === 'pending' ? 'secondary' : 'destructive'
+                      }>
                         {transaction.status}
                       </Badge>
                     </div>
-                    
-                    <div className="text-sm text-snow/60">
-                      <span>Campaign: {transaction.campaigns?.name || 'N/A'}</span>
-                      <span className="mx-2">•</span>
-                      <span>Influencer: {transaction.influencers?.name || 'N/A'}</span>
-                      <span className="mx-2">•</span>
-                      <span>{new Date(transaction.created_at).toLocaleDateString()}</span>
-                    </div>
-                    
-                    {transaction.razorpay_payment_id && (
-                      <div className="text-xs text-snow/50 mt-1">
-                        Payment ID: {transaction.razorpay_payment_id}
-                      </div>
-                    )}
+                    <p className="text-sm text-muted-foreground">
+                      {transaction.milestone_description || 'Payment to creator'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Creator: {transaction.influencers?.name || 'Unknown'} ({transaction.influencers?.handle || 'N/A'})
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <p className="font-semibold">{formatCurrency(transaction.amount)}</p>
+                    <p className="text-sm text-muted-foreground">{formatDate(transaction.created_at)}</p>
                   </div>
                 </div>
-
-                <div className="text-right">
-                  <div className="text-lg font-semibold text-snow">
-                    ₹{transaction.amount.toLocaleString()}
-                  </div>
-                  <div className="text-sm text-snow/60 uppercase">
-                    {transaction.payment_type}
-                  </div>
-                  {transaction.paid_at && (
-                    <div className="text-xs text-green-500">
-                      Paid: {new Date(transaction.paid_at).toLocaleDateString()}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-
-            {filteredTransactions?.length === 0 && (
-              <div className="text-center py-12">
-                <Receipt className="h-12 w-12 text-zinc-500 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-snow mb-2">No transactions found</h3>
-                <p className="text-snow/60">
-                  {transactions?.length === 0 
-                    ? "You haven't made any payments yet." 
-                    : "No transactions match your current filters."
-                  }
-                </p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
-
-export default TransactionHistory;

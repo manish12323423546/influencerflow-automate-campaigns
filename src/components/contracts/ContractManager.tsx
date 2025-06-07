@@ -1,268 +1,260 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileText, Download, Loader2 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import ContractsList from './ContractsList';
-import type { Campaign } from '@/types/campaign';
-import { useQueryClient } from '@tanstack/react-query';
-import { saveContractToLocalStorage } from "@/lib/utils/storage";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FileText, Download, Send, Eye, Plus, Trash2, Edit } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
-interface Influencer {
-  id: string;
-  name: string;
-  handle: string;
-  platform: string;
-  followers_count: number;
-  engagement_rate: number;
-  avatar_url?: string;
-}
-
-interface ContractTemplate {
-  id: string;
-  name: string;
-  template_type: string;
-  content_md: string;
-  created_at: string;
-  updated_at: string;
+interface ContractData {
+  fee: number;
+  deadline: string;
+  template_id: string;
+  generated_at: string;
 }
 
 interface Contract {
   id: string;
   campaign_id: string;
   influencer_id: string;
-  template_id: string;
-  pdf_url: string;
+  contract_data: ContractData;
+  status: 'DRAFT' | 'SENT' | 'ACCEPTED' | 'REJECTED' | 'COMPLETED';
   created_at: string;
-  campaigns?: { name: string };
-  influencers?: { name: string };
+  updated_at: string;
 }
 
-interface CampaignInfluencer {
-  influencer_id: string;
-  influencers: Influencer;
+interface Template {
+  id: string;
+  name: string;
+  template_type: string;
+  content_md: string;
 }
 
-interface ContractManagerProps {
-  campaignId?: string;
-}
+export const ContractManager: React.FC = () => {
+  const { user, session } = useAuth();
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [influencers, setInfluencers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
 
-export const ContractManager = ({ campaignId: initialCampaignId }: ContractManagerProps) => {
-  const { toast } = useToast();
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [selectedCampaign, setSelectedCampaign] = useState<string>(initialCampaignId || '');
-  const [selectedInfluencer, setSelectedInfluencer] = useState<string>('');
-  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
-  const [isCreating, setIsCreating] = useState(false);
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const queryClient = useQueryClient();
+  // Form states
+  const [newContract, setNewContract] = useState({
+    campaign_id: '',
+    influencer_id: '',
+    template_id: '',
+    fee: '',
+    deadline: '',
+  });
 
-  // Fetch campaigns using useEffect like in Campaigns.tsx
+  const [newTemplate, setNewTemplate] = useState({
+    name: '',
+    template_type: 'standard',
+    content_md: '',
+  });
+
   useEffect(() => {
-    const fetchCampaigns = async () => {
-      try {
-        console.log('Fetching campaigns from Supabase...');
-        const { data, error } = await supabase
-          .from('campaigns')
-          .select('*')
-          .order('created_at', { ascending: false });
+    fetchData();
+  }, [user]);
 
-        if (error) {
-          console.error('Error fetching campaigns:', error);
-          throw error;
-        }
-        
-        console.log('Fetched campaigns:', data);
-        setCampaigns(data || []);
-      } catch (error) {
-        console.error('Error in fetchCampaigns:', error);
-        toast({
-          title: "Error loading campaigns",
-          description: "Please try again later.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchData = async () => {
+    if (!user) return;
 
-    fetchCampaigns();
-  }, [toast]);
+    setLoading(true);
+    try {
+      // Fetch contracts
+      await fetchContracts();
 
-  // Fetch influencers for selected campaign
-  const { data: influencers, isLoading: influencersLoading } = useQuery({
-    queryKey: ['influencers-for-campaign', selectedCampaign],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('campaign_influencers')
-        .select(`
-          influencer_id,
-          influencers (
-            id,
-            name,
-            handle,
-            platform,
-            followers_count,
-            engagement_rate,
-            avatar_url
-          )
-        `)
-        .eq('campaign_id', selectedCampaign);
-
-      if (error) throw error;
-      return (data as unknown as CampaignInfluencer[]).map(ci => ci.influencers);
-    },
-    enabled: !!selectedCampaign,
-  });
-
-  // Fetch contract templates
-  const { data: contractTemplates = [], isLoading: templatesLoading } = useQuery({
-    queryKey: ['contract-templates'],
-    queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch templates
+      const { data: templatesData, error: templatesError } = await supabase
         .from('contract_templates')
+        .select('*');
+
+      if (templatesError) throw templatesError;
+      setTemplates(templatesData || []);
+
+      // Fetch campaigns
+      const { data: campaignsData, error: campaignsError } = await supabase
+        .from('campaigns')
         .select('*')
-        .order('created_at', { ascending: true });
+        .eq('user_id', user.id);
 
-      if (error) throw error;
-      return data as ContractTemplate[];
-    },
-  });
+      if (campaignsError) throw campaignsError;
+      setCampaigns(campaignsData || []);
 
-  const handleCreateContract = async () => {
-    if (!selectedCampaign || !selectedInfluencer || !selectedTemplate) {
-      toast({
-        title: "Selection Required",
-        description: "Please select a campaign, influencer, and contract template",
-        variant: "destructive",
-      });
-      return;
+      // Fetch influencers
+      const { data: influencersData, error: influencersError } = await supabase
+        .from('influencers')
+        .select('*');
+
+      if (influencersError) throw influencersError;
+      setInfluencers(influencersData || []);
+
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast.error('Failed to fetch data');
+    } finally {
+      setLoading(false);
     }
+  };
 
-    setIsCreating(true);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setNewContract(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleTemplateInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setNewTemplate(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const createContract = async () => {
+    if (!user) return;
 
     try {
-      // Get selected data
-      const selectedCampaignData = campaigns?.find(c => c.id === selectedCampaign);
-      const selectedInfluencerData = influencers?.find(i => i.id === selectedInfluencer);
-      const selectedTemplateData = contractTemplates?.find(t => t.id === selectedTemplate);
+      const { campaign_id, influencer_id, template_id, fee, deadline } = newContract;
 
-      if (!selectedCampaignData || !selectedInfluencerData || !selectedTemplateData) {
-        throw new Error('Required data not found');
-      }
-
-      // Create contract object
-      const contract = {
-        id: crypto.randomUUID(),
-        campaign_id: selectedCampaign,
-        influencer_id: selectedInfluencer,
-        brand_user_id: "d0d7d0d7-d0d7-d0d7-d0d7-d0d7d0d7d0d7", // Hardcoded brand_user_id
-        contract_data: {
-          fee: selectedCampaignData.budget || 0,
-          deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          template_id: selectedTemplate,
-          generated_at: new Date().toISOString(),
+      // Call the edge function to create the contract
+      const response = await fetch('/api/create-contract', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`
         },
-        status: "DRAFT",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      // Insert contract into Supabase
-      const { data: storedContract, error } = await supabase
-        .from('contracts')
-        .insert(contract)
-        .select()
-        .single();
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      // Save to localStorage
-      const savedLocally = saveContractToLocalStorage({
-        pdfBase64: '', // We're not generating PDF for now
-        fileName: `contract_${selectedCampaignData.name}_${selectedInfluencerData.name}.pdf`,
-        contract: storedContract,
-        timestamp: new Date().toISOString()
+        body: JSON.stringify({
+          campaignId: campaign_id,
+          influencerId: influencer_id,
+          templateId: template_id,
+          fee: parseFloat(fee),
+          deadline: deadline
+        })
       });
 
-      if (!savedLocally) {
-        toast({
-          title: "Warning",
-          description: "Contract saved to database but couldn't be saved locally",
-          variant: "default",
-        });
+      const result = await response.json();
+
+      if (result.success) {
+        toast.success(result.message);
+        setShowCreateDialog(false);
+        fetchContracts(); // Refresh contracts
+      } else {
+        toast.error(result.error || 'Failed to create contract');
       }
-
-      // Success!
-      toast({
-        title: "Contract Created",
-        description: "The contract has been saved successfully",
-      });
-
-      // Reset form
-      setSelectedCampaign('');
-      setSelectedInfluencer('');
-      setSelectedTemplate('');
-      setCreateModalOpen(false);
-
-      // Refresh contracts list
-      queryClient.invalidateQueries({ queryKey: ['contracts'] });
 
     } catch (error) {
       console.error('Error creating contract:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create contract",
-        variant: "destructive",
-      });
-    } finally {
-      setIsCreating(false);
+      toast.error('Failed to create contract');
     }
   };
 
-  const handleDownload = (pdfUrl: string) => {
-    if (pdfUrl) {
-      window.open(pdfUrl, '_blank');
-    } else {
-      toast({
-        title: "PDF not available",
-        description: "This contract doesn't have a PDF file.",
-        variant: "destructive",
-      });
+  const createTemplate = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('contract_templates')
+        .insert({
+          name: newTemplate.name,
+          template_type: newTemplate.template_type,
+          content_md: newTemplate.content_md,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast.success('Template created successfully!');
+      setShowTemplateDialog(false);
+      fetchData(); // Refresh templates
+
+    } catch (error) {
+      console.error('Error creating template:', error);
+      toast.error('Failed to create template');
     }
   };
 
-  const formatFollowers = (count: number) => {
-    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
-    if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
-    return count.toString();
+  const deleteContract = async (contractId: string) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('contracts')
+        .delete()
+        .eq('id', contractId);
+
+      if (error) throw error;
+
+      toast.success('Contract deleted successfully!');
+      fetchContracts(); // Refresh contracts
+
+    } catch (error) {
+      console.error('Error deleting contract:', error);
+      toast.error('Failed to delete contract');
+    }
   };
 
-  const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-500/10 text-green-500 border-green-500/20';
-      case 'completed':
-        return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-      case 'paused':
-        return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
-      case 'pending':
-        return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
-      default:
-        return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
+  const fetchContracts = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('contracts')
+        .select(`
+          *,
+          campaigns (name, brand),
+          influencers (name, handle, platform, avatar_url)
+        `)
+        .eq('brand_user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Transform the data to match our Contract interface
+      const transformedContracts = data?.map(contract => ({
+        ...contract,
+        contract_data: contract.contract_data as ContractData || {
+          fee: 0,
+          deadline: '',
+          template_id: '',
+          generated_at: contract.created_at
+        }
+      })) || [];
+
+      setContracts(transformedContracts);
+    } catch (error) {
+      console.error('Error fetching contracts:', error);
+      toast.error('Failed to fetch contracts');
+    }
+  };
+
+  const handleDownloadContract = async (contract: Contract) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('contracts')
+        .createSignedUrl(contract.pdf_url, 60, { download: true });
+
+      if (error) throw error;
+
+      // Open the signed URL in a new tab for download
+      window.open(data.signedUrl, '_blank');
+    } catch (error) {
+      console.error('Error generating signed URL:', error);
+      toast.error('Failed to download contract');
     }
   };
 
@@ -270,154 +262,185 @@ export const ContractManager = ({ campaignId: initialCampaignId }: ContractManag
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold text-gray-900">Contract Management</h2>
-          <p className="text-gray-600">Create and manage influencer contracts</p>
+          <h1 className="text-3xl font-bold">Contract Management</h1>
+          <p className="text-muted-foreground">Create, manage, and track influencer contracts</p>
         </div>
-        <Button
-          onClick={() => setCreateModalOpen(true)}
-          className="bg-coral hover:bg-coral/90 text-white shadow-md hover:shadow-lg transition-all duration-300"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Create Contract
-        </Button>
+        <div className="space-x-2">
+          <Button onClick={() => setShowTemplateDialog(true)} variant="outline">
+            <Plus className="w-4 h-4 mr-2" />
+            New Template
+          </Button>
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Create Contract
+          </Button>
+        </div>
       </div>
 
-      <ContractsList />
-
-      {/* Create Contract Modal */}
-      <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
-        <DialogContent className="bg-white border-gray-200 text-gray-900 sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Create Contract</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-6">
-            {/* Campaign Selection */}
-            <div>
-              <Label>Select Campaign</Label>
-              {isLoading ? (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="h-6 w-6 animate-spin text-purple-500" />
-                </div>
-              ) : campaigns.length === 0 ? (
-                <div className="text-center py-4 text-gray-500">
-                  No campaigns found. Please create a campaign first.
-                </div>
-              ) : (
-                <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
-                  <SelectTrigger className="bg-white border-gray-200 shadow-sm">
-                    <SelectValue placeholder="Select a campaign" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-gray-200">
-                    {campaigns.map((campaign) => (
-                      <SelectItem
-                        key={campaign.id}
-                        value={campaign.id}
-                        className="focus:bg-coral/10"
-                      >
-                        <div className="flex flex-col gap-1">
-                          <div className="font-medium text-gray-900">{campaign.name}</div>
-                          <div className="text-sm text-gray-600">
-                            {campaign.brand} • ${campaign.budget.toLocaleString()}
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-gray-500">
-                            <Badge className={getStatusBadgeColor(campaign.status)}>
-                              {campaign.status}
-                            </Badge>
-                            <span>{campaign.influencer_count} influencers</span>
-                          </div>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+      <Tabs defaultValue="contracts" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="contracts">Contracts</TabsTrigger>
+          <TabsTrigger value="templates">Templates</TabsTrigger>
+        </TabsList>
+        <TabsContent value="contracts" className="space-y-4">
+          {loading ? (
+            <p>Loading contracts...</p>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {contracts.map((contract) => (
+                <Card key={contract.id} className="bg-card text-card-foreground">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-semibold">{contract.campaigns?.name} - {contract.influencers?.name}</CardTitle>
+                    <CardDescription>
+                      <Badge variant="secondary">{contract.status}</Badge>
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">Fee: ${contract.contract_data?.fee}</p>
+                    <p className="text-sm text-muted-foreground">Deadline: {contract.contract_data?.deadline}</p>
+                    <div className="flex justify-end space-x-2 mt-4">
+                      <Button size="sm" variant="ghost" onClick={() => handleDownloadContract(contract)}>
+                        <Download className="w-4 h-4 mr-2" />
+                        Download
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => deleteContract(contract.id)}>
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
+          )}
+        </TabsContent>
+        <TabsContent value="templates" className="space-y-4">
+          {loading ? (
+            <p>Loading templates...</p>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {templates.map((template) => (
+                <Card key={template.id} className="bg-card text-card-foreground">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-semibold">{template.name}</CardTitle>
+                    <CardDescription>
+                      <Badge variant="outline">{template.template_type}</Badge>
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">{template.content_md.substring(0, 100)}...</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
-            {/* Influencer Selection */}
-            {selectedCampaign && (
-              <div>
-                <Label>Select Influencer</Label>
-                <RadioGroup value={selectedInfluencer} onValueChange={setSelectedInfluencer}>
-                  <div className="space-y-4 mt-2">
-                    {influencers?.map((influencer) => (
-                      <div
-                        key={influencer.id}
-                        className={`flex items-center space-x-4 p-4 rounded-lg border transition-colors ${
-                          selectedInfluencer === influencer.id
-                            ? 'bg-coral/10 border-coral'
-                            : 'bg-gray-50 border-gray-200 hover:border-coral/50'
-                        }`}
-                      >
-                        <RadioGroupItem value={influencer.id} id={influencer.id} />
-                        <div className="flex items-center flex-1 space-x-4">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={influencer.avatar_url} />
-                            <AvatarFallback>{influencer.name.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <Label htmlFor={influencer.id} className="flex-1 cursor-pointer">
-                            <div className="font-medium text-gray-900">{influencer.name}</div>
-                            <div className="text-sm text-gray-600">
-                              {influencer.handle} • {formatFollowers(influencer.followers_count)} followers
-                            </div>
-                          </Label>
-                          <Badge variant="outline" className="ml-auto border-gray-300 text-gray-600">
-                            {influencer.platform}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </RadioGroup>
-              </div>
-            )}
-
-            {/* Template Selection */}
-            {selectedInfluencer && (
-              <div>
-                <Label>Select Contract Template</Label>
-                <RadioGroup value={selectedTemplate} onValueChange={setSelectedTemplate}>
-                  <div className="space-y-4 mt-2">
-                    {contractTemplates.map((template) => (
-                      <div
-                        key={template.id}
-                        className={`flex items-center space-x-4 p-4 rounded-lg border transition-colors ${
-                          selectedTemplate === template.id
-                            ? 'bg-coral/10 border-coral'
-                            : 'bg-gray-50 border-gray-200 hover:border-coral/50'
-                        }`}
-                      >
-                        <RadioGroupItem value={template.id} id={template.id} />
-                        <Label htmlFor={template.id} className="flex-1 cursor-pointer">
-                          <div className="font-medium">{template.name}</div>
-                          <div className="text-sm text-gray-500">
-                            {template.template_type}
-                          </div>
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </RadioGroup>
-              </div>
-            )}
-
-            <div className="flex justify-end">
-              <Button
-                onClick={handleCreateContract}
-                disabled={isCreating || !selectedCampaign || !selectedInfluencer || !selectedTemplate}
-                className="bg-coral hover:bg-coral/90 text-white shadow-md hover:shadow-lg transition-all duration-300"
-              >
-                {isCreating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  'Generate Contract'
-                )}
-              </Button>
+      <Dialog open={showCreateDialog} onOpenChange={() => setShowCreateDialog(false)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Create New Contract</DialogTitle>
+            <DialogDescription>Fill in the details to generate a new contract.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="campaign_id" className="text-right">
+                Campaign
+              </Label>
+              <Select onValueChange={(value) => setNewContract(prev => ({ ...prev, campaign_id: value }))} defaultValue={newContract.campaign_id}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select a campaign" />
+                </SelectTrigger>
+                <SelectContent>
+                  {campaigns.map(campaign => (
+                    <SelectItem key={campaign.id} value={campaign.id}>{campaign.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="influencer_id" className="text-right">
+                Influencer
+              </Label>
+              <Select onValueChange={(value) => setNewContract(prev => ({ ...prev, influencer_id: value }))} defaultValue={newContract.influencer_id}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select an influencer" />
+                </SelectTrigger>
+                <SelectContent>
+                  {influencers.map(influencer => (
+                    <SelectItem key={influencer.id} value={influencer.id}>{influencer.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="template_id" className="text-right">
+                Template
+              </Label>
+              <Select onValueChange={(value) => setNewContract(prev => ({ ...prev, template_id: value }))} defaultValue={newContract.template_id}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select a template" />
+                </SelectTrigger>
+                <SelectContent>
+                  {templates.map(template => (
+                    <SelectItem key={template.id} value={template.id}>{template.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="fee" className="text-right">
+                Fee
+              </Label>
+              <Input type="number" id="fee" name="fee" value={newContract.fee} onChange={handleInputChange} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="deadline" className="text-right">
+                Deadline
+              </Label>
+              <Input type="date" id="deadline" name="deadline" value={newContract.deadline} onChange={handleInputChange} className="col-span-3" />
             </div>
           </div>
+          <Button onClick={createContract}>Create Contract</Button>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showTemplateDialog} onOpenChange={() => setShowTemplateDialog(false)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Create New Template</DialogTitle>
+            <DialogDescription>Define a new contract template.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Name
+              </Label>
+              <Input type="text" id="name" name="name" value={newTemplate.name} onChange={handleTemplateInputChange} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="template_type" className="text-right">
+                Type
+              </Label>
+              <Select onValueChange={(value) => setNewTemplate(prev => ({ ...prev, template_type: value }))} defaultValue={newTemplate.template_type}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select a type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="standard">Standard</SelectItem>
+                  <SelectItem value="custom">Custom</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="content_md" className="text-right">
+                Content (Markdown)
+              </Label>
+              <Textarea id="content_md" name="content_md" value={newTemplate.content_md} onChange={handleTemplateInputChange} className="col-span-3" />
+            </div>
+          </div>
+          <Button onClick={createTemplate}>Create Template</Button>
         </DialogContent>
       </Dialog>
     </div>
