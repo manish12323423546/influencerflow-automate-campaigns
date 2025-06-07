@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +10,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { ContractManager } from '@/components/contracts/ContractManager';
 
 interface MyCampaign {
   id: string;
@@ -310,6 +310,11 @@ const MyCampaigns = () => {
                         View Details
                       </Button>
                     </Link>
+                  </div>
+
+                  {/* Show contracts for this campaign and influencer */}
+                  <div className="mt-4">
+                    <ContractManager campaignId={campaign.campaign_id} influencerId={undefined} />
                   </div>
                 </CardContent>
               </Card>

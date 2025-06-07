@@ -3,8 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileText, Download, Loader2 } from 'lucide-react';
+import { FileText, Download, Loader2, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface Contract {
   id: string;
@@ -32,6 +35,10 @@ interface StoredContract {
 const ContractsList = () => {
   const { toast } = useToast();
   const [contracts, setContracts] = useState<StoredContract[]>([]);
+  const [open, setOpen] = useState(false);
+  const [fee, setFee] = useState('');
+  const [deadline, setDeadline] = useState('');
+  const [templateId, setTemplateId] = useState('');
 
   // Load contracts from localStorage
   useEffect(() => {
@@ -116,13 +123,68 @@ const ContractsList = () => {
     }
   };
 
+  const handleOpen = () => setOpen(true);
+  const handleClose = () => setOpen(false);
+  const handleFeeChange = (e: React.ChangeEvent<HTMLInputElement>) => setFee(e.target.value);
+  const handleDeadlineChange = (e: React.ChangeEvent<HTMLInputElement>) => setDeadline(e.target.value);
+  const handleTemplateIdChange = (e: React.ChangeEvent<HTMLInputElement>) => setTemplateId(e.target.value);
+  const handleCreateContract = () => {
+    // For local contracts, just show a toast and close dialog (or implement localStorage logic if needed)
+    toast({ title: 'Create Contract', description: 'This would create a contract (implement logic as needed).' });
+    setFee('');
+    setDeadline('');
+    setTemplateId('');
+    setOpen(false);
+  };
+
   return (
     <Card className="bg-white border-gray-200 shadow-sm">
       <CardHeader>
-        <CardTitle className="text-gray-900 flex items-center">
-          <FileText className="mr-2 h-5 w-5 text-coral" />
-          Local Contracts ({contracts.length})
-        </CardTitle>
+        <div className="flex items-center justify-between w-full">
+          <CardTitle className="text-gray-900 flex items-center">
+            <FileText className="mr-2 h-5 w-5 text-coral" />
+            Local Contracts ({contracts.length})
+          </CardTitle>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={handleOpen} size="sm" className="ml-2 bg-coral hover:bg-coral/90 text-white shadow-md hover:shadow-lg transition-all duration-300">
+                <Plus className="w-4 h-4 mr-1" />
+                Create Contract
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Add Contract</DialogTitle>
+                <DialogDescription>
+                  Create a new contract for an influencer.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="fee" className="text-right">
+                    Fee
+                  </Label>
+                  <Input id="fee" value={fee} onChange={handleFeeChange} className="col-span-3" type="number" />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="deadline" className="text-right">
+                    Deadline
+                  </Label>
+                  <Input id="deadline" value={deadline} onChange={handleDeadlineChange} className="col-span-3" type="date" />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="templateId" className="text-right">
+                    Template ID
+                  </Label>
+                  <Input id="templateId" value={templateId} onChange={handleTemplateIdChange} className="col-span-3" />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit" onClick={handleCreateContract} className="bg-coral hover:bg-coral/90 text-white">Create</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </CardHeader>
       <CardContent className="p-0">
         <Table>
@@ -151,7 +213,7 @@ const ContractsList = () => {
                     {new Date(contract.timestamp).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="bg-yellow-100 text-yellow-700 border-yellow-300">
+                    <Badge variant="outline" className="bg-coral/10 text-coral border-coral/20">
                       {contract.contract.status}
                     </Badge>
                   </TableCell>

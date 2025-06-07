@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -15,14 +15,16 @@ import ConversationsManager from '@/components/dashboard/ConversationsManager';
 import OutreachManager from '@/components/dashboard/OutreachManager';
 import KnowledgeBaseManager from '@/components/dashboard/KnowledgeBaseManager';
 import EmailConversionManager from '@/components/dashboard/EmailConversionManager';
+import ReportsManager from '@/components/dashboard/ReportsManager';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Campaign } from '@/types/campaign';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'campaigns' | 'discover' | 'contracts' | 'payments' | 'outreach' | 'knowledge' | 'conversations' | 'email-conversion'>('campaigns');
+  const [activeTab, setActiveTab] = useState<'campaigns' | 'discover' | 'contracts' | 'payments' | 'outreach' | 'knowledge' | 'conversations' | 'email-conversion' | 'reports'>('campaigns');
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [totalInfluencers, setTotalInfluencers] = useState(0);
@@ -30,50 +32,82 @@ const Dashboard = () => {
   const [totalPayments, setTotalPayments] = useState(0);
   const widgetRef = useRef<HTMLElement>(null);
 
+  // Handle URL parameters for tab and campaign selection
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && ['campaigns', 'discover', 'contracts', 'payments', 'reports', 'outreach', 'email-conversion', 'conversations', 'knowledge'].includes(tab)) {
+      setActiveTab(tab as any);
+    }
+  }, [searchParams]);
+
   // Fetch all data from Supabase
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
+        console.log('🔄 Starting dashboard data fetch...');
+
         // Fetch campaigns
+        console.log('📊 Fetching campaigns...');
         const { data: campaignsData, error: campaignsError } = await supabase
           .from('campaigns')
           .select('*')
           .order('created_at', { ascending: false });
 
-        if (campaignsError) throw campaignsError;
+        if (campaignsError) {
+          console.error('❌ Campaigns fetch error:', campaignsError);
+          throw campaignsError;
+        }
+        console.log('✅ Campaigns fetched:', campaignsData?.length || 0);
         setCampaigns(campaignsData || []);
 
         // Fetch influencers count
+        console.log('👥 Fetching influencers count...');
         const { count: influencersCount, error: influencersError } = await supabase
           .from('influencers')
           .select('*', { count: 'exact', head: true });
 
-        if (influencersError) throw influencersError;
+        if (influencersError) {
+          console.error('❌ Influencers count error:', influencersError);
+          // Don't throw here, just log and continue
+        }
+        console.log('✅ Influencers count:', influencersCount || 0);
         setTotalInfluencers(influencersCount || 0);
 
         // Fetch contracts count
+        console.log('📄 Fetching contracts count...');
         const { count: contractsCount, error: contractsError } = await supabase
           .from('contracts')
           .select('*', { count: 'exact', head: true });
 
-        if (contractsError) throw contractsError;
+        if (contractsError) {
+          console.error('❌ Contracts count error:', contractsError);
+          // Don't throw here, just log and continue
+        }
+        console.log('✅ Contracts count:', contractsCount || 0);
         setTotalContracts(contractsCount || 0);
 
         // Fetch payments total
+        console.log('💰 Fetching payments total...');
         const { data: paymentsData, error: paymentsError } = await supabase
           .from('payments')
           .select('amount')
           .eq('status', 'completed');
 
-        if (paymentsError) throw paymentsError;
+        if (paymentsError) {
+          console.error('❌ Payments fetch error:', paymentsError);
+          // Don't throw here, just log and continue
+        }
         const totalPaid = (paymentsData || []).reduce((sum, payment) => sum + Number(payment.amount), 0);
+        console.log('✅ Payments total:', totalPaid);
         setTotalPayments(totalPaid);
 
+        console.log('🎉 Dashboard data fetch completed successfully!');
+
       } catch (error) {
-        console.error('Error fetching dashboard data:', error);
+        console.error('❌ Critical error fetching dashboard data:', error);
         toast({
           title: "Error loading dashboard data",
-          description: "Please try again later.",
+          description: "Some data may not be available. Please try refreshing the page.",
           variant: "destructive",
         });
       } finally {
@@ -156,6 +190,7 @@ const Dashboard = () => {
     { id: 'discover', label: 'Discover Creators', icon: Users, description: 'Find perfect influencers' },
     { id: 'contracts', label: 'Contracts', icon: FileText, description: 'Manage contracts' },
     { id: 'payments', label: 'Payments', icon: CreditCard, description: 'Handle payments' },
+    { id: 'reports', label: 'Reports', icon: BarChart3, description: 'Generate and view reports' },
     { id: 'outreach', label: 'Outreach', icon: MessageSquare, description: 'Manage influencer outreach' },
     { id: 'email-conversion', label: 'Email Conversion', icon: Mail, description: 'Track email automation & contracts' },
     { id: 'conversations', label: 'Conversations', icon: MessageCircle, description: 'AI conversation history' },
@@ -311,14 +346,13 @@ const Dashboard = () => {
             </button>
           ))}
         </div>
-
-
         {/* Active Tab Content */}
         <div className="space-y-6">
           {activeTab === 'campaigns' && <CampaignsManager campaigns={campaigns} />}
           {activeTab === 'discover' && <DiscoverCreators />}
           {activeTab === 'contracts' && <ContractsManager />}
           {activeTab === 'payments' && <PaymentsManager />}
+          {activeTab === 'reports' && <ReportsManager preSelectedCampaign={searchParams.get('campaign')} />}
           {activeTab === 'outreach' && <OutreachManager />}
           {activeTab === 'email-conversion' && <EmailConversionManager />}
           {activeTab === 'conversations' && <ConversationsManager />}

@@ -4,50 +4,51 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
+import ErrorBoundary from "./components/ErrorBoundary";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import CreatorDashboard from "./pages/CreatorDashboard";
 import CreatorProfile from "./pages/CreatorProfile";
-import Influencers from "./pages/Influencers";
-import InfluencerProfile from "./pages/InfluencerProfile";
-import Campaigns from "./pages/Campaigns";
-import CreateCampaign from "./pages/CreateCampaign";
-import CampaignDetail from "./pages/CampaignDetail";
-import CreatorCampaignDetail from "./pages/CreatorCampaignDetail";
-import BrandProfile from "./pages/BrandProfile";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
-import Outreach from "./pages/Outreach";
+
+// Import components from new locations
+import { CampaignDetail, CreateCampaign, Campaigns } from "@/components/dashboard/campaigns";
+import { InfluencerProfile, Influencers } from "@/components/dashboard/influencers";
+import { Outreach } from "@/components/dashboard/outreach";
+import { BrandProfile } from "@/components/dashboard/profile";
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/creator-dashboard" element={<CreatorDashboard />} />
-            <Route path="/creator-profile" element={<CreatorProfile />} />
-            <Route path="/influencers" element={<Influencers />} />
-            <Route path="/influencers/:id" element={<InfluencerProfile />} />
-            <Route path="/campaigns" element={<Campaigns />} />
-            <Route path="/campaigns/create" element={<CreateCampaign />} />
-            <Route path="/campaigns/:id" element={<CampaignDetail />} />
-            <Route path="/creator-campaigns/:id" element={<CreatorCampaignDetail />} />
-            <Route path="/brand-profile" element={<BrandProfile />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/outreach" element={<Outreach />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <ErrorBoundary>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
+                <Route path="/creator-dashboard" element={<ErrorBoundary><CreatorDashboard /></ErrorBoundary>} />
+                <Route path="/creator-profile" element={<ErrorBoundary><CreatorProfile /></ErrorBoundary>} />
+                <Route path="/settings" element={<ErrorBoundary><Settings /></ErrorBoundary>} />
+
+                {/* Campaign Routes */}
+                <Route path="/campaigns/:id" element={<ErrorBoundary><CampaignDetail /></ErrorBoundary>} />
+                <Route path="/campaigns/create" element={<ErrorBoundary><CreateCampaign /></ErrorBoundary>} />
+                <Route path="/campaigns" element={<ErrorBoundary><Campaigns /></ErrorBoundary>} />
+
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </ErrorBoundary>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

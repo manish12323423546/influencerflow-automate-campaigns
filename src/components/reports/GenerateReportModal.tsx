@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -26,9 +26,10 @@ interface GenerateReportModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onReportGenerated: () => void;
+  preSelectedCampaign?: string | null;
 }
 
-const GenerateReportModal = ({ open, onOpenChange, onReportGenerated }: GenerateReportModalProps) => {
+const GenerateReportModal = ({ open, onOpenChange, onReportGenerated, preSelectedCampaign }: GenerateReportModalProps) => {
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
   const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>([]);
@@ -48,6 +49,16 @@ const GenerateReportModal = ({ open, onOpenChange, onReportGenerated }: Generate
     },
     enabled: open,
   });
+
+  // Auto-select pre-selected campaign when campaigns load
+  useEffect(() => {
+    if (preSelectedCampaign && campaigns && campaigns.length > 0) {
+      const campaignExists = campaigns.some(c => c.id === preSelectedCampaign);
+      if (campaignExists && !selectedCampaigns.includes(preSelectedCampaign)) {
+        setSelectedCampaigns([preSelectedCampaign]);
+      }
+    }
+  }, [preSelectedCampaign, campaigns, selectedCampaigns]);
 
   const handleCampaignToggle = (campaignId: string) => {
     setSelectedCampaigns(prev =>
@@ -116,64 +127,64 @@ const GenerateReportModal = ({ open, onOpenChange, onReportGenerated }: Generate
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-zinc-900 border-zinc-800 text-snow max-w-2xl">
+      <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="text-snow">Generate Performance Report</DialogTitle>
+          <DialogTitle className="text-gray-900">Generate Performance Report</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
           {/* Date Range Selection */}
           <div className="space-y-4">
-            <Label className="text-snow">Date Range</Label>
+            <Label className="text-gray-900">Date Range</Label>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-snow/70">Start Date</Label>
+                <Label className="text-gray-600">Start Date</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       className={cn(
-                        "w-full justify-start text-left font-normal bg-zinc-800 border-zinc-700",
-                        !startDate && "text-snow/50"
+                        "w-full justify-start text-left font-normal bg-white border-gray-200",
+                        !startDate && "text-gray-500"
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {startDate ? format(startDate, "PPP") : "Pick a date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 bg-zinc-800 border-zinc-700" align="start">
+                  <PopoverContent className="w-auto p-0 bg-white border-gray-200" align="start">
                     <Calendar
                       mode="single"
                       selected={startDate}
                       onSelect={setStartDate}
                       initialFocus
-                      className="bg-zinc-800"
+                      className="bg-white"
                     />
                   </PopoverContent>
                 </Popover>
               </div>
               <div className="space-y-2">
-                <Label className="text-snow/70">End Date</Label>
+                <Label className="text-gray-600">End Date</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       className={cn(
-                        "w-full justify-start text-left font-normal bg-zinc-800 border-zinc-700",
-                        !endDate && "text-snow/50"
+                        "w-full justify-start text-left font-normal bg-white border-gray-200",
+                        !endDate && "text-gray-500"
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {endDate ? format(endDate, "PPP") : "Pick a date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 bg-zinc-800 border-zinc-700" align="start">
+                  <PopoverContent className="w-auto p-0 bg-white border-gray-200" align="start">
                     <Calendar
                       mode="single"
                       selected={endDate}
                       onSelect={setEndDate}
                       initialFocus
-                      className="bg-zinc-800"
+                      className="bg-white"
                     />
                   </PopoverContent>
                 </Popover>
@@ -183,14 +194,14 @@ const GenerateReportModal = ({ open, onOpenChange, onReportGenerated }: Generate
 
           {/* Campaign Selection */}
           <div className="space-y-4">
-            <Label className="text-snow">Select Campaigns</Label>
+            <Label className="text-gray-900">Select Campaigns</Label>
             {campaignsLoading ? (
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="h-6 w-6 animate-spin text-coral" />
-                <span className="ml-2 text-snow/60">Loading campaigns...</span>
+                <span className="ml-2 text-gray-600">Loading campaigns...</span>
               </div>
             ) : (
-              <Card className="bg-zinc-800 border-zinc-700 max-h-60 overflow-y-auto">
+              <Card className="bg-white border-gray-200 max-h-60 overflow-y-auto">
                 <CardContent className="p-4 space-y-3">
                   {campaigns && campaigns.length > 0 ? (
                     campaigns.map((campaign) => (
@@ -201,15 +212,15 @@ const GenerateReportModal = ({ open, onOpenChange, onReportGenerated }: Generate
                           onCheckedChange={() => handleCampaignToggle(campaign.id)}
                         />
                         <div className="flex-1">
-                          <Label htmlFor={campaign.id} className="text-snow cursor-pointer">
+                          <Label htmlFor={campaign.id} className="text-gray-900 cursor-pointer">
                             {campaign.name}
                           </Label>
-                          <p className="text-sm text-snow/60">{campaign.brand} • {campaign.status}</p>
+                          <p className="text-sm text-gray-600">{campaign.brand} • {campaign.status}</p>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <p className="text-snow/60 text-center py-4">No campaigns found</p>
+                    <p className="text-gray-600 text-center py-4">No campaigns found</p>
                   )}
                 </CardContent>
               </Card>
@@ -221,7 +232,7 @@ const GenerateReportModal = ({ open, onOpenChange, onReportGenerated }: Generate
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="border-zinc-700 text-snow hover:bg-zinc-800"
+              className="border-gray-200 text-gray-900 hover:bg-gray-50"
             >
               Cancel
             </Button>

@@ -180,11 +180,11 @@ export const PaymentManager: React.FC<PaymentManagerProps> = ({ isOpen, onClose 
                 <span>Deadline: {new Date(contract.contract_data.deadline).toLocaleDateString()}</span>
               </div>
               <div>
-                <Badge variant="secondary">{contract.status}</Badge>
+                <Badge variant="outline" className="bg-coral/10 text-coral border-coral/20">{contract.status}</Badge>
               </div>
-              <Button 
+              <Button
                 onClick={() => handleSecurePayment(contract)}
-                className="w-full"
+                className="w-full bg-coral hover:bg-coral/90 text-white shadow-md hover:shadow-lg transition-all duration-300"
               >
                 <Shield className="w-4 h-4 mr-2" />
                 Secure Payment

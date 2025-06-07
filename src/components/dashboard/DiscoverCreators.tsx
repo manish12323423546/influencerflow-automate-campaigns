@@ -93,13 +93,18 @@ const DiscoverCreators = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        console.log('🔍 DiscoverCreators: Fetching influencers...');
         // Fetch creators
         const { data: creatorsData, error: creatorsError } = await supabase
           .from('influencers')
           .select('*')
           .order('followers_count', { ascending: false });
 
-        if (creatorsError) throw creatorsError;
+        if (creatorsError) {
+          console.error('❌ DiscoverCreators: Error fetching influencers:', creatorsError);
+          throw creatorsError;
+        }
+        console.log('✅ DiscoverCreators: Influencers fetched:', creatorsData?.length || 0);
         
         // Transform the data to match Creator interface
         const transformedData = (creatorsData || []).map(influencer => ({
@@ -118,20 +123,27 @@ const DiscoverCreators = () => {
         
         setCreators(transformedData);
 
+        console.log('🔍 DiscoverCreators: Fetching campaigns...');
         // Fetch campaigns
         const { data: campaignsData, error: campaignsError } = await supabase
           .from('campaigns')
           .select('*')
           .order('created_at', { ascending: false });
 
-        if (campaignsError) throw campaignsError;
-        setCampaigns(campaignsData || []);
+        if (campaignsError) {
+          console.error('❌ DiscoverCreators: Error fetching campaigns:', campaignsError);
+          // Don't throw here, just log and continue with empty campaigns
+          setCampaigns([]);
+        } else {
+          console.log('✅ DiscoverCreators: Campaigns fetched:', campaignsData?.length || 0);
+          setCampaigns(campaignsData || []);
+        }
 
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('❌ DiscoverCreators: Critical error fetching data:', error);
         toast({
           title: "Error loading data",
-          description: "Please try again later.",
+          description: "Some features may not be available. Please try refreshing the page.",
           variant: "destructive",
         });
       } finally {

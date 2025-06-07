@@ -18,7 +18,14 @@ import {
   Check,
   Mail,
   Target,
+  Plus,
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface Conversation {
   id: string;
@@ -53,6 +60,10 @@ export default function Outreach() {
   const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false);
   const [webhookResponses, setWebhookResponses] = useState<Record<string, any>>({});
   const { toast } = useToast();
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [allInfluencers, setAllInfluencers] = useState<any[]>([]);
+  const [searchInfluencer, setSearchInfluencer] = useState('');
+  const [selectedNewInfluencer, setSelectedNewInfluencer] = useState<any | null>(null);
 
   useEffect(() => {
     fetchConversations();
@@ -60,12 +71,29 @@ export default function Outreach() {
 
   useEffect(() => {
     if (selectedConversation) {
-      fetchMessages(selectedConversation.id);
+      fetchMessages(selectedConversation.id, selectedConversation.influencer[0].id);
     }
   }, [selectedConversation]);
 
+  // Helper to get active campaign influencer IDs
+  const getActiveCampaignInfluencerIds = async () => {
+    const { data, error } = await supabase
+      .from('campaign_influencers')
+      .select('influencer_id, status, campaign_id');
+    if (error) return [];
+    return data
+      .filter((ci: any) => ci.status === 'active' || ci.status === 'pending')
+      .map((ci: any) => ci.influencer_id);
+  };
+
+  // Fetch conversations with only influencers in active/pending campaigns
   const fetchConversations = async () => {
     try {
+      const activeInfluencerIds = await getActiveCampaignInfluencerIds();
+      if (!activeInfluencerIds.length) {
+        setConversations([]);
+        return;
+      }
       const { data, error } = await supabase
         .from('conversations')
         .select(`
@@ -81,10 +109,15 @@ export default function Outreach() {
             platform
           )
         `)
+        .in('influencer_id', activeInfluencerIds)
         .order('last_message_time', { ascending: false });
-
       if (error) throw error;
-      setConversations(data || []);
+      // Ensure influencer is always an array
+      const mapped = (data || []).map((conv: any) => ({
+        ...conv,
+        influencer: Array.isArray(conv.influencer) ? conv.influencer : [conv.influencer],
+      }));
+      setConversations(mapped);
     } catch (error) {
       console.error('Error fetching conversations:', error);
       toast({
@@ -95,16 +128,28 @@ export default function Outreach() {
     }
   };
 
-  const fetchMessages = async (conversationId: string) => {
+  // Fetch messages using sender/receiver logic
+  const fetchMessages = async (conversationId: string, influencerId?: string) => {
     try {
+      const user = await supabase.auth.getUser();
+      const userId = user.data.user?.id;
+      if (!userId || !influencerId) {
+        setMessages([]);
+        return;
+      }
       const { data, error } = await supabase
         .from('messages')
         .select('*')
-        .eq('conversation_id', conversationId)
+        .or(`and(sender_id.eq.${userId},receiver_id.eq.${influencerId}),and(sender_id.eq.${influencerId},receiver_id.eq.${userId})`)
         .order('created_at', { ascending: true });
-
       if (error) throw error;
-      setMessages(data || []);
+      // Add fallback for sender_type and is_read
+      const mapped = (data || []).map((msg: any) => ({
+        ...msg,
+        sender_type: msg.sender_type || (msg.sender_id === userId ? 'brand' : 'influencer'),
+        is_read: typeof msg.is_read === 'boolean' ? msg.is_read : true,
+      }));
+      setMessages(mapped);
     } catch (error) {
       console.error('Error fetching messages:', error);
       toast({
@@ -115,32 +160,23 @@ export default function Outreach() {
     }
   };
 
+  // Send message using sender/receiver logic
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
-
     try {
+      const user = await supabase.auth.getUser();
+      const userId = user.data.user?.id;
+      const influencerId = selectedConversation.influencer[0].id;
       const { error } = await supabase
         .from('messages')
         .insert({
-          conversation_id: selectedConversation.id,
-          sender_type: 'brand',
           content: newMessage,
-          sender_id: (await supabase.auth.getUser()).data.user?.id,
+          sender_id: userId,
+          receiver_id: influencerId,
         });
-
       if (error) throw error;
-
-      // Update conversation
-      await supabase
-        .from('conversations')
-        .update({
-          last_message: newMessage,
-          last_message_time: new Date().toISOString(),
-        })
-        .eq('id', selectedConversation.id);
-
       setNewMessage('');
-      fetchMessages(selectedConversation.id);
+      fetchMessages(selectedConversation.id, influencerId);
       fetchConversations();
     } catch (error) {
       console.error('Error sending message:', error);
@@ -156,6 +192,69 @@ export default function Outreach() {
     conv.influencer[0].name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     conv.influencer[0].handle.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Fetch all influencers for add dialog
+  const fetchAllInfluencers = async () => {
+    const { data, error } = await supabase
+      .from('influencers')
+      .select('id, name, handle, avatar_url, platform');
+    if (!error) setAllInfluencers(data || []);
+  };
+
+  // Add new conversation
+  const handleAddConversation = async () => {
+    if (!selectedNewInfluencer) return;
+    const user = await supabase.auth.getUser();
+    const userId = user.data.user?.id;
+    try {
+      // Check if conversation already exists
+      const { data: existing } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('influencer_id', selectedNewInfluencer.id)
+        .eq('brand_user_id', userId)
+        .single();
+      if (existing) {
+        setShowAddDialog(false);
+        setSelectedConversation({
+          id: existing.id,
+          influencer: [selectedNewInfluencer],
+          last_message: '',
+          last_message_time: '',
+          unread_count: 0,
+        });
+        return;
+      }
+      // Create new conversation
+      const { data: newConv, error: insertError } = await supabase
+        .from('conversations')
+        .insert({
+          influencer_id: selectedNewInfluencer.id,
+          brand_user_id: userId,
+          last_message: '',
+          last_message_time: new Date().toISOString(),
+          unread_count: 0,
+        })
+        .select('id')
+        .single();
+      if (insertError) throw insertError;
+      setShowAddDialog(false);
+      setSelectedConversation({
+        id: newConv.id,
+        influencer: [selectedNewInfluencer],
+        last_message: '',
+        last_message_time: '',
+        unread_count: 0,
+      });
+      fetchConversations();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create conversation',
+        variant: 'destructive',
+      });
+    }
+  };
 
   return (
     <div className="container mx-auto py-6">
@@ -173,6 +272,9 @@ export default function Outreach() {
                 className="pl-10 bg-zinc-800 border-zinc-700 text-snow"
               />
             </div>
+            <Button variant="ghost" size="icon" onClick={() => { setShowAddDialog(true); fetchAllInfluencers(); }}>
+              <Plus className="h-5 w-5" />
+            </Button>
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-[calc(100vh-16rem)]">
@@ -324,6 +426,42 @@ export default function Outreach() {
           )}
         </Card>
       </div>
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Conversation</DialogTitle>
+          </DialogHeader>
+          <Input
+            placeholder="Search influencer..."
+            value={searchInfluencer}
+            onChange={e => setSearchInfluencer(e.target.value)}
+          />
+          <div className="max-h-60 overflow-y-auto mt-2">
+            {allInfluencers
+              .filter(i =>
+                i.name.toLowerCase().includes(searchInfluencer.toLowerCase()) ||
+                i.handle.toLowerCase().includes(searchInfluencer.toLowerCase())
+              )
+              .map(i => (
+                <div
+                  key={i.id}
+                  className={`flex items-center gap-3 p-2 cursor-pointer hover:bg-gray-100 rounded ${selectedNewInfluencer?.id === i.id ? 'bg-gray-200' : ''}`}
+                  onClick={() => setSelectedNewInfluencer(i)}
+                >
+                  <Avatar>
+                    <AvatarImage src={i.avatar_url} />
+                    <AvatarFallback>{i.name[0]}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <div className="font-medium">{i.name}</div>
+                    <div className="text-xs text-gray-500">@{i.handle}</div>
+                  </div>
+                </div>
+              ))}
+          </div>
+          <Button onClick={handleAddConversation} disabled={!selectedNewInfluencer} className="mt-2 w-full">Start Chat</Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

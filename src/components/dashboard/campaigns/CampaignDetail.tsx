@@ -6,10 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
-import { 
-  ArrowLeft, Edit, Users, BarChart3, FileText, MessageSquare, 
-  Plus, Phone, Mail, Calendar, DollarSign, Target, 
-  CheckCircle2, AlertCircle, Clock, Share2, Download, Save, Eye, XCircle, Trash2 
+import {
+  ArrowLeft, Edit, Users, BarChart3, FileText, MessageSquare,
+  Plus, Phone, Mail, Calendar, DollarSign, Target,
+  CheckCircle2, AlertCircle, Clock, Share2, Download, Save, Eye, XCircle, Trash2, CreditCard
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -130,7 +130,17 @@ const AddInfluencerDialog = ({ campaignId, onInfluencerAdded }: AddInfluencerDia
         return;
       }
 
-      setInfluencers(data || []);
+      setInfluencers((data || []).map(inf => ({
+        id: inf.id,
+        name: inf.name,
+        handle: inf.handle,
+        avatar_url: inf.avatar_url,
+        platform: inf.platform,
+        followers_count: inf.followers_count,
+        engagement_rate: inf.engagement_rate,
+        phone_no: inf.phone_no?.toString(),
+        gmail_gmail: inf.gmail_gmail
+      })));
     };
 
     if (open && searchTerm.length > 2) {
@@ -671,7 +681,7 @@ const CampaignDetail = () => {
             (data.campaign_influencers?.length || 1) || 0
         };
 
-        setCampaign(campaignData);
+        setCampaign(campaignData as unknown as Campaign);
       } catch (error) {
         console.error('Error fetching campaign details:', error);
         toast({
@@ -1387,6 +1397,134 @@ const CampaignDetail = () => {
                   </p>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Payments Section */}
+          <Card className="bg-white border-gray-200 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-gray-900 flex items-center">
+                <CreditCard className="mr-2 h-5 w-5" />
+                Payments & Reports
+              </CardTitle>
+              {campaign.status === 'active' && (
+                <Button
+                  onClick={() => {
+                    // Navigate to reports tab in dashboard with campaign pre-selected
+                    navigate('/dashboard?tab=reports&campaign=' + campaign.id);
+                  }}
+                  className="bg-coral hover:bg-coral/90 text-white shadow-md hover:shadow-lg transition-all duration-300"
+                >
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  Generate Report
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Payment Summary */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Total Budget</p>
+                        <p className="text-xl font-bold text-gray-900">₹{campaign.budget?.toLocaleString() || 0}</p>
+                      </div>
+                      <DollarSign className="h-6 w-6 text-coral" />
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Amount Spent</p>
+                        <p className="text-xl font-bold text-gray-900">₹{campaign.spent?.toLocaleString() || 0}</p>
+                      </div>
+                      <CheckCircle2 className="h-6 w-6 text-green-500" />
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-600">Remaining</p>
+                        <p className="text-xl font-bold text-gray-900">
+                          ₹{((campaign.budget || 0) - (campaign.spent || 0)).toLocaleString()}
+                        </p>
+                      </div>
+                      <Clock className="h-6 w-6 text-yellow-500" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment Status */}
+                <div>
+                  <h3 className="text-sm font-medium text-gray-600 mb-3">Payment Status by Influencer</h3>
+                  {campaign.campaign_influencers && campaign.campaign_influencers.length > 0 ? (
+                    <div className="space-y-3">
+                      {campaign.campaign_influencers.map((ci) => (
+                        <div key={ci.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <Avatar>
+                              <AvatarImage src={ci.influencer.avatar_url} />
+                              <AvatarFallback>{ci.influencer.name[0]}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium text-gray-900">{ci.influencer.name}</p>
+                              <p className="text-sm text-gray-600">@{ci.influencer.handle}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="text-right">
+                              <p className="font-medium text-gray-900">₹{ci.fee?.toLocaleString() || 0}</p>
+                              <Badge className={
+                                ci.status === 'completed' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                                ci.status === 'confirmed' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                                'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+                              }>
+                                {ci.status === 'completed' ? 'Paid' :
+                                 ci.status === 'confirmed' ? 'Pending' : 'Not Started'}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Influencers Added</h3>
+                      <p className="text-gray-600">Add influencers to this campaign to track payments.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Report Generation Info */}
+                {campaign.status === 'active' && (
+                  <div className="bg-coral/5 border border-coral/20 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <BarChart3 className="h-5 w-5 text-coral mt-0.5" />
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-1">Generate Performance Report</h4>
+                        <p className="text-sm text-gray-600 mb-3">
+                          Create detailed reports for this active campaign including payment status,
+                          influencer performance, and ROI analysis.
+                        </p>
+                        <Button
+                          onClick={() => {
+                            navigate('/dashboard?tab=reports&campaign=' + campaign.id);
+                          }}
+                          size="sm"
+                          className="bg-coral hover:bg-coral/90 text-white"
+                        >
+                          <BarChart3 className="mr-2 h-4 w-4" />
+                          Generate Report
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>

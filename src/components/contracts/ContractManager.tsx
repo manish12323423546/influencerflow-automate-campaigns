@@ -32,7 +32,12 @@ interface ContractWithDetails extends Contract {
   influencers?: Influencer;
 }
 
-export const ContractManager: React.FC = () => {
+interface ContractManagerProps {
+  campaignId?: string;
+  influencerId?: string;
+}
+
+export const ContractManager: React.FC<ContractManagerProps> = ({ campaignId, influencerId }) => {
   const { user } = useAuth();
   const [contracts, setContracts] = useState<ContractWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,13 +50,13 @@ export const ContractManager: React.FC = () => {
 
   useEffect(() => {
     fetchContracts();
-  }, [user]);
+  }, [user, campaignId, influencerId]);
 
   const fetchContracts = async () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('contracts')
         .select(`
         *,
@@ -61,6 +66,15 @@ export const ContractManager: React.FC = () => {
         .eq('brand_user_id', user.id)
         .order('created_at', { ascending: false });
 
+      if (campaignId) {
+        query = query.eq('campaign_id', campaignId);
+      }
+      if (influencerId) {
+        query = query.eq('influencer_id', influencerId);
+      }
+
+      const { data, error } = await query;
+
       if (error) throw error;
 
       const transformedContracts = data?.map(contract => {
@@ -68,8 +82,12 @@ export const ContractManager: React.FC = () => {
         try {
           if (typeof contract.contract_data === 'string') {
             contractData = JSON.parse(contract.contract_data);
-          } else if (contract.contract_data && typeof contract.contract_data === 'object') {
-            contractData = contract.contract_data as ContractData;
+          } else if (
+            contract.contract_data &&
+            typeof contract.contract_data === 'object' &&
+            !Array.isArray(contract.contract_data)
+          ) {
+            contractData = contract.contract_data as unknown as ContractData;
           } else {
             contractData = {
               fee: 0,
@@ -191,6 +209,43 @@ export const ContractManager: React.FC = () => {
     }
   };
 
+  const handleCreateContract = async () => {
+    if (!fee || !deadline || !templateId) {
+      toast.error('Please fill all fields');
+      return;
+    }
+    if (!user) {
+      toast.error('User not authenticated');
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from('contracts')
+        .insert({
+          brand_user_id: user.id,
+          campaign_id: campaignId,
+          influencer_id: influencerId,
+          contract_data: {
+            fee: parseFloat(fee),
+            deadline: deadline,
+            template_id: templateId,
+            generated_at: new Date().toISOString()
+          },
+          status: 'draft',
+        });
+      if (error) throw error;
+      toast.success('Contract created successfully');
+      setFee('');
+      setDeadline('');
+      setTemplateId('');
+      setOpen(false);
+      fetchContracts();
+    } catch (error) {
+      console.error('Error creating contract:', error);
+      toast.error('Failed to create contract');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -198,7 +253,7 @@ export const ContractManager: React.FC = () => {
           <h2 className="text-2xl font-bold">Contracts</h2>
           <p className="text-muted-foreground">Manage your contracts with influencers</p>
         </div>
-        <Button onClick={handleOpen}>
+        <Button onClick={handleOpen} className="bg-coral hover:bg-coral/90 text-white shadow-md hover:shadow-lg transition-all duration-300">
           <Plus className="w-4 h-4 mr-2" />
           Create Contract
         </Button>
@@ -227,22 +282,22 @@ export const ContractManager: React.FC = () => {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Status:</span>
-                <Badge variant="secondary">{contract.status}</Badge>
+                <Badge variant="outline" className="bg-coral/10 text-coral border-coral/20">{contract.status}</Badge>
               </div>
               <div className="flex space-x-2">
-                <Button variant="outline" size="sm" onClick={() => downloadContract(contract)}>
+                <Button variant="outline" size="sm" onClick={() => downloadContract(contract)} className="border-coral text-coral hover:bg-coral hover:text-white transition-all duration-300">
                   <Download className="w-4 h-4 mr-1" />
                   Download
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="border-coral text-coral hover:bg-coral hover:text-white transition-all duration-300">
                   <Send className="w-4 h-4 mr-1" />
                   Send
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => handleEditOpen(contract)}>
+                <Button variant="ghost" size="sm" onClick={() => handleEditOpen(contract)} className="text-gray-600 hover:text-coral hover:bg-coral/10 transition-all duration-300">
                   <Edit className="w-4 h-4 mr-1" />
                   Edit
                 </Button>
-                <Button variant="destructive" size="sm" onClick={() => handleDelete(contract.id)}>
+                <Button variant="destructive" size="sm" onClick={() => handleDelete(contract.id)} className="bg-red-500 hover:bg-red-600 text-white transition-all duration-300">
                   <Trash2 className="w-4 h-4 mr-1" />
                   Delete
                 </Button>
@@ -284,7 +339,7 @@ export const ContractManager: React.FC = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit">Create</Button>
+            <Button type="submit" onClick={handleCreateContract}>Create</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

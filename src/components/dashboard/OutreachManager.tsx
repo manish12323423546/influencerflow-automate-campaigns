@@ -6,8 +6,10 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Phone, Mail } from 'lucide-react';
+import { Search, Phone, Mail, MessageSquare, ChevronLeft } from 'lucide-react';
+import ChatInterface from '@/components/chat/ChatInterface';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import {
   Dialog,
   DialogContent,
@@ -71,31 +73,56 @@ export default function OutreachManager() {
   const [influencers, setInfluencers] = useState<Influencer[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
-  const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [isGmailModalOpen, setIsGmailModalOpen] = useState(false);
   const [selectedInfluencerForGmail, setSelectedInfluencerForGmail] = useState<Influencer | null>(null);
   const [gmailResponses, setGmailResponses] = useState<Record<string, any>>({});
   const [isGmailInProgress, setIsGmailInProgress] = useState<Record<string, boolean>>({});
+  const [showChats, setShowChats] = useState(false);
 
   useEffect(() => {
-    fetchInfluencers();
-    fetchCampaigns();
-  }, []);
+    console.log('🔍 OutreachManager: Auth state:', { user: !!user, authLoading });
+    if (!authLoading) {
+      console.log('✅ OutreachManager: Fetching data...');
+      fetchInfluencers();
+      fetchCampaigns();
+    }
+  }, [user, authLoading]);
+
+
 
   const fetchCampaigns = async () => {
     try {
-      const { data, error } = await supabase
+      console.log('🔍 OutreachManager: Fetching campaigns...');
+
+      // Build query based on authentication status
+      let query = supabase
         .from('campaigns')
         .select('id, name, brand, status, created_at, timeline, budget, deliverables')
         .eq('status', 'active')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      // If user is authenticated, filter by user_id
+      if (user) {
+        console.log('🔐 OutreachManager: Filtering campaigns by user ID:', user.id);
+        query = query.eq('user_id', user.id);
+      } else {
+        console.log('🌐 OutreachManager: No user authentication, showing all active campaigns');
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('❌ OutreachManager: Error fetching campaigns:', error);
+        throw error;
+      }
+
+      console.log('✅ OutreachManager: Campaigns fetched:', data?.length || 0);
       setCampaigns(data || []);
     } catch (error) {
-      console.error('Error fetching campaigns:', error);
+      console.error('❌ OutreachManager: Error fetching campaigns:', error);
       toast({
         title: 'Error',
         description: 'Failed to fetch campaigns. Please try again.',
@@ -106,7 +133,10 @@ export default function OutreachManager() {
 
   const fetchInfluencers = async () => {
     try {
-      const { data, error } = await supabase
+      console.log('🔍 OutreachManager: Fetching campaign influencers...');
+
+      // Build query based on authentication status
+      let query = supabase
         .from('campaign_influencers')
         .select(`
           id,
@@ -119,7 +149,8 @@ export default function OutreachManager() {
             created_at,
             timeline,
             budget,
-            deliverables
+            deliverables,
+            user_id
           ),
           influencer:influencers!inner (
             id,
@@ -135,7 +166,21 @@ export default function OutreachManager() {
         `)
         .eq('campaign.status', 'active');
 
-      if (error) throw error;
+      // If user is authenticated, filter by user_id
+      if (user) {
+        console.log('🔐 OutreachManager: Filtering by user ID:', user.id);
+        query = query.eq('campaign.user_id', user.id);
+      } else {
+        console.log('🌐 OutreachManager: No user authentication, showing all active campaigns');
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('❌ OutreachManager: Error fetching campaign influencers:', error);
+        throw error;
+      }
+      console.log('✅ OutreachManager: Campaign influencers fetched:', data?.length || 0);
 
       // Transform the data to match the Influencer interface
       const influencersData: Influencer[] = (data as unknown as Array<{
@@ -287,7 +332,7 @@ export default function OutreachManager() {
           contractType: "Fixed-Fee",
           startDate: startDate,
           endDate: endDate,
-          deliverables: campaign.deliverables ? campaign.deliverables.split(',').map((item, index) => ({
+          deliverables: campaign.deliverables ? campaign.deliverables.split(',').map((item) => ({
             type: item.trim(),
             count: 1,
             dueDate: endDate
@@ -368,6 +413,8 @@ export default function OutreachManager() {
     }
   };
 
+
+
   const filteredInfluencers = influencers.filter(influencer =>
     influencer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     influencer.handle.toLowerCase().includes(searchQuery.toLowerCase())
@@ -387,93 +434,114 @@ export default function OutreachManager() {
 
   return (
     <Card className="bg-white border-gray-200">
-      <CardHeader>
-        <CardTitle className="text-gray-900">Outreach Manager</CardTitle>
-        <p className="text-sm text-gray-600">Manage your influencer outreach for active campaigns</p>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="text-gray-900">Outreach Manager</CardTitle>
+          <p className="text-sm text-gray-600">Manage your influencer outreach for active campaigns</p>
+        </div>
+        <Button
+          variant="outline"
+          className="ml-auto flex items-center gap-2 border-coral text-coral hover:bg-coral hover:text-white transition-all duration-300"
+          onClick={() => setShowChats((prev) => !prev)}
+        >
+          <MessageSquare className="h-4 w-4" />
+          {showChats ? 'Back to Outreach' : 'Show Chats'}
+        </Button>
       </CardHeader>
       <CardContent className="p-0">
         <div className="flex flex-col h-full">
-          <div className="flex items-center gap-2 mb-4 px-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search influencers..."
-                className="pl-8 bg-white border-gray-200 shadow-sm"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+          {showChats ? (
+            <div className="p-4">
+              <ChatInterface
+                userId={user?.id}
+                className="h-[600px]"
               />
             </div>
-          </div>
-
-          <ScrollArea className="flex-1">
-            <div className="grid grid-cols-[1fr_1fr_100px_100px_100px_120px] gap-4 px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">
-              <div>Influencer</div>
-              <div>Details</div>
-              <div>Status</div>
-              <div>Engagement</div>
-              <div>Followers</div>
-              <div>Actions</div>
-            </div>
-            <div className="px-4">
-              {filteredInfluencers.map((influencer) => (
-                <div
-                  key={influencer.id}
-                  className="grid grid-cols-[1fr_1fr_100px_100px_100px_120px] gap-4 py-3 border-b border-gray-200 items-center"
-                >
-                  <div className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarImage src={influencer.avatar_url} />
-                      <AvatarFallback>{influencer.name[0]}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-medium text-gray-900">{influencer.name}</p>
-                      <p className="text-sm text-gray-600">@{influencer.handle}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">{influencer.platform}</p>
-                    <p className="text-sm text-gray-600">{influencer.campaigns?.[0]?.name || 'No active campaign'}</p>
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    {influencer.campaign_status || 'N/A'}
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    {influencer.engagement_rate}%
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    {new Intl.NumberFormat().format(influencer.followers_count)}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {influencer.phone_no && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleCall(influencer.phone_no)}
-                        className="text-gray-600 hover:text-coral hover:bg-coral/10"
-                      >
-                        <Phone className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {influencer.gmail_gmail && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEmailClick(influencer)}
-                        disabled={isGmailInProgress[influencer.id]}
-                        className="text-gray-600 hover:text-coral hover:bg-coral/10"
-                      >
-                        {isGmailInProgress[influencer.id] ? (
-                          <span className="loading loading-spinner loading-xs" />
-                        ) : (
-                          <Mail className="h-4 w-4" />
-                        )}
-                      </Button>
-                    )}
-                  </div>
+          ) : (
+            <div className="flex flex-col h-full">
+              <div className="flex items-center gap-2 mb-4 px-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search influencers..."
+                    className="pl-8 bg-white border-gray-200 shadow-sm"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
                 </div>
-              ))}
+              </div>
+
+              <ScrollArea className="flex-1">
+                <div className="grid grid-cols-[1fr_1fr_100px_100px_100px_120px] gap-4 px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">
+                  <div>Influencer</div>
+                  <div>Details</div>
+                  <div>Status</div>
+                  <div>Engagement</div>
+                  <div>Followers</div>
+                  <div>Actions</div>
+                </div>
+                <div className="px-4">
+                  {filteredInfluencers.map((influencer) => (
+                    <div
+                      key={influencer.id}
+                      className="grid grid-cols-[1fr_1fr_100px_100px_100px_120px] gap-4 py-3 border-b border-gray-200 items-center"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarImage src={influencer.avatar_url} />
+                          <AvatarFallback>{influencer.name[0]}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium text-gray-900">{influencer.name}</p>
+                          <p className="text-sm text-gray-600">@{influencer.handle}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">{influencer.platform}</p>
+                        <p className="text-sm text-gray-600">{influencer.campaigns?.[0]?.name || 'No active campaign'}</p>
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {influencer.campaign_status || 'N/A'}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {influencer.engagement_rate}%
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {new Intl.NumberFormat().format(influencer.followers_count)}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {influencer.phone_no && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleCall(influencer.phone_no)}
+                            className="text-gray-600 hover:text-coral hover:bg-coral/10"
+                          >
+                            <Phone className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {influencer.gmail_gmail && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEmailClick(influencer)}
+                            disabled={isGmailInProgress[influencer.id]}
+                            className="text-gray-600 hover:text-coral hover:bg-coral/10"
+                          >
+                            {isGmailInProgress[influencer.id] ? (
+                              <span className="loading loading-spinner loading-xs" />
+                            ) : (
+                              <Mail className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
             </div>
-          </ScrollArea>
+          )}
         </div>
       </CardContent>
 
@@ -498,7 +566,7 @@ export default function OutreachManager() {
                     variant="outline"
                     onClick={() => handleGmailSend(campaign.id)}
                     disabled={isGmailInProgress[selectedInfluencerForGmail?.id || '']}
-                    className="justify-start border-gray-200 text-gray-900 hover:bg-gray-50"
+                    className="justify-start border-coral text-coral hover:bg-coral hover:text-white transition-all duration-300"
                   >
                     <div className="text-left">
                       <div className="font-medium">{campaign.name}</div>
