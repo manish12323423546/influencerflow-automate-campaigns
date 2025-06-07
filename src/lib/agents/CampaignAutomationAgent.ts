@@ -2,6 +2,8 @@ import { CampaignState, CampaignStatus, Creator, Communication, Campaign, Creato
 import { supabase } from '@/integrations/supabase/client';
 import { ChatOpenAI } from "@langchain/openai";
 import { CEOAgent } from './CEOAgent';
+import { GmailService, GmailCreator, GmailCampaign } from '@/lib/services/gmailService';
+import { AutomationLoggingService, AutomationStep, AutomationError } from '@/lib/services/automationLoggingService';
 
 export class CampaignAutomationAgent {
   private campaignId: string;
@@ -11,6 +13,12 @@ export class CampaignAutomationAgent {
   private model: ChatOpenAI;
   private ceoAgent: CEOAgent;
   private onProgress: (state: CampaignState) => void;
+
+  // Automation logging
+  private loggingService: AutomationLoggingService;
+  private automationSessionId: string;
+  private currentLogId: string | null = null;
+  private automationStartTime: number = 0;
   
   // Add rate limiting and control parameters
   private readonly MIN_DELAY_BETWEEN_ACTIONS = 5000; // 5 seconds minimum between actions
@@ -26,7 +34,7 @@ export class CampaignAutomationAgent {
     onProgress: (state: CampaignState) => void
   ) {
     this.model = model;
-    this.campaignId = config.campaignId || 'fae52f4e-695d-4cba-9d0c-2a9577a129670';
+    this.campaignId = config.campaignId || 'ad48a64e-0e64-402a-8271-090f55088293';
     this.userId = config.userId || 'e5c58861-fada-4c8c-bbe7-f7aff2879fcb';
     this.mode = config.mode;
     this.onProgress = onProgress;
@@ -36,12 +44,101 @@ export class CampaignAutomationAgent {
       sentContracts: [],
       communications: [],
     };
+
+    // Initialize logging service
+    this.loggingService = AutomationLoggingService.getInstance();
+    // Generate a proper UUID for the automation session
+    this.automationSessionId = crypto.randomUUID();
+    // CEOAgent will be initialized later when we have campaign and creator data
   }
 
   public async initialize() {
     this.log('Initializing campaign automation agent...');
     await this.updateState({ status: CampaignStatus.INITIATED });
     return this;
+  }
+
+  // Automation logging methods
+  private async startAutomationLogging(): Promise<void> {
+    try {
+      this.log('Starting automation logging...');
+      this.automationStartTime = Date.now();
+
+      this.log(`Campaign ID: ${this.campaignId}, User ID: ${this.userId}, Mode: ${this.mode}`);
+
+      this.currentLogId = await this.loggingService.startAutomationLog({
+        campaign_id: this.campaignId,
+        automation_session_id: this.automationSessionId,
+        user_id: this.userId,
+        automation_mode: this.mode,
+        total_steps: 5, // INITIATED, CREATOR_SEARCH, CONTRACT_PHASE, OUTREACH, COMPLETED
+        current_step: 'Initializing automation agent'
+      });
+
+      this.log(`Automation log created with ID: ${this.currentLogId}`);
+
+      await this.logStep({
+        step_name: 'Initialization',
+        step_type: 'INITIALIZATION',
+        status: 'STARTED',
+        started_at: new Date().toISOString(),
+        details: { automation_mode: this.mode, session_id: this.automationSessionId }
+      });
+
+      this.log('Automation logging started successfully');
+    } catch (error) {
+      console.error('Failed to start automation logging:', error);
+      this.log(`Automation logging failed: ${error}`);
+      // Don't throw the error to prevent automation from failing
+    }
+  }
+
+  private async logStep(step: AutomationStep): Promise<void> {
+    if (!this.currentLogId) {
+      this.log('Warning: No current log ID, skipping step log');
+      return;
+    }
+
+    try {
+      this.log(`Logging step: ${step.step_name} - ${step.status}`);
+      await this.loggingService.addStepLog(this.currentLogId, step);
+      this.log(`Successfully logged step: ${step.step_name}`);
+    } catch (error) {
+      console.error('Failed to log step:', error);
+      this.log(`Failed to log step ${step.step_name}: ${error}`);
+    }
+  }
+
+  private async logError(error: AutomationError): Promise<void> {
+    if (!this.currentLogId) {
+      this.log('Warning: No current log ID, skipping error log');
+      return;
+    }
+
+    try {
+      this.log(`Logging error: ${error.error_type} - ${error.error_message}`);
+      await this.loggingService.addErrorLog(this.currentLogId, error);
+      this.log('Successfully logged error');
+    } catch (error) {
+      console.error('Failed to log error:', error);
+      this.log(`Failed to log error: ${error}`);
+    }
+  }
+
+  private async updateAutomationMetrics(updates: any): Promise<void> {
+    if (!this.currentLogId) {
+      this.log('Warning: No current log ID, skipping metrics update');
+      return;
+    }
+
+    try {
+      this.log(`Updating automation metrics: ${JSON.stringify(updates)}`);
+      await this.loggingService.updateAutomationLog(this.currentLogId, updates);
+      this.log('Successfully updated automation metrics');
+    } catch (error) {
+      console.error('Failed to update automation metrics:', error);
+      this.log(`Failed to update automation metrics: ${error}`);
+    }
   }
 
   public async executeCampaign() {
@@ -55,12 +152,63 @@ export class CampaignAutomationAgent {
 
     try {
       this.log('Starting campaign execution...');
+
+      // Start automation logging
+      await this.startAutomationLogging();
+
       await this.updateState({ status: CampaignStatus.INITIATED });
+
+      // Step 1: Search Creators
+      await this.logStep({
+        step_name: 'Search Creators',
+        step_type: 'CREATOR_SEARCH',
+        status: 'STARTED',
+        started_at: new Date().toISOString()
+      });
 
       await this.enforceDelay();
       await this.searchCreators();
+
+      await this.logStep({
+        step_name: 'Search Creators',
+        step_type: 'CREATOR_SEARCH',
+        status: 'COMPLETED',
+        started_at: new Date().toISOString(),
+        completed_at: new Date().toISOString(),
+        details: { creators_found: this.state.selectedCreators.length }
+      });
+
+      await this.updateAutomationMetrics({
+        creators_found: this.state.selectedCreators.length,
+        completed_steps: 2
+      });
+
+      // Step 2: Generate Contracts
+      await this.logStep({
+        step_name: 'Generate Contracts',
+        step_type: 'CONTRACT_GENERATION',
+        status: 'STARTED',
+        started_at: new Date().toISOString()
+      });
+
       await this.enforceDelay();
       await this.generateContracts();
+
+      await this.logStep({
+        step_name: 'Generate Contracts',
+        step_type: 'CONTRACT_GENERATION',
+        status: 'COMPLETED',
+        started_at: new Date().toISOString(),
+        completed_at: new Date().toISOString(),
+        details: { contracts_generated: this.state.sentContracts.length }
+      });
+
+      await this.updateAutomationMetrics({
+        contracts_generated: this.state.sentContracts.length,
+        contracts_sent: this.state.sentContracts.length,
+        completed_steps: 3
+      });
+
       await this.enforceDelay();
 
       const campaignData = await this.getCampaignWithSettings();
@@ -70,16 +218,72 @@ export class CampaignAutomationAgent {
         this.state.selectedCreators
       );
 
+      // Step 3: Conduct Outreach
+      await this.logStep({
+        step_name: 'Conduct Outreach',
+        step_type: 'OUTREACH',
+        status: 'STARTED',
+        started_at: new Date().toISOString()
+      });
+
       await this.conductOutreach();
+
+      await this.logStep({
+        step_name: 'Conduct Outreach',
+        step_type: 'OUTREACH',
+        status: 'COMPLETED',
+        started_at: new Date().toISOString(),
+        completed_at: new Date().toISOString(),
+        details: { communications_sent: this.state.communications.length }
+      });
+
+      await this.updateAutomationMetrics({
+        creators_contacted: this.state.selectedCreators.filter(c => c.contactPreference !== 'NONE').length,
+        emails_sent: this.state.communications.filter(c => c.type === 'EMAIL' && c.status === 'SENT').length,
+        phone_calls_made: this.state.communications.filter(c => c.type === 'PHONE' && c.status === 'SENT').length,
+        successful_communications: this.state.communications.filter(c => c.status === 'SENT').length,
+        failed_communications: this.state.communications.filter(c => c.status === 'FAILED').length,
+        completed_steps: 4
+      });
+
       await this.enforceDelay();
       await this.processResponses();
 
       await this.updateState({ status: CampaignStatus.COMPLETED });
+
+      // Final completion logging
+      await this.updateAutomationMetrics({
+        status: 'COMPLETED',
+        final_status: 'Campaign automation completed successfully',
+        completed_steps: 5,
+        summary_report: {
+          total_creators: this.state.selectedCreators.length,
+          contracts_generated: this.state.sentContracts.length,
+          communications_sent: this.state.communications.length,
+          success_rate: this.state.communications.length > 0 ?
+            (this.state.communications.filter(c => c.status === 'SENT').length / this.state.communications.length) * 100 : 0
+        }
+      });
+
       this.log('Campaign completed successfully!');
       return this.state;
 
     } catch (error) {
       this.log(`Campaign failed: ${error}`);
+
+      // Log the error
+      await this.logError({
+        error_type: 'CAMPAIGN_EXECUTION_FAILURE',
+        error_message: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+        context: { step: 'executeCampaign', campaign_id: this.campaignId }
+      });
+
+      await this.updateAutomationMetrics({
+        status: 'FAILED',
+        final_status: `Campaign automation failed: ${error}`
+      });
+
       await this.updateState({ status: CampaignStatus.FAILED });
       throw error;
     } finally {
@@ -411,25 +615,9 @@ export class CampaignAutomationAgent {
         return;
       }
 
-      // Process email creators
-      for (const creator of emailCreators) {
-        try {
-          await this.enforceDelay();
-          await this.sendEmail(creator);
-        } catch (error) {
-          this.log(`Failed to send email to ${creator.name}: ${error}`);
-          const communication: Communication = {
-            id: `outreach-email-failed-${creator.id}-${Date.now()}`,
-            creatorId: creator.id,
-            type: 'EMAIL',
-            status: 'FAILED',
-            content: `Failed to send email to ${creator.name}: ${error}`,
-            timestamp: new Date().toISOString(),
-          };
-          await this.updateState({
-            communications: [...this.state.communications, communication],
-          });
-        }
+      // Process email creators using bulk Gmail workflow
+      if (emailCreators.length > 0) {
+        await this.sendBulkEmails(emailCreators);
       }
 
       // Process phone creators
@@ -467,7 +655,7 @@ export class CampaignAutomationAgent {
 
   private async sendEmail(creator: Creator) {
     const campaignData = await this.getCampaignWithSettings();
-    
+
     try {
       // First check if we have a valid email
       if (!creator.email) {
@@ -476,31 +664,50 @@ export class CampaignAutomationAgent {
 
       // Get contract for this creator
       const contract = this.state.sentContracts.find(c => c.creatorId === creator.id);
-      if (!contract) {
-        throw new Error(`No contract found for creator ${creator.name}`);
+
+      // Get full creator data from Supabase for Gmail service
+      const { data: creatorData, error: creatorError } = await supabase
+        .from('influencers')
+        .select('*')
+        .eq('id', creator.id)
+        .single();
+
+      if (creatorError || !creatorData) {
+        throw new Error(`Failed to fetch creator data for ${creator.name}`);
       }
 
-      const response = await fetch("https://varhhh.app.n8n.cloud/webhook/08b089ba-1617-4d04-a5c7-f9b7d8ca57c4", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        body: JSON.stringify({
-          gmail: creator.email,
-          campaign: campaignData,
-          creator: {
-            id: creator.id,
-            name: creator.name,
-            metrics: creator.metrics
-          },
-          contract: contract.content
-        })
-      });
+      // Transform data for Gmail service
+      const gmailCreator: GmailCreator = {
+        id: creatorData.id,
+        name: creatorData.name,
+        gmail_gmail: creatorData.gmail_gmail,
+        handle: creatorData.handle,
+        platform: creatorData.platform,
+        followers_count: creatorData.followers_count,
+        engagement_rate: creatorData.engagement_rate
+      };
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(`Failed to send email to ${creator.name}: ${errorData?.message || response.statusText}`);
+      const gmailCampaign: GmailCampaign = {
+        id: campaignData.id,
+        name: campaignData.name,
+        brand: campaignData.brand,
+        description: campaignData.description,
+        goals: campaignData.goals,
+        target_audience: campaignData.target_audience,
+        budget: campaignData.budget,
+        deliverables: campaignData.deliverables,
+        timeline: campaignData.timeline
+      };
+
+      // Use Gmail service to send email
+      const result = await GmailService.sendGmailWorkflow(
+        gmailCreator,
+        gmailCampaign,
+        contract?.content
+      );
+
+      if (result.status === 'error') {
+        throw new Error(result.error || 'Failed to send email');
       }
 
       const communication: Communication = {
@@ -508,7 +715,7 @@ export class CampaignAutomationAgent {
         creatorId: creator.id,
         type: 'EMAIL',
         status: 'SENT',
-        content: `Initial outreach email sent to ${creator.name} (${creator.email})`,
+        content: `Gmail workflow sent to ${creator.name} (${creator.email})`,
         timestamp: new Date().toISOString(),
       };
 
@@ -516,9 +723,85 @@ export class CampaignAutomationAgent {
         communications: [...this.state.communications, communication],
       });
 
-      this.log(`Successfully sent email to creator ${creator.name}`);
+      this.log(`Successfully sent Gmail workflow to creator ${creator.name}`);
     } catch (error) {
       this.log(`Error sending email to ${creator.name}: ${error}`);
+      throw error;
+    }
+  }
+
+  private async sendBulkEmails(creators: Creator[]) {
+    this.log(`Sending bulk emails to ${creators.length} creators...`);
+
+    try {
+      const campaignData = await this.getCampaignWithSettings();
+
+      // Get full creator data from Supabase
+      const { data: creatorsData, error: creatorsError } = await supabase
+        .from('influencers')
+        .select('*')
+        .in('id', creators.map(c => c.id));
+
+      if (creatorsError || !creatorsData) {
+        throw new Error('Failed to fetch creators data for bulk email');
+      }
+
+      // Transform data for Gmail service
+      const gmailCreators: GmailCreator[] = creatorsData.map(creatorData => ({
+        id: creatorData.id,
+        name: creatorData.name,
+        gmail_gmail: creatorData.gmail_gmail,
+        handle: creatorData.handle,
+        platform: creatorData.platform,
+        followers_count: creatorData.followers_count,
+        engagement_rate: creatorData.engagement_rate
+      }));
+
+      const gmailCampaign: GmailCampaign = {
+        id: campaignData.id,
+        name: campaignData.name,
+        brand: campaignData.brand,
+        description: campaignData.description,
+        goals: campaignData.goals,
+        target_audience: campaignData.target_audience,
+        budget: campaignData.budget,
+        deliverables: campaignData.deliverables,
+        timeline: campaignData.timeline
+      };
+
+      // Send bulk emails with progress tracking
+      const results = await GmailService.sendBulkGmailWorkflow(
+        gmailCreators,
+        gmailCampaign,
+        (creator, result) => {
+          // Create communication log for each email
+          const communication: Communication = {
+            id: `bulk-email-${creator.id}-${Date.now()}`,
+            creatorId: creator.id,
+            type: 'EMAIL',
+            status: result.status === 'success' ? 'SENT' : 'FAILED',
+            content: result.status === 'success'
+              ? `Gmail workflow sent to ${creator.name} (${creator.gmail_gmail})`
+              : `Failed to send email to ${creator.name}: ${result.error}`,
+            timestamp: new Date().toISOString(),
+          };
+
+          // Update state with new communication
+          this.updateState({
+            communications: [...this.state.communications, communication],
+          });
+
+          this.log(`Email ${result.status} for ${creator.name}`);
+        }
+      );
+
+      const successCount = Object.values(results).filter(r => r.status === 'success').length;
+      const failureCount = Object.values(results).filter(r => r.status === 'error').length;
+
+      this.log(`Bulk email completed: ${successCount} successful, ${failureCount} failed`);
+
+    } catch (error) {
+      this.log(`Error in bulk email sending: ${error}`);
       throw error;
     }
   }

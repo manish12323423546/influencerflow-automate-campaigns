@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { ChatOpenAI } from "@langchain/openai";
 import { CampaignAutomationAgent } from '@/lib/agents/CampaignAutomationAgent';
 import { CampaignState, CampaignStatus, CreatorContactPreference } from '@/lib/agents/types';
+import { AutomationLoggingService } from '@/lib/services/automationLoggingService';
 import { getCampaignTools } from '@/lib/agents/tools';
 import { PromptTemplate } from "@langchain/core/prompts";
 import { supabase } from '@/integrations/supabase/client';
@@ -92,17 +93,18 @@ export const useAutomationAgent = ({ campaignId, mode }: UseAutomationAgentProps
   }, [agent]);
 
   const startAutomation = useCallback(async () => {
+    console.log('🚀 Starting automation for campaign:', campaignId);
     setIsRunning(true);
     setError(null);
 
     try {
       const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-      
+
       if (!apiKey) {
         throw new Error('OpenAI API key is not configured. Please check your environment variables.');
       }
 
-      console.log('Initializing ChatOpenAI with API key');
+      console.log('🔑 Initializing ChatOpenAI with API key');
       
       let model;
       try {
@@ -120,24 +122,34 @@ export const useAutomationAgent = ({ campaignId, mode }: UseAutomationAgentProps
         throw new Error('Failed to initialize AI model: ' + modelError.message);
       }
 
+      console.log('🤖 Creating CampaignAutomationAgent...');
       const newAgent = new CampaignAutomationAgent(
         model,
-        { campaignId, mode },
+        {
+          campaignId,
+          userId: 'e5c58861-fada-4c8c-bbe7-f7aff2879fcb', // TODO: Get from auth context
+          mode
+        },
         (newState) => {
+          console.log('📊 Agent state updated:', newState.status);
           setState(newState);
         }
       );
-      
+
       setAgent(newAgent);
 
+      console.log('🔧 Initializing agent...');
       await newAgent.initialize();
-      
+
       // Apply any existing preferences before execution
       if (state.creatorPreferences?.length) {
+        console.log('⚙️ Applying creator preferences:', state.creatorPreferences.length, 'preferences');
         newAgent.setCreatorPreferences(state.creatorPreferences);
       }
-      
+
+      console.log('▶️ Starting campaign execution...');
       await newAgent.executeCampaign();
+      console.log('✅ Campaign execution completed successfully');
 
     } catch (err) {
       console.error('Automation error:', err);
@@ -168,12 +180,46 @@ export const useAutomationAgent = ({ campaignId, mode }: UseAutomationAgentProps
     setAgent(null);
   }, []);
 
+  const getAutomationReport = useCallback(async (campaignId: string) => {
+    try {
+      const loggingService = AutomationLoggingService.getInstance();
+      return await loggingService.getAutomationReport(campaignId);
+    } catch (error) {
+      console.error('Failed to get automation report:', error);
+      return null;
+    }
+  }, []);
+
+  const getAutomationLogs = useCallback(async (campaignId: string) => {
+    try {
+      const loggingService = AutomationLoggingService.getInstance();
+      return await loggingService.getAutomationLogs(campaignId);
+    } catch (error) {
+      console.error('Failed to get automation logs:', error);
+      return [];
+    }
+  }, []);
+
+  const testAutomationLogging = useCallback(async (campaignId: string, userId: string) => {
+    try {
+      const loggingService = AutomationLoggingService.getInstance();
+      await loggingService.testLogging(campaignId, userId);
+      console.log('Automation logging test completed successfully');
+    } catch (error) {
+      console.error('Automation logging test failed:', error);
+      throw error;
+    }
+  }, []);
+
   return {
     state,
     isRunning,
     error,
     startAutomation,
     resetAutomation,
-    updateCreatorPreferences
+    updateCreatorPreferences,
+    getAutomationReport,
+    getAutomationLogs,
+    testAutomationLogging,
   };
-}; 
+};

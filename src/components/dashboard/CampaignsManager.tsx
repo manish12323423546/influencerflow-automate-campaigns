@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Loader2 } from 'lucide-react';
+import { Search, Loader2, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Campaign } from '@/types/campaign';
@@ -170,6 +170,15 @@ const CampaignsManager = ({ campaigns: initialCampaigns }: CampaignsManagerProps
             </SelectContent>
           </Select>
         </div>
+
+        {/* Create Campaign Button */}
+        <Button
+          onClick={() => navigate('/campaigns/create')}
+          className="bg-coral hover:bg-coral/90 text-white shadow-md hover:shadow-lg transition-all duration-300"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Create Campaign
+        </Button>
       </div>
 
       {/* Campaigns Table */}

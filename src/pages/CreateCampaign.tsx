@@ -336,7 +336,7 @@ const CreateCampaign = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -444,10 +444,10 @@ const CreateCampaign = () => {
                       value={formData.name}
                       onChange={(e) => handleInputChange('name', e.target.value)}
                       placeholder="Enter campaign name"
-                      className={`bg-white border-gray-200 text-gray-900 ${errors.name ? 'border-red-500' : ''}`}
+                      className={`bg-white border-gray-200 text-gray-900 focus:border-coral ${errors.name ? 'border-red-500' : ''}`}
                     />
                     {errors.name && (
-                      <p className="text-red-400 text-sm mt-1 flex items-center">
+                      <p className="text-red-500 text-sm mt-1 flex items-center">
                         <AlertCircle className="h-4 w-4 mr-1" />
                         {errors.name}
                       </p>
@@ -462,10 +462,10 @@ const CreateCampaign = () => {
                       value={formData.brand}
                       onChange={(e) => handleInputChange('brand', e.target.value)}
                       placeholder="Enter brand name"
-                      className={`bg-white border-gray-200 text-gray-900 ${errors.brand ? 'border-red-500' : ''}`}
+                      className={`bg-white border-gray-200 text-gray-900 focus:border-coral ${errors.brand ? 'border-red-500' : ''}`}
                     />
                     {errors.brand && (
-                      <p className="text-red-400 text-sm mt-1 flex items-center">
+                      <p className="text-red-500 text-sm mt-1 flex items-center">
                         <AlertCircle className="h-4 w-4 mr-1" />
                         {errors.brand}
                       </p>
@@ -474,29 +474,29 @@ const CreateCampaign = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-snow mb-2">
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
                     Description
                   </label>
                   <Textarea
                     value={formData.description}
                     onChange={(e) => handleInputChange('description', e.target.value)}
                     placeholder="Enter campaign description"
-                    className="bg-zinc-800 border-zinc-700 text-snow min-h-[100px]"
+                    className="bg-white border-gray-200 text-gray-900 min-h-[100px] focus:border-coral"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-snow mb-2">
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
                     Goals *
                   </label>
                   <Textarea
                     value={formData.goals}
                     onChange={(e) => handleInputChange('goals', e.target.value)}
                     placeholder="What are your campaign goals?"
-                    className={`bg-zinc-800 border-zinc-700 text-snow ${errors.goals ? 'border-red-500' : ''}`}
+                    className={`bg-white border-gray-200 text-gray-900 focus:border-coral ${errors.goals ? 'border-red-500' : ''}`}
                   />
                   {errors.goals && (
-                    <p className="text-red-400 text-sm mt-1 flex items-center">
+                    <p className="text-red-500 text-sm mt-1 flex items-center">
                       <AlertCircle className="h-4 w-4 mr-1" />
                       {errors.goals}
                     </p>
@@ -504,17 +504,17 @@ const CreateCampaign = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-snow mb-2">
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
                     Target Audience *
                   </label>
                   <Textarea
                     value={formData.target_audience}
                     onChange={(e) => handleInputChange('target_audience', e.target.value)}
                     placeholder="Describe your target audience"
-                    className={`bg-zinc-800 border-zinc-700 text-snow ${errors.target_audience ? 'border-red-500' : ''}`}
+                    className={`bg-white border-gray-200 text-gray-900 focus:border-coral ${errors.target_audience ? 'border-red-500' : ''}`}
                   />
                   {errors.target_audience && (
-                    <p className="text-red-400 text-sm mt-1 flex items-center">
+                    <p className="text-red-500 text-sm mt-1 flex items-center">
                       <AlertCircle className="h-4 w-4 mr-1" />
                       {errors.target_audience}
                     </p>
@@ -523,7 +523,7 @@ const CreateCampaign = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-snow mb-2">
+                    <label className="block text-sm font-medium text-gray-900 mb-2">
                       Budget ($) *
                     </label>
                     <Input
@@ -531,10 +531,10 @@ const CreateCampaign = () => {
                       value={formData.budget}
                       onChange={(e) => handleInputChange('budget', e.target.value)}
                       placeholder="0"
-                      className={`bg-zinc-800 border-zinc-700 text-snow ${errors.budget ? 'border-red-500' : ''}`}
+                      className={`bg-white border-gray-200 text-gray-900 focus:border-coral ${errors.budget ? 'border-red-500' : ''}`}
                     />
                     {errors.budget && (
-                      <p className="text-red-400 text-sm mt-1 flex items-center">
+                      <p className="text-red-500 text-sm mt-1 flex items-center">
                         <AlertCircle className="h-4 w-4 mr-1" />
                         {errors.budget}
                       </p>
@@ -542,30 +542,30 @@ const CreateCampaign = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-snow mb-2">
+                    <label className="block text-sm font-medium text-gray-900 mb-2">
                       Timeline
                     </label>
                     <Input
                       value={formData.timeline}
                       onChange={(e) => handleInputChange('timeline', e.target.value)}
                       placeholder="e.g., 2 weeks, 1 month"
-                      className="bg-zinc-800 border-zinc-700 text-snow"
+                      className="bg-white border-gray-200 text-gray-900 focus:border-coral"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-snow mb-2">
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
                     Deliverables *
                   </label>
                   <Textarea
                     value={formData.deliverables}
                     onChange={(e) => handleInputChange('deliverables', e.target.value)}
                     placeholder="What do you expect from influencers?"
-                    className={`bg-zinc-800 border-zinc-700 text-snow ${errors.deliverables ? 'border-red-500' : ''}`}
+                    className={`bg-white border-gray-200 text-gray-900 focus:border-coral ${errors.deliverables ? 'border-red-500' : ''}`}
                   />
                   {errors.deliverables && (
-                    <p className="text-red-400 text-sm mt-1 flex items-center">
+                    <p className="text-red-500 text-sm mt-1 flex items-center">
                       <AlertCircle className="h-4 w-4 mr-1" />
                       {errors.deliverables}
                     </p>
@@ -575,11 +575,11 @@ const CreateCampaign = () => {
             </Card>
 
             {/* Influencer Selection */}
-            <Card className="bg-zinc-900 border-zinc-800">
+            <Card className="bg-white border-gray-200 shadow-sm">
               <CardHeader>
-                <CardTitle className="text-snow flex items-center justify-between">
+                <CardTitle className="text-gray-900 flex items-center justify-between">
                   <div className="flex items-center">
-                    <Users className="h-5 w-5 mr-2 text-purple-500" />
+                    <Users className="h-5 w-5 mr-2 text-coral" />
                     Selected Influencers
                   </div>
                   <div className="flex items-center space-x-2">
@@ -587,7 +587,7 @@ const CreateCampaign = () => {
                       variant="outline"
                       onClick={handleFindInfluencers}
                       disabled={isMatchingInfluencers}
-                      className="bg-zinc-800 border-zinc-700 text-snow hover:bg-zinc-700"
+                      className="bg-white border-gray-200 text-gray-900 hover:bg-coral/5 hover:border-coral/50"
                     >
                       {isMatchingInfluencers ? (
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -599,7 +599,7 @@ const CreateCampaign = () => {
                     <Button
                       variant="outline"
                       onClick={() => setSearchModalOpen(true)}
-                      className="bg-zinc-800 border-zinc-700 text-snow hover:bg-zinc-700"
+                      className="bg-white border-gray-200 text-gray-900 hover:bg-coral/5 hover:border-coral/50"
                     >
                       <Users className="h-4 w-4 mr-2" />
                       Browse All
@@ -609,7 +609,7 @@ const CreateCampaign = () => {
               </CardHeader>
               <CardContent>
                 {selectedInfluencers.length === 0 ? (
-                  <div className="text-center py-8 text-snow/70">
+                  <div className="text-center py-8 text-gray-500">
                     No influencers selected yet. Click "Find Matching Influencers" or browse all.
                   </div>
                 ) : (
@@ -617,7 +617,7 @@ const CreateCampaign = () => {
                     {selectedInfluencers.map((influencer) => (
                       <div
                         key={influencer.id}
-                        className="flex items-center justify-between p-4 bg-zinc-800 rounded-lg"
+                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200"
                       >
                         <div className="flex items-center space-x-4">
                           {influencer.avatar_url && (
@@ -628,12 +628,12 @@ const CreateCampaign = () => {
                             />
                           )}
                           <div>
-                            <h3 className="text-snow font-medium">{influencer.name}</h3>
-                            <p className="text-snow/70 text-sm">
+                            <h3 className="text-gray-900 font-medium">{influencer.name}</h3>
+                            <p className="text-gray-600 text-sm">
                               {influencer.platform} • {influencer.followers_count.toLocaleString()} followers
                             </p>
                             {'match_score' in influencer && (
-                              <p className="text-xs text-purple-400 mt-1">
+                              <p className="text-xs text-coral mt-1">
                                 Match Score: {influencer.match_score}% - {influencer.match_reason}
                               </p>
                             )}
@@ -643,7 +643,7 @@ const CreateCampaign = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleRemoveInfluencer(influencer.id)}
-                          className="text-red-400 hover:text-red-500 hover:bg-red-500/10"
+                          className="text-red-500 hover:text-red-600 hover:bg-red-50"
                         >
                           Remove
                         </Button>
@@ -657,23 +657,23 @@ const CreateCampaign = () => {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            <Card className="bg-zinc-900 border-zinc-800">
+            <Card className="bg-white border-gray-200 shadow-sm">
               <CardHeader>
-                <CardTitle className="text-snow">Campaign Summary</CardTitle>
+                <CardTitle className="text-gray-900">Campaign Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <p className="text-sm text-snow/70">Selected Influencers</p>
-                  <p className="text-2xl font-bold text-snow">{selectedInfluencers.length}</p>
+                  <p className="text-sm text-gray-600">Selected Influencers</p>
+                  <p className="text-2xl font-bold text-gray-900">{selectedInfluencers.length}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-snow/70">Total Budget</p>
-                  <p className="text-2xl font-bold text-snow">
+                  <p className="text-sm text-gray-600">Total Budget</p>
+                  <p className="text-2xl font-bold text-gray-900">
                     ${formData.budget ? parseFloat(formData.budget).toLocaleString() : '0'}
                   </p>
                 </div>
                 <Button
-                  className="w-full bg-purple-500 hover:bg-purple-600 text-white"
+                  className="w-full bg-coral hover:bg-coral/90 text-white shadow-md hover:shadow-lg transition-all duration-300"
                   onClick={handleCreateCampaign}
                   disabled={isSubmitting}
                 >
@@ -691,23 +691,23 @@ const CreateCampaign = () => {
           {/* Automation Interface Section */}
           <div id="automation-section" className="lg:col-span-3 mt-8">
             {mode === 'AUTOMATIC' && campaignId && (
-              <Card className="bg-zinc-900 border-zinc-800">
+              <Card className="bg-white border-gray-200 shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-snow flex items-center">
-                    <Bot className="h-5 w-5 mr-2 text-purple-500" />
+                  <CardTitle className="text-gray-900 flex items-center">
+                    <Bot className="h-5 w-5 mr-2 text-coral" />
                     Campaign Automation
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {!campaignPersisted ? (
                     <div className="text-center py-6">
-                      <p className="text-snow/70 mb-4">
+                      <p className="text-gray-600 mb-4">
                         Click "Create Campaign" to start the automation process
                       </p>
                       <Button
                         onClick={handleCreateCampaign}
                         disabled={isSubmitting}
-                        className="bg-purple-500 hover:bg-purple-600"
+                        className="bg-coral hover:bg-coral/90 text-white shadow-md hover:shadow-lg transition-all duration-300"
                       >
                         {isSubmitting ? (
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
