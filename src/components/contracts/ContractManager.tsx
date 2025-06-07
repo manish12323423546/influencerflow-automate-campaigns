@@ -55,8 +55,8 @@ export const ContractManager: React.FC = () => {
         .from('contracts')
         .select(`
         *,
-        campaigns!inner(name, brand),
-        influencers!inner(name, handle, platform, avatar_url)
+        campaigns!inner(id, name, brand),
+        influencers!inner(id, name, handle, platform, avatar_url)
       `)
         .eq('brand_user_id', user.id)
         .order('created_at', { ascending: false });
@@ -66,9 +66,18 @@ export const ContractManager: React.FC = () => {
       const transformedContracts = data?.map(contract => {
         let contractData: ContractData;
         try {
-          contractData = typeof contract.contract_data === 'string'
-            ? JSON.parse(contract.contract_data)
-            : contract.contract_data as ContractData;
+          if (typeof contract.contract_data === 'string') {
+            contractData = JSON.parse(contract.contract_data);
+          } else if (contract.contract_data && typeof contract.contract_data === 'object') {
+            contractData = contract.contract_data as ContractData;
+          } else {
+            contractData = {
+              fee: 0,
+              deadline: '',
+              template_id: '',
+              generated_at: new Date().toISOString()
+            };
+          }
         } catch {
           contractData = {
             fee: 0,
@@ -87,7 +96,7 @@ export const ContractManager: React.FC = () => {
         };
       }) || [];
 
-      setContracts(transformedContracts as Contract[]);
+      setContracts(transformedContracts as ContractWithDetails[]);
     } catch (error) {
       console.error('Error fetching contracts:', error);
       toast.error('Failed to fetch contracts');

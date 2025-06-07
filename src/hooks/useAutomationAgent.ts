@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { ChatOpenAI } from "@langchain/openai";
 import { CampaignAutomationAgent } from '@/lib/agents/CampaignAutomationAgent';
-import { CampaignState, CampaignStatus, CreatorContactPreference } from '@/lib/agents/types';
+import { CampaignState, CampaignStatus, CreatorContactPreference, Creator } from '@/lib/agents/types';
 import { AutomationLoggingService } from '@/lib/services/automationLoggingService';
 import { getCampaignTools } from '@/lib/agents/tools';
 import { PromptTemplate } from "@langchain/core/prompts";
@@ -48,15 +48,17 @@ export const useAutomationAgent = ({ campaignId, mode }: UseAutomationAgentProps
 
           if (influencers) {
             // Transform influencers to creators format
-            const creators = influencers.map(inf => {
+            const creators: Creator[] = influencers.map(inf => {
               const relationship = relationships.find(r => r.influencer_id === inf.id);
               return {
                 id: inf.id,
                 name: inf.name,
                 email: inf.gmail_gmail,
+                phone: inf.phone_no?.toString(),
                 metrics: {
                   followers: inf.followers_count,
-                  engagement: inf.engagement_rate
+                  engagement: inf.engagement_rate,
+                  relevanceScore: inf.audience_fit_score
                 },
                 contactPreference: 'NONE' as const
               };

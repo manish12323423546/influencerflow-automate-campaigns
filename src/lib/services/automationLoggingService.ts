@@ -1,61 +1,42 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
-export interface AutomationStep {
-  step_name: string;
-  step_type: 'INITIALIZATION' | 'CREATOR_SEARCH' | 'CONTRACT_GENERATION' | 'OUTREACH' | 'COMMUNICATION' | 'COMPLETION';
-  status: 'STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED' | 'SKIPPED';
-  started_at: string;
-  completed_at?: string;
-  duration_ms?: number;
-  details?: any;
-  error_message?: string;
+export interface AutomationReport {
+  id: string;
+  campaignId: string;
+  status: string;
+  totalSteps: number;
+  completedSteps: number;
+  creatorsFound: number;
+  creatorsContacted: number;
+  contractsGenerated: number;
+  contractsSent: number;
+  emailsSent: number;
+  phoneCallsMade: number;
+  successfulCommunications: number;
+  failedCommunications: number;
+  startedAt: string;
+  completedAt?: string;
+  stepLogs: any[];
+  errorLogs: any[];
+  performanceMetrics: any;
+  summaryReport: any;
 }
 
-export interface AutomationError {
-  error_type: string;
-  error_message: string;
-  step_name?: string;
+export interface AutomationLog {
+  id: string;
+  campaignId: string;
+  step: string;
+  message: string;
+  level: 'info' | 'warn' | 'error' | 'debug';
   timestamp: string;
-  stack_trace?: string;
-  context?: any;
-}
-
-export interface AutomationMetrics {
-  total_execution_time_ms?: number;
-  average_step_time_ms?: number;
-  success_rate?: number;
-  email_success_rate?: number;
-  contract_generation_time_ms?: number;
-  creator_matching_time_ms?: number;
-}
-
-export interface AutomationLogData {
-  campaign_id: string;
-  automation_session_id: string;
-  user_id: string;
-  automation_mode: 'AUTOMATIC' | 'MANUAL';
-  status?: 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
-  total_steps?: number;
-  completed_steps?: number;
-  current_step?: string;
-  creators_found?: number;
-  creators_contacted?: number;
-  contracts_generated?: number;
-  contracts_sent?: number;
-  emails_sent?: number;
-  phone_calls_made?: number;
-  successful_communications?: number;
-  failed_communications?: number;
-  step_logs?: AutomationStep[];
-  error_logs?: AutomationError[];
-  performance_metrics?: AutomationMetrics;
-  final_status?: string;
-  summary_report?: any;
+  metadata?: any;
 }
 
 export class AutomationLoggingService {
   private static instance: AutomationLoggingService;
-  private currentLogId: string | null = null;
+
+  private constructor() {}
 
   static getInstance(): AutomationLoggingService {
     if (!AutomationLoggingService.instance) {
@@ -64,185 +45,193 @@ export class AutomationLoggingService {
     return AutomationLoggingService.instance;
   }
 
-  async startAutomationLog(data: AutomationLogData): Promise<string> {
+  async startAutomationSession(
+    campaignId: string,
+    userId: string,
+    mode: 'AUTOMATIC' | 'MANUAL'
+  ): Promise<string> {
     try {
-      console.log('Starting automation log with data:', data);
-
-      const insertData = {
-        campaign_id: data.campaign_id,
-        automation_session_id: data.automation_session_id,
-        user_id: data.user_id,
-        automation_mode: data.automation_mode,
-        status: 'RUNNING',
-        total_steps: data.total_steps || 0,
-        completed_steps: 0,
-        current_step: data.current_step || 'Initializing',
-        step_logs: [],
-        error_logs: [],
-        performance_metrics: {}
-      };
-
-      console.log('Inserting automation log:', insertData);
-
-      const { data: logEntry, error } = await supabase
-        .from('campaign_automation_logs')
-        .insert(insertData)
-        .select('id')
-        .single();
-
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
-      }
-
-      if (!logEntry) {
-        throw new Error('No log entry returned from database');
-      }
-
-      console.log('Successfully created automation log with ID:', logEntry.id);
-      this.currentLogId = logEntry.id;
-      return logEntry.id;
-    } catch (error) {
-      console.error('Failed to start automation log:', error);
-      throw error;
-    }
-  }
-
-  async updateAutomationLog(logId: string, updates: Partial<AutomationLogData>): Promise<void> {
-    try {
-      console.log('Updating automation log:', logId, 'with updates:', updates);
-
-      const updateData: any = {
-        updated_at: new Date().toISOString()
-      };
-
-      // Map the updates to database columns
-      if (updates.status) updateData.status = updates.status;
-      if (updates.completed_steps !== undefined) updateData.completed_steps = updates.completed_steps;
-      if (updates.current_step) updateData.current_step = updates.current_step;
-      if (updates.creators_found !== undefined) updateData.creators_found = updates.creators_found;
-      if (updates.creators_contacted !== undefined) updateData.creators_contacted = updates.creators_contacted;
-      if (updates.contracts_generated !== undefined) updateData.contracts_generated = updates.contracts_generated;
-      if (updates.contracts_sent !== undefined) updateData.contracts_sent = updates.contracts_sent;
-      if (updates.emails_sent !== undefined) updateData.emails_sent = updates.emails_sent;
-      if (updates.phone_calls_made !== undefined) updateData.phone_calls_made = updates.phone_calls_made;
-      if (updates.successful_communications !== undefined) updateData.successful_communications = updates.successful_communications;
-      if (updates.failed_communications !== undefined) updateData.failed_communications = updates.failed_communications;
-      if (updates.final_status) updateData.final_status = updates.final_status;
-      if (updates.summary_report) updateData.summary_report = updates.summary_report;
-      if (updates.performance_metrics) updateData.performance_metrics = updates.performance_metrics;
-
-      // Handle completion
-      if (updates.status === 'COMPLETED' || updates.status === 'FAILED' || updates.status === 'CANCELLED') {
-        updateData.completed_at = new Date().toISOString();
-      }
-
-      console.log('Updating with data:', updateData);
-
+      const sessionId = crypto.randomUUID();
+      
       const { error } = await supabase
         .from('campaign_automation_logs')
-        .update(updateData)
-        .eq('id', logId);
+        .insert({
+          id: sessionId,
+          campaign_id: campaignId,
+          automation_session_id: sessionId,
+          user_id: userId,
+          automation_mode: mode,
+          status: 'RUNNING',
+          started_at: new Date().toISOString(),
+          total_steps: 10,
+          completed_steps: 0,
+          creators_found: 0,
+          creators_contacted: 0,
+          contracts_generated: 0,
+          contracts_sent: 0,
+          emails_sent: 0,
+          phone_calls_made: 0,
+          successful_communications: 0,
+          failed_communications: 0,
+          step_logs: [],
+          error_logs: [],
+          performance_metrics: {},
+          summary_report: {}
+        });
 
-      if (error) {
-        console.error('Supabase update error:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      console.log('Successfully updated automation log');
+      return sessionId;
     } catch (error) {
-      console.error('Failed to update automation log:', error);
+      console.error('Failed to start automation session:', error);
       throw error;
     }
   }
 
-  async addStepLog(logId: string, step: AutomationStep): Promise<void> {
+  async updateAutomationProgress(
+    sessionId: string,
+    updates: Partial<{
+      completedSteps: number;
+      currentStep: string;
+      creatorsFound: number;
+      creatorsContacted: number;
+      contractsGenerated: number;
+      contractsSent: number;
+      emailsSent: number;
+      phoneCallsMade: number;
+      successfulCommunications: number;
+      failedCommunications: number;
+    }>
+  ): Promise<void> {
     try {
-      console.log('Adding step log to:', logId, 'step:', step);
+      const { error } = await supabase
+        .from('campaign_automation_logs')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('automation_session_id', sessionId);
 
-      // Get current step logs
+      if (error) throw error;
+    } catch (error) {
+      console.error('Failed to update automation progress:', error);
+      throw error;
+    }
+  }
+
+  async logAutomationStep(
+    sessionId: string,
+    step: string,
+    message: string,
+    level: 'info' | 'warn' | 'error' | 'debug' = 'info',
+    metadata?: any
+  ): Promise<void> {
+    try {
+      // Get current logs
       const { data: currentLog, error: fetchError } = await supabase
         .from('campaign_automation_logs')
         .select('step_logs')
-        .eq('id', logId)
+        .eq('automation_session_id', sessionId)
         .single();
 
-      if (fetchError) {
-        console.error('Failed to fetch current log:', fetchError);
-        throw fetchError;
-      }
+      if (fetchError) throw fetchError;
 
-      const currentStepLogs = currentLog.step_logs || [];
-      const updatedStepLogs = [...currentStepLogs, step];
+      const stepLogs = Array.isArray(currentLog.step_logs) ? currentLog.step_logs : [];
+      
+      const newLog = {
+        id: crypto.randomUUID(),
+        step,
+        message,
+        level,
+        timestamp: new Date().toISOString(),
+        metadata
+      };
 
-      console.log('Updating step logs from', currentStepLogs.length, 'to', updatedStepLogs.length, 'steps');
+      stepLogs.push(newLog);
 
       const { error } = await supabase
         .from('campaign_automation_logs')
         .update({
-          step_logs: updatedStepLogs,
+          step_logs: stepLogs,
           updated_at: new Date().toISOString()
         })
-        .eq('id', logId);
+        .eq('automation_session_id', sessionId);
 
-      if (error) {
-        console.error('Failed to update step logs:', error);
-        throw error;
-      }
-
-      console.log('Successfully added step log');
+      if (error) throw error;
     } catch (error) {
-      console.error('Failed to add step log:', error);
+      console.error('Failed to log automation step:', error);
       throw error;
     }
   }
 
-  async addErrorLog(logId: string, errorLog: AutomationError): Promise<void> {
+  async logAutomationError(
+    sessionId: string,
+    error: string,
+    step?: string,
+    metadata?: any
+  ): Promise<void> {
     try {
       // Get current error logs
       const { data: currentLog, error: fetchError } = await supabase
         .from('campaign_automation_logs')
         .select('error_logs')
-        .eq('id', logId)
+        .eq('automation_session_id', sessionId)
         .single();
 
       if (fetchError) throw fetchError;
 
-      const currentErrorLogs = currentLog.error_logs || [];
-      const updatedErrorLogs = [...currentErrorLogs, errorLog];
+      const errorLogs = Array.isArray(currentLog.error_logs) ? currentLog.error_logs : [];
+      
+      const newError = {
+        id: crypto.randomUUID(),
+        error,
+        step,
+        timestamp: new Date().toISOString(),
+        metadata
+      };
 
+      errorLogs.push(newError);
+
+      const { error: updateError } = await supabase
+        .from('campaign_automation_logs')
+        .update({
+          error_logs: errorLogs,
+          updated_at: new Date().toISOString()
+        })
+        .eq('automation_session_id', sessionId);
+
+      if (updateError) throw updateError;
+    } catch (err) {
+      console.error('Failed to log automation error:', err);
+      throw err;
+    }
+  }
+
+  async completeAutomationSession(
+    sessionId: string,
+    status: 'COMPLETED' | 'FAILED',
+    summaryReport?: any
+  ): Promise<void> {
+    try {
       const { error } = await supabase
         .from('campaign_automation_logs')
         .update({
-          error_logs: updatedErrorLogs,
+          status,
+          final_status: status,
+          completed_at: new Date().toISOString(),
+          summary_report: summaryReport || {},
           updated_at: new Date().toISOString()
         })
-        .eq('id', logId);
+        .eq('automation_session_id', sessionId);
 
       if (error) throw error;
     } catch (error) {
-      console.error('Failed to add error log:', error);
+      console.error('Failed to complete automation session:', error);
       throw error;
     }
   }
 
-  async getAutomationLogs(campaignId: string): Promise<any[]> {
-    try {
-      const { data, error } = await supabase
-        .from('campaign_automation_logs')
-        .select('*')
-        .eq('campaign_id', campaignId)
-        .order('started_at', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Failed to get automation logs:', error);
-      return [];
-    }
-  }
-
-  async getAutomationReport(campaignId: string): Promise<any> {
+  async getAutomationReport(campaignId: string): Promise<AutomationReport | null> {
     try {
       const { data, error } = await supabase
         .from('campaign_automation_logs')
@@ -253,30 +242,28 @@ export class AutomationLoggingService {
         .single();
 
       if (error) throw error;
-
-      // Calculate summary metrics
-      const stepLogs = data.step_logs || [];
-      const errorLogs = data.error_logs || [];
-      
-      const totalSteps = stepLogs.length;
-      const completedSteps = stepLogs.filter((step: AutomationStep) => step.status === 'COMPLETED').length;
-      const failedSteps = stepLogs.filter((step: AutomationStep) => step.status === 'FAILED').length;
-      
-      const totalDuration = stepLogs.reduce((acc: number, step: AutomationStep) => {
-        return acc + (step.duration_ms || 0);
-      }, 0);
+      if (!data) return null;
 
       return {
-        ...data,
-        calculated_metrics: {
-          total_steps: totalSteps,
-          completed_steps: completedSteps,
-          failed_steps: failedSteps,
-          success_rate: totalSteps > 0 ? (completedSteps / totalSteps) * 100 : 0,
-          total_duration_ms: totalDuration,
-          total_errors: errorLogs.length,
-          automation_efficiency: data.successful_communications / (data.successful_communications + data.failed_communications) * 100 || 0
-        }
+        id: data.id,
+        campaignId: data.campaign_id,
+        status: data.status,
+        totalSteps: data.total_steps || 0,
+        completedSteps: data.completed_steps || 0,
+        creatorsFound: data.creators_found || 0,
+        creatorsContacted: data.creators_contacted || 0,
+        contractsGenerated: data.contracts_generated || 0,
+        contractsSent: data.contracts_sent || 0,
+        emailsSent: data.emails_sent || 0,
+        phoneCallsMade: data.phone_calls_made || 0,
+        successfulCommunications: data.successful_communications || 0,
+        failedCommunications: data.failed_communications || 0,
+        startedAt: data.started_at,
+        completedAt: data.completed_at,
+        stepLogs: Array.isArray(data.step_logs) ? data.step_logs : [],
+        errorLogs: Array.isArray(data.error_logs) ? data.error_logs : [],
+        performanceMetrics: data.performance_metrics || {},
+        summaryReport: data.summary_report || {}
       };
     } catch (error) {
       console.error('Failed to get automation report:', error);
@@ -284,52 +271,45 @@ export class AutomationLoggingService {
     }
   }
 
-  getCurrentLogId(): string | null {
-    return this.currentLogId;
+  async getAutomationLogs(campaignId: string): Promise<AutomationLog[]> {
+    try {
+      const { data, error } = await supabase
+        .from('campaign_automation_logs')
+        .select('step_logs')
+        .eq('campaign_id', campaignId)
+        .order('started_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error) throw error;
+      if (!data || !Array.isArray(data.step_logs)) return [];
+
+      return data.step_logs.map((log: any) => ({
+        id: log.id,
+        campaignId,
+        step: log.step,
+        message: log.message,
+        level: log.level,
+        timestamp: log.timestamp,
+        metadata: log.metadata
+      }));
+    } catch (error) {
+      console.error('Failed to get automation logs:', error);
+      return [];
+    }
   }
 
-  setCurrentLogId(logId: string): void {
-    this.currentLogId = logId;
-  }
-
-  // Test method to verify logging is working
   async testLogging(campaignId: string, userId: string): Promise<void> {
     try {
-      console.log('Testing automation logging...');
-
-      const sessionId = `test_${Date.now()}`;
-      const logId = await this.startAutomationLog({
-        campaign_id: campaignId,
-        automation_session_id: sessionId,
-        user_id: userId,
-        automation_mode: 'AUTOMATIC',
-        total_steps: 3,
-        current_step: 'Testing'
-      });
-
-      console.log('Created test log with ID:', logId);
-
-      await this.addStepLog(logId, {
-        step_name: 'Test Step',
-        step_type: 'INITIALIZATION',
-        status: 'COMPLETED',
-        started_at: new Date().toISOString(),
-        completed_at: new Date().toISOString(),
-        duration_ms: 1000,
-        details: { test: true }
-      });
-
-      await this.updateAutomationLog(logId, {
-        status: 'COMPLETED',
-        completed_steps: 3,
-        creators_found: 5,
-        emails_sent: 3,
-        final_status: 'Test completed successfully'
-      });
-
-      console.log('Test logging completed successfully');
+      const sessionId = await this.startAutomationSession(campaignId, userId, 'MANUAL');
+      
+      await this.logAutomationStep(sessionId, 'TEST', 'Test logging functionality', 'info');
+      await this.updateAutomationProgress(sessionId, { completedSteps: 1 });
+      await this.completeAutomationSession(sessionId, 'COMPLETED');
+      
+      console.log('Automation logging test completed successfully');
     } catch (error) {
-      console.error('Test logging failed:', error);
+      console.error('Automation logging test failed:', error);
       throw error;
     }
   }

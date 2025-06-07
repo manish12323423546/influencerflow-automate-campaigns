@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,7 +31,12 @@ interface Contract {
   status: string;
 }
 
-export const PaymentManager: React.FC = () => {
+interface PaymentManagerProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export const PaymentManager: React.FC<PaymentManagerProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,9 +65,18 @@ export const PaymentManager: React.FC = () => {
       const transformedContracts = data?.map(contract => {
         let contractData: ContractData;
         try {
-          contractData = typeof contract.contract_data === 'string'
-            ? JSON.parse(contract.contract_data)
-            : contract.contract_data as ContractData;
+          if (typeof contract.contract_data === 'string') {
+            contractData = JSON.parse(contract.contract_data);
+          } else if (contract.contract_data && typeof contract.contract_data === 'object') {
+            contractData = contract.contract_data as ContractData;
+          } else {
+            contractData = {
+              fee: 0,
+              deadline: '',
+              template_id: '',
+              generated_at: new Date().toISOString()
+            };
+          }
         } catch {
           contractData = {
             fee: 0,
