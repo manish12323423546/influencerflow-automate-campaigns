@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -5,12 +6,12 @@ import { Progress } from '@/components/ui/progress';
 import { CheckCircle, AlertCircle, Clock, Users, Mail, Phone, FileText, Send } from 'lucide-react';
 
 interface AutomationReportProps {
-  sessionId: string;
+  campaignId: string;
   onClose: () => void;
 }
 
 export const AutomationReport: React.FC<AutomationReportProps> = ({
-  sessionId,
+  campaignId,
   onClose,
 }) => {
   // Mock data for demonstration
