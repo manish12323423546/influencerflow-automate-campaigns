@@ -4,11 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { DollarSign, Calendar, User, FileText, Building, CreditCard } from 'lucide-react';
+import { DollarSign, Calendar, User, FileText, Building, CreditCard, Shield } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { ContractData } from '@/lib/agents/types';
+import { SecurePaymentForm } from './SecurePaymentForm';
 
 interface Campaign {
   name: string;
@@ -40,6 +41,8 @@ export const PaymentManager: React.FC<PaymentManagerProps> = ({ isOpen, onClose 
   const { user } = useAuth();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showSecurePayment, setShowSecurePayment] = useState(false);
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
 
   useEffect(() => {
     fetchContracts();
@@ -103,16 +106,51 @@ export const PaymentManager: React.FC<PaymentManagerProps> = ({ isOpen, onClose 
     }
   };
 
+  const handleSecurePayment = (contract: Contract) => {
+    setSelectedContract(contract);
+    setShowSecurePayment(true);
+  };
+
+  const handlePaymentSuccess = () => {
+    toast.success('Payment processed successfully');
+    setShowSecurePayment(false);
+    setSelectedContract(null);
+    fetchContracts(); // Refresh the contracts list
+  };
+
   if (loading) {
     return <div>Loading contracts...</div>;
+  }
+
+  if (showSecurePayment && selectedContract) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowSecurePayment(false)}
+          >
+            ← Back to Contracts
+          </Button>
+        </div>
+        <SecurePaymentForm
+          campaignId={selectedContract.campaign.name}
+          influencerId={selectedContract.influencer.name}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Payment Management</h2>
-          <p className="text-muted-foreground">Manage payments for accepted contracts</p>
+          <h2 className="text-2xl font-bold">Secure Payment Management</h2>
+          <p className="text-muted-foreground flex items-center space-x-1">
+            <Shield className="w-4 h-4 text-green-600" />
+            <span>Manage payments for accepted contracts securely</span>
+          </p>
         </div>
       </div>
 
@@ -135,7 +173,7 @@ export const PaymentManager: React.FC<PaymentManagerProps> = ({ isOpen, onClose 
               </div>
               <div className="flex items-center space-x-2">
                 <DollarSign className="w-4 h-4" />
-                <span>Amount: ${contract.contract_data.fee}</span>
+                <span>Amount: ₹{contract.contract_data.fee}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Calendar className="w-4 h-4" />
@@ -144,9 +182,12 @@ export const PaymentManager: React.FC<PaymentManagerProps> = ({ isOpen, onClose 
               <div>
                 <Badge variant="secondary">{contract.status}</Badge>
               </div>
-              <Button>
-                <CreditCard className="w-4 h-4 mr-2" />
-                Make Payment
+              <Button 
+                onClick={() => handleSecurePayment(contract)}
+                className="w-full"
+              >
+                <Shield className="w-4 h-4 mr-2" />
+                Secure Payment
               </Button>
             </CardContent>
           </Card>

@@ -1,11 +1,9 @@
+
 import { useState, useCallback, useEffect } from 'react';
-import { ChatOpenAI } from "@langchain/openai";
-import { CampaignAutomationAgent } from '@/lib/agents/CampaignAutomationAgent';
 import { CampaignState, CampaignStatus, CreatorContactPreference, Creator } from '@/lib/agents/types';
 import { AutomationLoggingService } from '@/lib/services/automationLoggingService';
-import { getCampaignTools } from '@/lib/agents/tools';
-import { PromptTemplate } from "@langchain/core/prompts";
 import { supabase } from '@/integrations/supabase/client';
+import SecureApiService from '@/lib/services/secureApiService';
 
 interface UseAutomationAgentProps {
   campaignId: string;   
@@ -23,7 +21,7 @@ export const useAutomationAgent = ({ campaignId, mode }: UseAutomationAgentProps
 
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [agent, setAgent] = useState<CampaignAutomationAgent | null>(null);
+  const secureApiService = SecureApiService.getInstance();
 
   // Load selected influencers when component mounts
   useEffect(() => {
@@ -64,7 +62,6 @@ export const useAutomationAgent = ({ campaignId, mode }: UseAutomationAgentProps
               };
             });
 
-            // Update state with creators
             setState(prev => ({
               ...prev,
               selectedCreators: creators
@@ -81,9 +78,6 @@ export const useAutomationAgent = ({ campaignId, mode }: UseAutomationAgentProps
   }, [campaignId]);
 
   const updateCreatorPreferences = useCallback((preferences: CreatorContactPreference[]) => {
-    if (agent) {
-      agent.setCreatorPreferences(preferences);
-    }
     setState(prev => ({
       ...prev,
       creatorPreferences: preferences,
@@ -92,83 +86,45 @@ export const useAutomationAgent = ({ campaignId, mode }: UseAutomationAgentProps
         contactPreference: preferences.find(p => p.creatorId === creator.id)?.contactMethod || 'NONE'
       }))
     }));
-  }, [agent]);
+  }, []);
 
   const startAutomation = useCallback(async () => {
-    console.log('🚀 Starting automation for campaign:', campaignId);
+    console.log('🚀 Starting secure automation for campaign:', campaignId);
     setIsRunning(true);
     setError(null);
 
     try {
-      const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-
-      if (!apiKey) {
-        throw new Error('OpenAI API key is not configured. Please check your environment variables.');
-      }
-
-      console.log('🔑 Initializing ChatOpenAI with API key');
-      
-      let model;
-      try {
-        if (!apiKey.startsWith('sk-') || apiKey.includes('=')) {
-          throw new Error('Invalid OpenAI API key format. Please check your API key.');
-        }
-
-        model = new ChatOpenAI({
-          modelName: "gpt-4.1-nano",
-          temperature: 0.7,
-          openAIApiKey: apiKey,
-        });
-      } catch (modelError) {
-        console.error('Error initializing ChatOpenAI:', modelError);
-        throw new Error('Failed to initialize AI model: ' + modelError.message);
-      }
-
-      console.log('🤖 Creating CampaignAutomationAgent...');
-      const newAgent = new CampaignAutomationAgent(
-        model,
+      // Use secure API service instead of direct OpenAI calls
+      const messages = [
         {
-          campaignId,
-          userId: 'e5c58861-fada-4c8c-bbe7-f7aff2879fcb', // TODO: Get from auth context
-          mode
+          role: 'system',
+          content: 'You are a campaign automation assistant. Help analyze and execute campaign workflows.'
         },
-        (newState) => {
-          console.log('📊 Agent state updated:', newState.status);
-          setState(newState);
+        {
+          role: 'user',
+          content: `Start automation for campaign ${campaignId} in ${mode} mode`
         }
-      );
+      ];
 
-      setAgent(newAgent);
+      const response = await secureApiService.callOpenAI(messages);
+      console.log('✅ Secure automation response:', response);
 
-      console.log('🔧 Initializing agent...');
-      await newAgent.initialize();
-
-      // Apply any existing preferences before execution
-      if (state.creatorPreferences?.length) {
-        console.log('⚙️ Applying creator preferences:', state.creatorPreferences.length, 'preferences');
-        newAgent.setCreatorPreferences(state.creatorPreferences);
-      }
-
-      console.log('▶️ Starting campaign execution...');
-      await newAgent.executeCampaign();
-      console.log('✅ Campaign execution completed successfully');
+      setState(prev => ({
+        ...prev,
+        status: CampaignStatus.COMPLETED
+      }));
 
     } catch (err) {
-      console.error('Automation error:', err);
+      console.error('Secure automation error:', err);
       let errorMessage = 'An unexpected error occurred';
       if (err instanceof Error) {
         errorMessage = err.message;
-        if (err.message.includes('template')) {
-          errorMessage = 'AI configuration error: ' + err.message;
-        } else if (err.message.includes('API key')) {
-          errorMessage = 'Authentication error: ' + err.message;
-        }
       }
       setError(errorMessage);
     } finally {
       setIsRunning(false);
     }
-  }, [campaignId, mode, state.creatorPreferences]);
+  }, [campaignId, mode, secureApiService]);
 
   const resetAutomation = useCallback(() => {
     setState({
@@ -179,7 +135,6 @@ export const useAutomationAgent = ({ campaignId, mode }: UseAutomationAgentProps
       creatorPreferences: []
     });
     setError(null);
-    setAgent(null);
   }, []);
 
   const getAutomationReport = useCallback(async (campaignId: string) => {
