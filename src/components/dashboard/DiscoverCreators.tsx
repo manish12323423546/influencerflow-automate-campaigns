@@ -418,7 +418,7 @@ const DiscoverCreators = () => {
 
       console.log('Sending Gmail workflow with data:', JSON.stringify(requestBody, null, 2));
 
-      const response = await fetch("https://sdsd12.app.n8n.cloud/webhook/08b089ba-1617-4d04-a5c7-f9b7d8ca57c4", {
+      const response = await fetch("https://sdsd12.app.n8n.cloud/webhook-test/08b089ba-1617-4d04-a5c7-f9b7d8ca57c4", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
