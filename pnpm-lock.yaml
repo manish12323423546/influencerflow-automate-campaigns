@@ -137,9 +137,6 @@ importers:
       langchain:
         specifier: ^0.3.27
         version: 0.3.27(@langchain/core@0.3.57(openai@4.104.0(ws@8.18.2)(zod@3.25.46)))(axios@1.9.0)(openai@4.104.0(ws@8.18.2)(zod@3.25.46))(ws@8.18.2)
-      lovable-tagger:
-        specifier: ^1.1.8
-        version: 1.1.8(vite@5.4.19(@types/node@20.17.57))
       lucide-react:
         specifier: ^0.323.0
         version: 0.323.0(react@18.3.1)
@@ -213,6 +210,9 @@ importers:
       autoprefixer:
         specifier: ^10.4.17
         version: 10.4.21(postcss@8.5.4)
+      lovable-tagger:
+        specifier: ^1.1.8
+        version: 1.1.8(vite@5.4.19(@types/node@20.17.57))
       postcss:
         specifier: ^8.4.35
         version: 8.5.4
