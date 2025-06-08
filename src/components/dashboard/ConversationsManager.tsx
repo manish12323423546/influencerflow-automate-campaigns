@@ -547,9 +547,9 @@ const ConversationsManager = () => {
 
     return (
       <div className="mt-6">
-        <Card className="bg-zinc-800/50 border-zinc-700">
+        <Card className="bg-white border-gray-200 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-snow">
+            <CardTitle className="text-gray-900">
               {mode.agentType?.charAt(0).toUpperCase() + mode.agentType?.slice(1)} Assistant
             </CardTitle>
           </CardHeader>
@@ -560,26 +560,26 @@ const ConversationsManager = () => {
                   <div
                     key={idx}
                     className={`rounded-lg p-4 ${
-                      msg.role === 'assistant' 
-                        ? 'bg-zinc-700 ml-4' 
-                        : 'bg-zinc-600 mr-4'
+                      msg.role === 'assistant'
+                        ? 'bg-gray-100 ml-4'
+                        : 'bg-coral/10 mr-4'
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-1">
                       <span className={`text-xs font-medium ${
-                        msg.role === 'assistant' ? 'text-coral' : 'text-blue-400'
+                        msg.role === 'assistant' ? 'text-coral' : 'text-blue-600'
                       }`}>
                         {msg.role === 'assistant' ? 'AI Assistant' : 'You'}
                       </span>
-                      <span className="text-xs text-snow/60">
+                      <span className="text-xs text-gray-500">
                         {new Date(msg.timestamp).toLocaleTimeString()}
                       </span>
                     </div>
-                    <p className="text-snow whitespace-pre-wrap">{msg.content}</p>
+                    <p className="text-gray-900 whitespace-pre-wrap">{msg.content}</p>
                   </div>
                 ))}
                 {isAgentTyping && (
-                  <div className="flex items-center gap-2 text-snow/60 text-sm p-2">
+                  <div className="flex items-center gap-2 text-gray-500 text-sm p-2">
                     <div className="animate-pulse flex gap-1">
                       <div className="w-2 h-2 bg-coral rounded-full"></div>
                       <div className="w-2 h-2 bg-coral rounded-full animation-delay-200"></div>
@@ -602,7 +602,7 @@ const ConversationsManager = () => {
                     }
                   }}
                   placeholder="Type your message..."
-                  className="flex-1 bg-zinc-700 border-zinc-600 text-snow placeholder:text-snow/40"
+                  className="flex-1 bg-white border-gray-200 text-gray-900 placeholder:text-gray-400 shadow-sm"
                 />
                 <Button
                   onClick={() => {
@@ -610,7 +610,7 @@ const ConversationsManager = () => {
                     setCurrentMessage('');
                   }}
                   disabled={!currentMessage.trim() || isAgentTyping}
-                  className="bg-coral hover:bg-coral/90"
+                  className="bg-coral hover:bg-coral/90 shadow-md"
                 >
                   <Send className="h-4 w-4" />
                 </Button>
@@ -694,7 +694,7 @@ const ConversationsManager = () => {
       )}
       
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold text-snow">AI Conversations</h2>
+        <h2 className="text-2xl font-semibold text-gray-900">AI Conversations</h2>
       </div>
 
       {renderModeToggle()}
@@ -702,18 +702,18 @@ const ConversationsManager = () => {
 
       <div className="grid gap-4">
         {loading ? (
-          <div className="text-center text-snow">Loading conversations...</div>
+          <div className="text-center text-gray-600">Loading conversations...</div>
         ) : conversations.length === 0 ? (
-          <div className="text-center text-snow">No conversations found</div>
+          <div className="text-center text-gray-500">No conversations found</div>
         ) : (
           conversations.map((conversation) => (
-            <Card key={conversation.conversation_id} className="bg-zinc-800/50 border-zinc-700">
+            <Card key={conversation.conversation_id} className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300">
               <CardHeader className="flex flex-row items-start justify-between space-y-0">
                 <div>
-                  <CardTitle className="text-lg text-snow">
+                  <CardTitle className="text-lg text-gray-900">
                     Conversation with {conversation.agent_name}
                   </CardTitle>
-                  <p className="text-sm text-snow/60">
+                  <p className="text-sm text-gray-500">
                     {formatDate(conversation.start_time_unix_secs)}
                   </p>
                 </div>
@@ -722,10 +722,10 @@ const ConversationsManager = () => {
                     variant="ghost"
                     size="sm"
                     onClick={() => handlePlayAudio(conversation.conversation_id)}
-                    className="text-snow hover:text-coral"
+                    className="text-gray-600 hover:text-coral hover:bg-coral/10"
                   >
-                    {isPlaying && selectedConversation?.conversation_id === conversation.conversation_id ? 
-                      <Pause className="h-4 w-4" /> : 
+                    {isPlaying && selectedConversation?.conversation_id === conversation.conversation_id ?
+                      <Pause className="h-4 w-4" /> :
                       <Play className="h-4 w-4" />
                     }
                   </Button>
@@ -733,7 +733,7 @@ const ConversationsManager = () => {
                     variant="ghost"
                     size="sm"
                     onClick={() => setSelectedConversation(conversation)}
-                    className="text-snow hover:text-coral flex items-center gap-1"
+                    className="text-gray-600 hover:text-coral hover:bg-coral/10 flex items-center gap-1"
                   >
                     <Headphones className="h-4 w-4" />
                     <span className="hidden sm:inline">View Transcript</span>
@@ -742,7 +742,7 @@ const ConversationsManager = () => {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDeleteConversation(conversation.conversation_id)}
-                    className="text-red-500 hover:text-red-600"
+                    className="text-red-500 hover:text-red-600 hover:bg-red-50"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -751,18 +751,18 @@ const ConversationsManager = () => {
               <CardContent>
                 <div className="grid grid-cols-3 gap-4 text-sm">
                   <div>
-                    <p className="text-snow/60">Duration</p>
-                    <p className="text-snow font-medium">
+                    <p className="text-gray-500">Duration</p>
+                    <p className="text-gray-900 font-medium">
                       {formatDuration(conversation.call_duration_secs)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-snow/60">Messages</p>
-                    <p className="text-snow font-medium">{conversation.message_count}</p>
+                    <p className="text-gray-500">Messages</p>
+                    <p className="text-gray-900 font-medium">{conversation.message_count}</p>
                   </div>
                   <div>
-                    <p className="text-snow/60">Status</p>
-                    <p className="text-snow font-medium capitalize">{conversation.status}</p>
+                    <p className="text-gray-500">Status</p>
+                    <p className="text-gray-900 font-medium capitalize">{conversation.status}</p>
                   </div>
                 </div>
               </CardContent>
@@ -854,12 +854,12 @@ const ConversationsManager = () => {
       />
 
       <Dialog open={!!selectedConversation} onOpenChange={() => setSelectedConversation(null)}>
-        <DialogContent className="bg-zinc-900 border-zinc-800 max-w-4xl h-[80vh] overflow-y-auto">
+        <DialogContent className="bg-white border-gray-200 max-w-4xl h-[80vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <div>
-                <DialogTitle className="text-snow">Conversation Details</DialogTitle>
-                <DialogDescription className="text-snow/60">
+                <DialogTitle className="text-gray-900">Conversation Details</DialogTitle>
+                <DialogDescription className="text-gray-600">
                   Full conversation transcript and analytics
                 </DialogDescription>
               </div>
@@ -868,7 +868,7 @@ const ConversationsManager = () => {
                   variant="outline"
                   size="sm"
                   onClick={() => downloadTranscript(selectedConversation, transcripts)}
-                  className="border-zinc-700 text-snow hover:bg-zinc-800"
+                  className="border-gray-200 text-gray-600 hover:bg-gray-50"
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Download Transcript
@@ -880,32 +880,32 @@ const ConversationsManager = () => {
           {/* Call Summary Section */}
           {selectedConversation && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <Card className="bg-zinc-800/50 border-zinc-700">
+              <Card className="bg-gray-50 border-gray-200">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-snow/60">Duration</CardTitle>
+                  <CardTitle className="text-sm font-medium text-gray-600">Duration</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold text-snow">
+                  <p className="text-2xl font-bold text-gray-900">
                     {formatDuration(selectedConversation.call_duration_secs)}
                   </p>
                 </CardContent>
               </Card>
-              <Card className="bg-zinc-800/50 border-zinc-700">
+              <Card className="bg-gray-50 border-gray-200">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-snow/60">Status</CardTitle>
+                  <CardTitle className="text-sm font-medium text-gray-600">Status</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold text-snow capitalize">
+                  <p className="text-2xl font-bold text-gray-900 capitalize">
                     {selectedConversation.status}
                   </p>
                 </CardContent>
               </Card>
-              <Card className="bg-zinc-800/50 border-zinc-700">
+              <Card className="bg-gray-50 border-gray-200">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-snow/60">Agent</CardTitle>
+                  <CardTitle className="text-sm font-medium text-gray-600">Agent</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold text-snow">
+                  <p className="text-2xl font-bold text-gray-900">
                     {selectedConversation.agent_name}
                   </p>
                 </CardContent>
@@ -917,19 +917,19 @@ const ConversationsManager = () => {
           {selectedConversation && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-snow">Conversation Transcript</h3>
-                <p className="text-xs text-snow/60">
+                <h3 className="text-lg font-semibold text-gray-900">Conversation Transcript</h3>
+                <p className="text-xs text-gray-600">
                   Started at: {formatDate(selectedConversation.start_time_unix_secs)}
                 </p>
               </div>
-              
-              <div className="space-y-4 border border-zinc-800 rounded-lg p-4">
+
+              <div className="space-y-4 border border-gray-200 rounded-lg p-4 bg-gray-50">
                 {transcripts.length === 0 ? (
                   <div className="text-center py-8">
                     {selectedConversation.status === 'initiated' ? (
                       <>
-                        <div className="text-snow/60 mb-2">Call Initiated</div>
-                        <p className="text-sm text-snow/40">
+                        <div className="text-gray-600 mb-2">Call Initiated</div>
+                        <p className="text-sm text-gray-500">
                           The conversation has been initiated but no messages have been exchanged yet.
                         </p>
                       </>
@@ -940,14 +940,14 @@ const ConversationsManager = () => {
                           <div className="h-2 w-2 bg-coral rounded-full mx-1 animate-pulse-delay-200"></div>
                           <div className="h-2 w-2 bg-coral rounded-full mx-1 animate-pulse-delay-400"></div>
                         </div>
-                        <p className="text-sm text-snow/40 mt-2">
+                        <p className="text-sm text-gray-500 mt-2">
                           Call in progress, waiting for messages...
                         </p>
                       </>
                     ) : (
                       <>
-                        <div className="text-snow/60 mb-2">No Messages</div>
-                        <p className="text-sm text-snow/40">
+                        <div className="text-gray-600 mb-2">No Messages</div>
+                        <p className="text-sm text-gray-500">
                           No transcript messages are available for this conversation.
                         </p>
                       </>
@@ -958,35 +958,35 @@ const ConversationsManager = () => {
                     <div
                       key={idx}
                       className={`rounded-lg ${
-                        msg.role === 'agent' 
-                          ? 'bg-zinc-800 ml-4' 
-                          : 'bg-zinc-700 mr-4'
+                        msg.role === 'agent'
+                          ? 'bg-white ml-4 border border-gray-200'
+                          : 'bg-gray-100 mr-4 border border-gray-200'
                       } p-4`}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            msg.role === 'agent' 
-                              ? 'bg-coral/20 text-coral' 
-                              : 'bg-blue-500/20 text-blue-400'
+                            msg.role === 'agent'
+                              ? 'bg-coral/20 text-coral'
+                              : 'bg-blue-500/20 text-blue-600'
                           }`}>
                             {msg.role.toUpperCase()}
                           </span>
-                          <span className="text-snow/60 text-xs">
+                          <span className="text-gray-600 text-xs">
                             {formatDuration(msg.time_in_call_secs)} into call
                           </span>
                         </div>
                         {msg.source_medium && (
-                          <span className="text-xs text-snow/40">
+                          <span className="text-xs text-gray-500">
                             via {msg.source_medium}
                           </span>
                         )}
                       </div>
-                      <p className="text-snow whitespace-pre-wrap">{msg.message}</p>
+                      <p className="text-gray-900 whitespace-pre-wrap">{msg.message}</p>
                       
                       {/* Show additional message metadata if available */}
                       {(msg.tool_calls?.length > 0 || msg.interrupted || msg.llm_usage) && (
-                        <div className="mt-2 pt-2 border-t border-zinc-700/50 text-xs text-snow/40 space-y-1">
+                        <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-gray-500 space-y-1">
                           {msg.interrupted && (
                             <p>⚡ Message was interrupted</p>
                           )}
@@ -1010,18 +1010,18 @@ const ConversationsManager = () => {
           {/* Call Analytics Section */}
           {selectedConversation && transcripts.length > 0 && (
             <div className="mt-6 space-y-4">
-              <h3 className="text-lg font-semibold text-snow">Call Analytics</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Call Analytics</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card className="bg-zinc-800/50 border-zinc-700">
+                <Card className="bg-gray-50 border-gray-200">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-snow/60">Message Count</CardTitle>
+                    <CardTitle className="text-sm font-medium text-gray-600">Message Count</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center justify-between">
-                      <p className="text-2xl font-bold text-snow">
+                      <p className="text-2xl font-bold text-gray-900">
                         {transcripts.length}
                       </p>
-                      <div className="text-xs text-snow/60">
+                      <div className="text-xs text-gray-600">
                         <p>User: {transcripts.filter(m => m.role === 'user').length}</p>
                         <p>Agent: {transcripts.filter(m => m.role === 'agent').length}</p>
                       </div>
@@ -1029,9 +1029,9 @@ const ConversationsManager = () => {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-zinc-800/50 border-zinc-700">
+                <Card className="bg-gray-50 border-gray-200">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-snow/60">Audio Status</CardTitle>
+                    <CardTitle className="text-sm font-medium text-gray-600">Audio Status</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
@@ -1039,19 +1039,19 @@ const ConversationsManager = () => {
                         <div className={`w-2 h-2 rounded-full ${
                           selectedConversation.has_audio ? 'bg-green-500' : 'bg-red-500'
                         }`} />
-                        <span className="text-snow text-sm">Recording Available</span>
+                        <span className="text-gray-900 text-sm">Recording Available</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className={`w-2 h-2 rounded-full ${
                           selectedConversation.has_user_audio ? 'bg-green-500' : 'bg-red-500'
                         }`} />
-                        <span className="text-snow text-sm">User Audio</span>
+                        <span className="text-gray-900 text-sm">User Audio</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className={`w-2 h-2 rounded-full ${
                           selectedConversation.has_response_audio ? 'bg-green-500' : 'bg-red-500'
                         }`} />
-                        <span className="text-snow text-sm">Agent Audio</span>
+                        <span className="text-gray-900 text-sm">Agent Audio</span>
                       </div>
                     </div>
                   </CardContent>

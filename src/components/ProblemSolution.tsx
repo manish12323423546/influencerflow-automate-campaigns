@@ -19,24 +19,24 @@ const ProblemSolution = () => {
   ];
 
   return (
-    <section className="section-padding bg-zinc-900/30">
+    <section className="section-padding bg-gray-50">
       <div className="container-custom">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           {/* Problem Side */}
           <div className="space-y-8">
-            <h2 className="text-4xl md:text-5xl font-space font-bold text-snow/90 mb-8">
-              The <span className="text-red-400">old way</span>
+            <h2 className="text-4xl md:text-5xl font-space font-bold text-gray-900 mb-8">
+              The <span className="text-red-500">old way</span>
             </h2>
-            
+
             <div className="space-y-6">
               {problems.map((problem, index) => (
-                <div 
+                <div
                   key={index}
                   className="flex items-start gap-4 animate-slide-in-right"
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
-                  <X className="h-6 w-6 text-red-400 mt-1 flex-shrink-0" />
-                  <p className="text-lg text-snow/80">{problem}</p>
+                  <X className="h-6 w-6 text-red-500 mt-1 flex-shrink-0" />
+                  <p className="text-lg text-gray-700">{problem}</p>
                 </div>
               ))}
             </div>
@@ -44,19 +44,19 @@ const ProblemSolution = () => {
 
           {/* Solution Side */}
           <div className="space-y-8">
-            <h2 className="text-4xl md:text-5xl font-space font-bold text-snow mb-8">
+            <h2 className="text-4xl md:text-5xl font-space font-bold text-gray-900 mb-8">
               The <span className="text-coral">InfluencerFlow way</span>
             </h2>
-            
+
             <div className="space-y-6">
               {solutions.map((solution, index) => (
-                <div 
+                <div
                   key={index}
                   className="flex items-start gap-4 animate-slide-in-right"
                   style={{ animationDelay: `${(index * 100) + 300}ms` }}
                 >
                   <CheckCircle className="h-6 w-6 text-coral mt-1 flex-shrink-0" />
-                  <p className="text-lg text-snow/80">{solution}</p>
+                  <p className="text-lg text-gray-700">{solution}</p>
                 </div>
               ))}
             </div>

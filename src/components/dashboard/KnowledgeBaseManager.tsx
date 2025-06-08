@@ -365,20 +365,20 @@ Additional Information:
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-snow">Knowledge Base</h2>
-          <p className="text-snow/70">Manage your AI knowledge base documents</p>
+          <h2 className="text-2xl font-bold text-gray-900">Knowledge Base</h2>
+          <p className="text-gray-600">Manage your AI knowledge base documents</p>
         </div>
         <div className="flex gap-2">
-          <Button 
+          <Button
             onClick={() => setIsCampaignModalOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-300"
           >
             <Target className="mr-2 h-4 w-4" />
             Add Campaigns
           </Button>
-          <Button 
+          <Button
             onClick={() => setIsCreateModalOpen(true)}
-            className="bg-coral hover:bg-coral/90 text-white"
+            className="bg-coral hover:bg-coral/90 text-white shadow-md hover:shadow-lg transition-all duration-300"
           >
             <Plus className="mr-2 h-4 w-4" />
             Add Document
@@ -389,27 +389,27 @@ Additional Information:
       {/* Search */}
       <div className="flex items-center space-x-4">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-snow/50" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             placeholder="Search documents..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 bg-zinc-800 border-zinc-700 text-snow"
+            className="pl-10 bg-white border-gray-200 text-gray-900 shadow-sm"
           />
         </div>
         <Button
           onClick={fetchDocuments}
           variant="outline"
-          className="border-zinc-700 text-snow hover:bg-zinc-800"
+          className="border-gray-200 text-gray-600 hover:bg-gray-50 shadow-sm"
         >
           Refresh
         </Button>
       </div>
 
       {/* Documents Table */}
-      <Card className="bg-zinc-900 border-zinc-800">
+      <Card className="bg-white border-gray-200 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-snow">Documents ({documents.length})</CardTitle>
+          <CardTitle className="text-gray-900">Documents ({documents.length})</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -418,9 +418,9 @@ Additional Information:
             </div>
           ) : documents.length === 0 ? (
             <div className="text-center py-8">
-              <FileText className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-snow mb-2">No documents found</h3>
-              <p className="text-snow/70 mb-4">
+              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No documents found</h3>
+              <p className="text-gray-600 mb-4">
                 {searchTerm ? 'No documents match your search.' : 'Start by creating your first knowledge base document.'}
               </p>
               <div className="flex justify-center gap-2">
@@ -443,37 +443,37 @@ Additional Information:
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-zinc-800">
-                  <TableHead className="text-snow/80">Name</TableHead>
-                  <TableHead className="text-snow/80">Type</TableHead>
-                  <TableHead className="text-snow/80">Size</TableHead>
-                  <TableHead className="text-snow/80">Created</TableHead>
-                  <TableHead className="text-snow/80">Updated</TableHead>
-                  <TableHead className="text-snow/80">Injectable</TableHead>
+                <TableRow className="border-gray-200">
+                  <TableHead className="text-gray-600">Name</TableHead>
+                  <TableHead className="text-gray-600">Type</TableHead>
+                  <TableHead className="text-gray-600">Size</TableHead>
+                  <TableHead className="text-gray-600">Created</TableHead>
+                  <TableHead className="text-gray-600">Updated</TableHead>
+                  <TableHead className="text-gray-600">Injectable</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {documents.map((doc) => (
-                  <TableRow key={doc.id} className="border-zinc-800">
-                    <TableCell className="text-snow font-medium">
+                  <TableRow key={doc.id} className="border-gray-200 hover:bg-gray-50">
+                    <TableCell className="text-gray-900 font-medium">
                       <div className="flex items-center space-x-2">
                         {doc.type === 'url' ? (
-                          <LinkIcon className="h-4 w-4 text-blue-400" />
+                          <LinkIcon className="h-4 w-4 text-blue-500" />
                         ) : (
-                          <FileText className="h-4 w-4 text-green-400" />
+                          <FileText className="h-4 w-4 text-green-500" />
                         )}
                         <span>{doc.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-snow/70 capitalize">{doc.type}</TableCell>
-                    <TableCell className="text-snow/70">{formatSize(doc.metadata.size_bytes)}</TableCell>
-                    <TableCell className="text-snow/70">{formatDate(doc.metadata.created_at_unix_secs)}</TableCell>
-                    <TableCell className="text-snow/70">{formatDate(doc.metadata.last_updated_at_unix_secs)}</TableCell>
+                    <TableCell className="text-gray-600 capitalize">{doc.type}</TableCell>
+                    <TableCell className="text-gray-600">{formatSize(doc.metadata.size_bytes)}</TableCell>
+                    <TableCell className="text-gray-600">{formatDate(doc.metadata.created_at_unix_secs)}</TableCell>
+                    <TableCell className="text-gray-600">{formatDate(doc.metadata.last_updated_at_unix_secs)}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded-full text-xs ${
-                        doc.prompt_injectable 
-                          ? 'bg-green-500/20 text-green-400' 
-                          : 'bg-red-500/20 text-red-400'
+                        doc.prompt_injectable
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-red-100 text-red-700'
                       }`}>
                         {doc.prompt_injectable ? 'Yes' : 'No'}
                       </span>
@@ -488,10 +488,10 @@ Additional Information:
 
       {/* Add Campaigns Modal */}
       <Dialog open={isCampaignModalOpen} onOpenChange={setIsCampaignModalOpen}>
-        <DialogContent className="bg-zinc-900 border-zinc-800 text-snow max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Complete Campaign Data to Knowledge Base</DialogTitle>
-            <DialogDescription className="text-snow/70">
+            <DialogDescription className="text-gray-600">
               Select campaigns to add their complete data to your knowledge base. This will include all available fields and performance metrics.
             </DialogDescription>
           </DialogHeader>
@@ -502,12 +502,12 @@ Additional Information:
               <Button
                 onClick={handleSelectAllCampaigns}
                 variant="outline"
-                className="border-zinc-700 text-snow hover:bg-zinc-800"
+                className="border-gray-200 text-gray-600 hover:bg-gray-50"
               >
                 <Users className="mr-2 h-4 w-4" />
                 {selectedCampaigns.length === campaigns.length ? 'Deselect All' : 'Select All'}
               </Button>
-              <span className="text-snow/70">
+              <span className="text-gray-600">
                 {selectedCampaigns.length} of {campaigns.length} campaigns selected
               </span>
             </div>
@@ -517,36 +517,36 @@ Additional Information:
               {campaigns.map((campaign) => (
                 <div
                   key={campaign.id}
-                  className="flex items-center space-x-3 p-3 bg-zinc-800/50 rounded-lg border border-zinc-700"
+                  className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors duration-200"
                 >
                   <Checkbox
                     checked={selectedCampaigns.includes(campaign.id)}
-                    onCheckedChange={(checked) => 
+                    onCheckedChange={(checked) =>
                       handleCampaignSelection(campaign.id, checked as boolean)
                     }
-                    className="border-zinc-600"
+                    className="border-gray-300"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <h4 className="text-snow font-medium truncate">{campaign.name}</h4>
+                      <h4 className="text-gray-900 font-medium truncate">{campaign.name}</h4>
                       <span className={`px-2 py-1 rounded-full text-xs ${
-                        campaign.status === 'active' 
-                          ? 'bg-green-500/20 text-green-400'
+                        campaign.status === 'active'
+                          ? 'bg-green-100 text-green-700'
                           : campaign.status === 'completed'
-                          ? 'bg-blue-500/20 text-blue-400'
-                          : 'bg-yellow-500/20 text-yellow-400'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-yellow-100 text-yellow-700'
                       }`}>
                         {campaign.status}
                       </span>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      <p className="text-snow/70">Brand: {campaign.brand}</p>
-                      <p className="text-snow/60">Budget: ${campaign.budget.toLocaleString()}</p>
-                      <p className="text-snow/60">Spent: ${campaign.spent.toLocaleString()}</p>
-                      <p className="text-snow/60">Reach: {campaign.reach.toLocaleString()}</p>
+                      <p className="text-gray-600">Brand: {campaign.brand}</p>
+                      <p className="text-gray-500">Budget: ${campaign.budget.toLocaleString()}</p>
+                      <p className="text-gray-500">Spent: ${campaign.spent.toLocaleString()}</p>
+                      <p className="text-gray-500">Reach: {campaign.reach.toLocaleString()}</p>
                     </div>
-                    <p className="text-snow/50 text-xs mt-1">
-                      Created: {new Date(campaign.created_at).toLocaleDateString()} | 
+                    <p className="text-gray-400 text-xs mt-1">
+                      Created: {new Date(campaign.created_at).toLocaleDateString()} |
                       Updated: {new Date(campaign.updated_at).toLocaleDateString()}
                     </p>
                   </div>
@@ -559,14 +559,14 @@ Additional Information:
             <Button
               variant="outline"
               onClick={() => setIsCampaignModalOpen(false)}
-              className="border-zinc-700 text-snow hover:bg-zinc-800"
+              className="border-gray-200 text-gray-600 hover:bg-gray-50"
             >
               Cancel
             </Button>
             <Button
               onClick={createFromCampaigns}
               disabled={isCreating || selectedCampaigns.length === 0}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-300"
             >
               {isCreating ? (
                 <>
@@ -586,10 +586,10 @@ Additional Information:
 
       {/* Create Document Modal */}
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="bg-zinc-900 border-zinc-800 text-snow max-w-lg">
+        <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-lg">
           <DialogHeader>
             <DialogTitle>Add Knowledge Base Document</DialogTitle>
-            <DialogDescription className="text-snow/70">
+            <DialogDescription className="text-gray-600">
               Create a new knowledge base document from text, file, or URL.
             </DialogDescription>
           </DialogHeader>
@@ -601,7 +601,7 @@ Additional Information:
                 type="button"
                 variant={createType === 'text' ? 'default' : 'outline'}
                 onClick={() => setCreateType('text')}
-                className={createType === 'text' ? 'bg-coral hover:bg-coral/90' : 'border-zinc-700 text-snow hover:bg-zinc-800'}
+                className={createType === 'text' ? 'bg-coral hover:bg-coral/90' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}
               >
                 <FileText className="mr-2 h-4 w-4" />
                 Text
@@ -610,7 +610,7 @@ Additional Information:
                 type="button"
                 variant={createType === 'file' ? 'default' : 'outline'}
                 onClick={() => setCreateType('file')}
-                className={createType === 'file' ? 'bg-coral hover:bg-coral/90' : 'border-zinc-700 text-snow hover:bg-zinc-800'}
+                className={createType === 'file' ? 'bg-coral hover:bg-coral/90' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}
               >
                 <Upload className="mr-2 h-4 w-4" />
                 File
@@ -619,7 +619,7 @@ Additional Information:
                 type="button"
                 variant={createType === 'url' ? 'default' : 'outline'}
                 onClick={() => setCreateType('url')}
-                className={createType === 'url' ? 'bg-coral hover:bg-coral/90' : 'border-zinc-700 text-snow hover:bg-zinc-800'}
+                className={createType === 'url' ? 'bg-coral hover:bg-coral/90' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}
               >
                 <LinkIcon className="mr-2 h-4 w-4" />
                 URL
@@ -628,55 +628,55 @@ Additional Information:
 
             {/* Name Field */}
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-snow">Document Name (Optional)</Label>
+              <Label htmlFor="name" className="text-gray-900">Document Name (Optional)</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="Enter document name..."
-                className="bg-zinc-800 border-zinc-700 text-snow"
+                className="bg-white border-gray-200 text-gray-900 shadow-sm"
               />
             </div>
 
             {/* Content Fields */}
             {createType === 'text' && (
               <div className="space-y-2">
-                <Label htmlFor="text" className="text-snow">Text Content *</Label>
+                <Label htmlFor="text" className="text-gray-900">Text Content *</Label>
                 <Textarea
                   id="text"
                   value={formData.text}
                   onChange={(e) => setFormData(prev => ({ ...prev, text: e.target.value }))}
                   placeholder="Enter text content for the knowledge base..."
                   rows={6}
-                  className="bg-zinc-800 border-zinc-700 text-snow"
+                  className="bg-white border-gray-200 text-gray-900 shadow-sm"
                 />
               </div>
             )}
 
             {createType === 'file' && (
               <div className="space-y-2">
-                <Label htmlFor="file" className="text-snow">Upload File *</Label>
+                <Label htmlFor="file" className="text-gray-900">Upload File *</Label>
                 <Input
                   id="file"
                   type="file"
                   onChange={(e) => setFormData(prev => ({ ...prev, file: e.target.files?.[0] || null }))}
-                  className="bg-zinc-800 border-zinc-700 text-snow"
+                  className="bg-white border-gray-200 text-gray-900 shadow-sm"
                   accept=".txt,.md,.pdf,.doc,.docx"
                 />
-                <p className="text-xs text-snow/60">Supported formats: TXT, MD, PDF, DOC, DOCX</p>
+                <p className="text-xs text-gray-500">Supported formats: TXT, MD, PDF, DOC, DOCX</p>
               </div>
             )}
 
             {createType === 'url' && (
               <div className="space-y-2">
-                <Label htmlFor="url" className="text-snow">URL *</Label>
+                <Label htmlFor="url" className="text-gray-900">URL *</Label>
                 <Input
                   id="url"
                   type="url"
                   value={formData.url}
                   onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
                   placeholder="https://example.com/documentation"
-                  className="bg-zinc-800 border-zinc-700 text-snow"
+                  className="bg-white border-gray-200 text-gray-900 shadow-sm"
                 />
               </div>
             )}
@@ -686,7 +686,7 @@ Additional Information:
             <Button
               variant="outline"
               onClick={() => setIsCreateModalOpen(false)}
-              className="border-zinc-700 text-snow hover:bg-zinc-800"
+              className="border-gray-200 text-gray-600 hover:bg-gray-50"
             >
               Cancel
             </Button>
@@ -698,7 +698,7 @@ Additional Information:
                 (createType === 'file' && !formData.file) ||
                 (createType === 'url' && !formData.url.trim())
               }
-              className="bg-coral hover:bg-coral/90 text-white"
+              className="bg-coral hover:bg-coral/90 text-white shadow-md hover:shadow-lg transition-all duration-300"
             >
               {isCreating ? (
                 <>

@@ -1,3 +1,4 @@
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -10,6 +11,13 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
+    // Only load componentTagger in development mode and handle ESM import properly
+    ...(mode === 'development' ? [
+      (async () => {
+        const { componentTagger } = await import("lovable-tagger");
+        return componentTagger();
+      })()
+    ] : [])
   ],
   resolve: {
     alias: {
