@@ -3,13 +3,23 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
 // Use environment variables instead of hardcoded values
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
   throw new Error(
     'Missing Supabase configuration. ' +
     'Ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set in your environment.'
+  );
+}
+
+try {
+  // Validate SUPABASE_URL to provide a clearer error when the value is malformed
+  // rather than letting the Supabase client throw a cryptic "Invalid URL" error.
+  new URL(SUPABASE_URL);
+} catch {
+  throw new Error(
+    'Invalid SUPABASE_URL. Make sure it is a fully qualified URL (e.g. https://xyz.supabase.co).'
   );
 }
 

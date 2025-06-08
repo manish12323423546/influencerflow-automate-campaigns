@@ -43,9 +43,10 @@ Create a `.env` file with the following:
 ```env
 VITE_OPENAI_API_KEY=your_openai_api_key
 VITE_ELEVENLABS_API_KEY=your_elevenlabs_api_key
-VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
+`VITE_SUPABASE_URL` must include the protocol (`https://`) and point to your Supabase project URL.
 
 4. Start the development server:
 ```bash
