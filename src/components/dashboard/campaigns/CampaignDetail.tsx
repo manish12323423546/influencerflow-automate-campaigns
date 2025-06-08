@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import SecureApiService from '@/lib/services/secureApiService';
+import { conversationalAIService } from '@/services/conversationalAI';
 import { motion } from 'framer-motion';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -396,7 +398,11 @@ const CampaignDetail = () => {
       const requestBody = {
         agent_id: env.VITE_ELEVENLABS_AGENT_ID,
         agent_phone_number_id: env.VITE_ELEVENLABS_PHONE_NUMBER_ID,
-        to_number: `+${phoneNumber}`
+        to_number: `+${phoneNumber}`,
+        context: {
+          campaign,
+          influencer: { id: influencerId, name: influencerName }
+        }
       };
 
       console.log('📦 Request Body:', JSON.stringify(requestBody, null, 2));
@@ -429,6 +435,36 @@ const CampaignDetail = () => {
           title: "Call initiated",
           description: `Connected with ${influencerName}`,
         });
+
+        try {
+          const transcript = await conversationalAIService.getCallTranscript(responseData.call_id);
+          const secureApi = SecureApiService.getInstance();
+          const messages = [
+            {
+              role: 'system',
+              content: 'Extract agreed fee and deadline from this transcript. Reply with JSON {"fee": number, "deadline": "YYYY-MM-DD"}'
+            },
+            { role: 'user', content: JSON.stringify(transcript) }
+          ];
+          const aiResp = await secureApi.callOpenAI(messages);
+          let terms: { fee: number; deadline: string } | null = null;
+          try {
+            terms = JSON.parse(aiResp.choices[0].message.content);
+          } catch {}
+          if (terms?.fee) {
+            await supabase.functions.invoke('create-contract', {
+              body: {
+                campaignId: campaign.id,
+                influencerId,
+                templateId: '1',
+                fee: terms.fee,
+                deadline: terms.deadline
+              }
+            });
+          }
+        } catch (err) {
+          console.error('Transcript analysis error:', err);
+        }
       } else {
         console.error('❌ API Error Response:', {
           status: response.status,
@@ -704,6 +740,7 @@ const CampaignDetail = () => {
     if (location.state?.isEditing && campaign) {
       setEditedCampaign({
         name: campaign.name,
+        brand: campaign.brand,
         description: campaign.description,
         goals: campaign.goals,
         target_audience: campaign.target_audience,
@@ -723,6 +760,7 @@ const CampaignDetail = () => {
     if (!isEditing && campaign) {
       setEditedCampaign({
         name: campaign.name,
+        brand: campaign.brand,
         description: campaign.description,
         goals: campaign.goals,
         target_audience: campaign.target_audience,
@@ -741,6 +779,7 @@ const CampaignDetail = () => {
         .from('campaigns')
         .update({
           name: editedCampaign.name,
+          brand: editedCampaign.brand,
           description: editedCampaign.description,
           goals: editedCampaign.goals,
           target_audience: editedCampaign.target_audience,
@@ -958,16 +997,26 @@ const CampaignDetail = () => {
             </Button>
             <div>
               {isEditing ? (
-                <Input
-                  value={editedCampaign.name || ''}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  className="text-2xl font-bold text-gray-900 bg-white border-gray-200"
-                  placeholder="Campaign Name"
-                />
+                <>
+                  <Input
+                    value={editedCampaign.name || ''}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    className="text-2xl font-bold text-gray-900 bg-white border-gray-200 mb-2"
+                    placeholder="Campaign Name"
+                  />
+                  <Input
+                    value={editedCampaign.brand || ''}
+                    onChange={(e) => handleInputChange('brand', e.target.value)}
+                    className="text-sm text-gray-900 bg-white border-gray-200"
+                    placeholder="Brand Name"
+                  />
+                </>
               ) : (
-                <h1 className="text-2xl font-bold text-gray-900">{campaign.name}</h1>
+                <>
+                  <h1 className="text-2xl font-bold text-gray-900">{campaign.name}</h1>
+                  <p className="text-gray-600">{campaign.brand}</p>
+                </>
               )}
-              <p className="text-gray-600">{campaign.brand}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -1036,12 +1085,14 @@ const CampaignDetail = () => {
                         if (influencersError) throw influencersError;
 
                         // Then delete the campaign
-                        const { error: campaignError } = await supabase
+                        const { data: deletedCampaign, error: campaignError } = await supabase
                           .from('campaigns')
                           .delete()
-                          .eq('id', campaign.id);
+                          .eq('id', campaign.id)
+                          .select('id')
+                          .single();
 
-                        if (campaignError) throw campaignError;
+                        if (campaignError || !deletedCampaign) throw campaignError || new Error('Delete failed');
 
                         toast({
                           title: "Campaign deleted",
