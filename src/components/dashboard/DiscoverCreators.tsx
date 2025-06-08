@@ -231,10 +231,15 @@ const DiscoverCreators = () => {
         description: `Starting a call with ${creatorName} at ${phoneNumber}...`,
       });
 
+      const campaign = campaigns[0];
       const requestBody = {
         agent_id: env.VITE_ELEVENLABS_AGENT_ID,
         agent_phone_number_id: env.VITE_ELEVENLABS_PHONE_NUMBER_ID,
-        to_number: `+${phoneNumber}`
+        to_number: `+${phoneNumber}`,
+        context: {
+          campaign,
+          creator: { id: creatorId, name: creatorName }
+        }
       };
 
       console.log('📦 Request Body:', JSON.stringify(requestBody, null, 2));

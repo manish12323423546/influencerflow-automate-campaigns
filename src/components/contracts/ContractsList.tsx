@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Contract {
   id: string;
@@ -35,6 +36,7 @@ interface StoredContract {
 const ContractsList = () => {
   const { toast } = useToast();
   const [contracts, setContracts] = useState<StoredContract[]>([]);
+  const [dbContracts, setDbContracts] = useState<Contract[]>([]);
   const [open, setOpen] = useState(false);
   const [fee, setFee] = useState('');
   const [deadline, setDeadline] = useState('');
@@ -42,7 +44,7 @@ const ContractsList = () => {
 
   // Load contracts from localStorage
   useEffect(() => {
-    const loadContracts = () => {
+    const loadContracts = async () => {
       const storedContracts: StoredContract[] = [];
       
       // Iterate through localStorage
@@ -64,6 +66,18 @@ const ContractsList = () => {
       );
 
       setContracts(storedContracts);
+
+      try {
+        const { data, error } = await supabase
+          .from('contracts')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (!error && data) {
+          setDbContracts(data);
+        }
+      } catch (err) {
+        console.error('Error fetching contracts from DB:', err);
+      }
     };
 
     loadContracts();
@@ -197,7 +211,7 @@ const ContractsList = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {contracts.length === 0 ? (
+            {contracts.length === 0 && dbContracts.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={4} className="text-center text-gray-500 py-8">
                   No contracts found. Create your first contract to get started.
@@ -237,6 +251,19 @@ const ContractsList = () => {
                   </TableCell>
                 </TableRow>
               ))
+            )}
+            {dbContracts.map(contract => (
+              <TableRow key={contract.id} className="border-gray-200 hover:bg-gray-50">
+                <TableCell className="text-gray-900 font-medium">{contract.id}</TableCell>
+                <TableCell className="text-gray-600">{new Date(contract.created_at).toLocaleDateString()}</TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="bg-coral/10 text-coral border-coral/20">
+                    {contract.status}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">-</TableCell>
+              </TableRow>
+            ))
             )}
           </TableBody>
         </Table>
