@@ -25,33 +25,36 @@ const Features = () => {
   ];
 
   return (
-    <section className="section-padding">
-      <div className="container-custom">
+    <section className="section-padding bg-gradient-to-b from-gray-50 to-white relative">
+      {/* Background decoration */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(255,98,67,0.05),transparent_50%)]"></div>
+
+      <div className="container-custom relative">
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-6xl font-space font-bold mb-8">
-            Everything you need to scale
+          <h2 className="text-4xl md:text-6xl font-space font-bold mb-8 text-gray-900">
+            Everything you need to <span className="text-coral">scale</span>
           </h2>
-          <p className="text-xl text-snow/80 max-w-3xl mx-auto">
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
             From discovery to payment, our platform handles every aspect of influencer marketing
           </p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8">
           {features.map((feature, index) => (
-            <Card 
+            <Card
               key={index}
-              className="bg-zinc-900/50 border-zinc-800 hover:border-coral/50 transition-all duration-300 hover:scale-105 hover:shadow-xl group"
+              className="bg-white border-gray-200 hover:border-coral/50 transition-all duration-300 hover:scale-105 hover:shadow-xl group"
             >
               <CardContent className="p-8">
                 <div className="w-16 h-16 bg-coral/20 rounded-xl flex items-center justify-center mb-6 group-hover:bg-coral/30 transition-colors">
                   <feature.icon className="h-8 w-8 text-coral" />
                 </div>
-                
-                <h3 className="text-2xl font-space font-bold mb-4 text-snow">
+
+                <h3 className="text-2xl font-space font-bold mb-4 text-gray-900">
                   {feature.title}
                 </h3>
-                
-                <p className="text-snow/80 mb-6 leading-relaxed">
+
+                <p className="text-gray-600 mb-6 leading-relaxed">
                   {feature.description}
                 </p>
 

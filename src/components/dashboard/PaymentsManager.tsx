@@ -127,54 +127,54 @@ const PaymentsManager = () => {
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <Card className="bg-zinc-800/50 border-zinc-700">
+        <Card className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-snow/80">Pending</CardTitle>
-            <Clock className="h-4 w-4 text-yellow-400" />
+            <CardTitle className="text-sm font-medium text-gray-600">Pending</CardTitle>
+            <Clock className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-snow">{paymentStats.pending}</div>
-            <p className="text-xs text-neutral-400">₹{paymentStats.totalPending.toLocaleString()}</p>
+            <div className="text-2xl font-bold text-gray-900">{paymentStats.pending}</div>
+            <p className="text-xs text-gray-500">₹{paymentStats.totalPending.toLocaleString()}</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-zinc-800/50 border-zinc-700">
+        <Card className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-snow/80">Processing</CardTitle>
-            <CreditCard className="h-4 w-4 text-blue-400" />
+            <CardTitle className="text-sm font-medium text-gray-600">Processing</CardTitle>
+            <CreditCard className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-snow">{paymentStats.processing}</div>
+            <div className="text-2xl font-bold text-gray-900">{paymentStats.processing}</div>
           </CardContent>
         </Card>
 
-        <Card className="bg-zinc-800/50 border-zinc-700">
+        <Card className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-snow/80">Completed</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-400" />
+            <CardTitle className="text-sm font-medium text-gray-600">Completed</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-snow">{paymentStats.completed}</div>
+            <div className="text-2xl font-bold text-gray-900">{paymentStats.completed}</div>
           </CardContent>
         </Card>
 
-        <Card className="bg-zinc-800/50 border-zinc-700">
+        <Card className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-snow/80">Failed</CardTitle>
-            <XCircle className="h-4 w-4 text-red-400" />
+            <CardTitle className="text-sm font-medium text-gray-600">Failed</CardTitle>
+            <XCircle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-snow">{paymentStats.failed}</div>
+            <div className="text-2xl font-bold text-gray-900">{paymentStats.failed}</div>
           </CardContent>
         </Card>
 
-        <Card className="bg-zinc-800/50 border-zinc-700 md:col-span-2">
+        <Card className="bg-white border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300 md:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-snow/80">Total Paid</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">Total Paid</CardTitle>
             <DollarSign className="h-4 w-4 text-coral" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-snow">₹{paymentStats.totalCompleted.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-gray-900">₹{paymentStats.totalCompleted.toLocaleString()}</div>
           </CardContent>
         </Card>
       </div>
@@ -183,7 +183,7 @@ const PaymentsManager = () => {
       <div className="flex justify-end">
         <Button
           onClick={() => setShowPaymentManager(true)}
-          className="bg-coral hover:bg-coral/90 text-white"
+          className="bg-coral hover:bg-coral/90 text-white shadow-md hover:shadow-lg transition-all duration-300"
         >
           <Plus className="mr-2 h-4 w-4" />
           Create New Payment
@@ -192,58 +192,58 @@ const PaymentsManager = () => {
 
       {/* Tabs for Payments and Transactions */}
       <Tabs defaultValue="payments" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 lg:w-[400px] bg-zinc-800 border border-zinc-700">
-          <TabsTrigger 
+        <TabsList className="grid w-full grid-cols-2 lg:w-[400px] bg-white border border-gray-200 shadow-sm">
+          <TabsTrigger
             value="payments"
-            className="data-[state=active]:bg-coral data-[state=active]:text-white text-snow/80 hover:text-snow transition-colors"
+            className="data-[state=active]:bg-coral data-[state=active]:text-white text-gray-600 hover:text-gray-900 transition-colors"
           >
             Pending Payments
           </TabsTrigger>
-          <TabsTrigger 
+          <TabsTrigger
             value="transactions"
-            className="data-[state=active]:bg-coral data-[state=active]:text-white text-snow/80 hover:text-snow transition-colors"
+            className="data-[state=active]:bg-coral data-[state=active]:text-white text-gray-600 hover:text-gray-900 transition-colors"
           >
             Transaction History
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="payments">
-          <Card className="bg-zinc-800/50 border-zinc-700">
+          <Card className="bg-white border-gray-200 shadow-sm">
             <CardHeader>
-              <CardTitle className="text-snow">Pending Payments</CardTitle>
+              <CardTitle className="text-gray-900">Pending Payments</CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow className="border-zinc-700">
-                    <TableHead className="text-snow/80">Campaign</TableHead>
-                    <TableHead className="text-snow/80">Influencer</TableHead>
-                    <TableHead className="text-snow/80">Amount</TableHead>
-                    <TableHead className="text-snow/80">Type</TableHead>
-                    <TableHead className="text-snow/80">Status</TableHead>
-                    <TableHead className="text-snow/80">Created</TableHead>
-                    <TableHead className="text-snow/80">Actions</TableHead>
+                  <TableRow className="border-gray-200">
+                    <TableHead className="text-gray-600">Campaign</TableHead>
+                    <TableHead className="text-gray-600">Influencer</TableHead>
+                    <TableHead className="text-gray-600">Amount</TableHead>
+                    <TableHead className="text-gray-600">Type</TableHead>
+                    <TableHead className="text-gray-600">Status</TableHead>
+                    <TableHead className="text-gray-600">Created</TableHead>
+                    <TableHead className="text-gray-600">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {pendingPayments.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-snow/60">
+                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                         No pending payments found.
                       </TableCell>
                     </TableRow>
                   ) : (
                     pendingPayments.map((payment) => (
-                      <TableRow key={payment.id} className="border-zinc-700 hover:bg-zinc-700/50">
-                        <TableCell className="font-medium text-snow">
+                      <TableRow key={payment.id} className="border-gray-200 hover:bg-gray-50">
+                        <TableCell className="font-medium text-gray-900">
                           {payment.campaign?.name || 'Unknown Campaign'}
                         </TableCell>
-                        <TableCell className="text-snow/80">
+                        <TableCell className="text-gray-600">
                           {payment.influencer?.name || 'Unknown Influencer'}
                         </TableCell>
-                        <TableCell className="text-snow/80">₹{Number(payment.amount).toLocaleString()}</TableCell>
+                        <TableCell className="text-gray-600">₹{Number(payment.amount).toLocaleString()}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="border-zinc-600 text-snow/70">
+                          <Badge variant="outline" className="border-gray-300 text-gray-600">
                             {payment.payment_type || 'milestone'}
                           </Badge>
                         </TableCell>
@@ -252,7 +252,7 @@ const PaymentsManager = () => {
                             {payment.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-snow/80">
+                        <TableCell className="text-gray-600">
                           {new Date(payment.created_at).toLocaleDateString()}
                         </TableCell>
                         <TableCell>
@@ -270,7 +270,7 @@ const PaymentsManager = () => {
                             </Button>
                           )}
                           {payment.status === 'processing' && (
-                            <span className="text-sm text-snow/60">Processing...</span>
+                            <span className="text-sm text-gray-500">Processing...</span>
                           )}
                         </TableCell>
                       </TableRow>
@@ -283,41 +283,41 @@ const PaymentsManager = () => {
         </TabsContent>
 
         <TabsContent value="transactions">
-          <Card className="bg-zinc-800/50 border-zinc-700">
+          <Card className="bg-white border-gray-200 shadow-sm">
             <CardHeader>
-              <CardTitle className="text-snow">Transaction History</CardTitle>
+              <CardTitle className="text-gray-900">Transaction History</CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow className="border-zinc-700">
-                    <TableHead className="text-snow/80">Campaign</TableHead>
-                    <TableHead className="text-snow/80">Influencer</TableHead>
-                    <TableHead className="text-snow/80">Amount</TableHead>
-                    <TableHead className="text-snow/80">Type</TableHead>
-                    <TableHead className="text-snow/80">Status</TableHead>
-                    <TableHead className="text-snow/80">Paid At</TableHead>
+                  <TableRow className="border-gray-200">
+                    <TableHead className="text-gray-600">Campaign</TableHead>
+                    <TableHead className="text-gray-600">Influencer</TableHead>
+                    <TableHead className="text-gray-600">Amount</TableHead>
+                    <TableHead className="text-gray-600">Type</TableHead>
+                    <TableHead className="text-gray-600">Status</TableHead>
+                    <TableHead className="text-gray-600">Paid At</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {completedPayments.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-snow/60">
+                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                         No transaction history found.
                       </TableCell>
                     </TableRow>
                   ) : (
                     completedPayments.map((payment) => (
-                      <TableRow key={payment.id} className="border-zinc-700 hover:bg-zinc-700/50">
-                        <TableCell className="font-medium text-snow">
+                      <TableRow key={payment.id} className="border-gray-200 hover:bg-gray-50">
+                        <TableCell className="font-medium text-gray-900">
                           {payment.campaign?.name || 'Unknown Campaign'}
                         </TableCell>
-                        <TableCell className="text-snow/80">
+                        <TableCell className="text-gray-600">
                           {payment.influencer?.name || 'Unknown Influencer'}
                         </TableCell>
-                        <TableCell className="text-snow/80">₹{Number(payment.amount).toLocaleString()}</TableCell>
+                        <TableCell className="text-gray-600">₹{Number(payment.amount).toLocaleString()}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="border-zinc-600 text-snow/70">
+                          <Badge variant="outline" className="border-gray-300 text-gray-600">
                             {payment.payment_type || 'payment'}
                           </Badge>
                         </TableCell>
@@ -326,7 +326,7 @@ const PaymentsManager = () => {
                             {payment.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-snow/80">
+                        <TableCell className="text-gray-600">
                           {payment.paid_at ? new Date(payment.paid_at).toLocaleDateString() : 'N/A'}
                         </TableCell>
                       </TableRow>

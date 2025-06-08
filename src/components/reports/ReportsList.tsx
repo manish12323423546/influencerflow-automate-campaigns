@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,32 +5,25 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Download, Calendar, FileText, Clock } from 'lucide-react';
+import { Download, Calendar, FileText, Clock, TrendingUp, MousePointerClick, Target, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
+import type { Database } from '@/types/supabase';
 
-interface ReportRequest {
-  id: string;
-  range_start: string;
-  range_end: string;
-  filters_json: any;
-  status: string;
-  pdf_url: string | null;
-  created_at: string;
-}
+type Report = Database['public']['Tables']['reports']['Row'];
 
 const ReportsList = () => {
-  const [reports, setReports] = useState<ReportRequest[]>([]);
+  const [reports, setReports] = useState<Report[]>([]);
 
   const { data: reportsData, isLoading } = useQuery({
     queryKey: ['reports'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('report_requests')
+        .from('reports')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as ReportRequest[];
+      return data as Report[];
     },
   });
 
@@ -50,17 +42,17 @@ const ReportsList = () => {
         {
           event: '*',
           schema: 'public',
-          table: 'report_requests'
+          table: 'reports'
         },
         (payload) => {
           console.log('Report update received:', payload);
           
           if (payload.eventType === 'INSERT') {
-            setReports(prev => [payload.new as ReportRequest, ...prev]);
+            setReports(prev => [payload.new as Report, ...prev]);
           } else if (payload.eventType === 'UPDATE') {
             setReports(prev => 
               prev.map(report => 
-                report.id === payload.new.id ? payload.new as ReportRequest : report
+                report.id === payload.new.id ? payload.new as Report : report
               )
             );
           } else if (payload.eventType === 'DELETE') {
@@ -75,24 +67,45 @@ const ReportsList = () => {
     };
   }, []);
 
-  const handleDownload = async (report: ReportRequest) => {
-    if (!report.pdf_url) return;
-    
+  const handleDownload = async (report: Report) => {
     try {
-      // For demo purposes, we'll just open the URL
-      // In a real app, you'd generate a signed URL from Supabase Storage
-      window.open(report.pdf_url, '_blank');
+      // Create CSV content
+      const csvContent = [
+        'Campaign Performance Report',
+        `Date Range: ${format(new Date(report.range_start), 'MMM dd, yyyy')} - ${format(new Date(report.range_end), 'MMM dd, yyyy')}`,
+        '',
+        'Overall Performance',
+        'Metric,Value',
+        `Impressions,${report.total_impressions.toLocaleString()}`,
+        `Clicks,${report.total_clicks.toLocaleString()}`,
+        `Conversions,${report.total_conversions.toLocaleString()}`,
+        `Spend,$${report.total_spend.toLocaleString()}`,
+        `CTR,${((report.total_clicks / report.total_impressions) * 100).toFixed(2)}%`,
+        `CVR,${((report.total_conversions / report.total_clicks) * 100).toFixed(2)}%`,
+        `CPA,$${(report.total_spend / report.total_conversions).toFixed(2)}`
+      ].join('\n');
+      
+      // Create and download the CSV file
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `report-${format(new Date(report.created_at), 'yyyy-MM-dd')}.csv`;
+      
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
     } catch (error) {
       console.error('Error downloading report:', error);
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: Report['status']) => {
     switch (status) {
       case 'ready':
         return <Badge className="bg-green-500 hover:bg-green-600">Ready</Badge>;
-      case 'pending':
-        return <Badge className="bg-yellow-500 hover:bg-yellow-600">Generating</Badge>;
       case 'failed':
         return <Badge variant="destructive">Failed</Badge>;
       default:
@@ -100,11 +113,11 @@ const ReportsList = () => {
     }
   };
 
-  const getCampaignNames = (filters: any) => {
-    if (filters?.campaignIds && Array.isArray(filters.campaignIds)) {
-      return filters.campaignIds.length > 2 
-        ? `${filters.campaignIds.slice(0, 2).join(', ')} +${filters.campaignIds.length - 2} more`
-        : filters.campaignIds.join(', ');
+  const getCampaignIds = (report: Report) => {
+    if (report.campaign_ids && Array.isArray(report.campaign_ids)) {
+      return report.campaign_ids.length > 2 
+        ? `${report.campaign_ids.slice(0, 2).join(', ')} +${report.campaign_ids.length - 2} more`
+        : report.campaign_ids.join(', ');
     }
     return 'All Campaigns';
   };
@@ -150,6 +163,7 @@ const ReportsList = () => {
             <TableRow className="border-zinc-800">
               <TableHead className="text-snow/70">Date Range</TableHead>
               <TableHead className="text-snow/70">Campaigns</TableHead>
+              <TableHead className="text-snow/70">Metrics</TableHead>
               <TableHead className="text-snow/70">Status</TableHead>
               <TableHead className="text-snow/70">Generated</TableHead>
               <TableHead className="text-snow/70">Actions</TableHead>
@@ -167,7 +181,27 @@ const ReportsList = () => {
                   </div>
                 </TableCell>
                 <TableCell className="text-snow/80">
-                  {getCampaignNames(report.filters_json)}
+                  {getCampaignIds(report)}
+                </TableCell>
+                <TableCell className="text-snow/80">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center" title="Impressions">
+                      <TrendingUp className="h-4 w-4 text-coral mr-1" />
+                      {report.total_impressions.toLocaleString()}
+                    </div>
+                    <div className="flex items-center" title="Clicks">
+                      <MousePointerClick className="h-4 w-4 text-coral mr-1" />
+                      {report.total_clicks.toLocaleString()}
+                    </div>
+                    <div className="flex items-center" title="Conversions">
+                      <Target className="h-4 w-4 text-coral mr-1" />
+                      {report.total_conversions.toLocaleString()}
+                    </div>
+                    <div className="flex items-center" title="Spend">
+                      <DollarSign className="h-4 w-4 text-coral mr-1" />
+                      {report.total_spend.toLocaleString()}
+                    </div>
+                  </div>
                 </TableCell>
                 <TableCell>
                   {getStatusBadge(report.status)}
@@ -178,10 +212,9 @@ const ReportsList = () => {
                 <TableCell>
                   <Button
                     onClick={() => handleDownload(report)}
-                    disabled={report.status !== 'ready' || !report.pdf_url}
                     size="sm"
                     variant="outline"
-                    className="border-coral text-coral hover:bg-coral hover:text-white disabled:opacity-50"
+                    className="border-coral text-coral hover:bg-coral hover:text-white"
                   >
                     <Download className="h-4 w-4 mr-1" />
                     Download

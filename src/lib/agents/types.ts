@@ -1,3 +1,37 @@
+
+export interface Creator {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  metrics: {
+    followers: number;
+    engagement: number;
+    relevanceScore: number;
+  };
+  contactPreference?: ContactMethod;
+}
+
+export interface Campaign {
+  id: string;
+  name: string;
+  description: string | null;
+  brand: string;
+  status: string;
+  budget: number;
+  spent: number;
+  influencer_count: number;
+  reach: number;
+  engagement_rate: number;
+  goals: string | null;
+  target_audience: string | null;
+  deliverables: string | null;
+  timeline: string | null;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export enum CampaignStatus {
   INITIATED = 'INITIATED',
   CREATOR_SEARCH = 'CREATOR_SEARCH',
@@ -5,7 +39,7 @@ export enum CampaignStatus {
   OUTREACH = 'OUTREACH',
   RESPONSE_PROCESSING = 'RESPONSE_PROCESSING',
   COMPLETED = 'COMPLETED',
-  FAILED = 'FAILED',
+  FAILED = 'FAILED'
 }
 
 export type ContactMethod = 'EMAIL' | 'PHONE' | 'NONE';
@@ -15,75 +49,48 @@ export interface CreatorContactPreference {
   contactMethod: ContactMethod;
 }
 
-export interface Creator {
-  id: string;
-  name: string;
-  email: string;
-  metrics: {
-    followers: number;
-    engagement: number;
-  };
-  contactPreference?: ContactMethod;
-}
-
-export interface Contract {
-  id: string;
-  creatorId: string;
-  status: 'DRAFT' | 'SENT' | 'SIGNED' | 'REJECTED';
-  content: any;
-}
-
 export interface Communication {
   id: string;
-  creatorId: string;
-  type: 'EMAIL' | 'SYSTEM' | 'PHONE';
-  status: 'SENT' | 'FAILED';
+  type: 'EMAIL' | 'PHONE' | 'SYSTEM';
   content: string;
+  status: 'SENT' | 'FAILED';
   timestamp: string;
-}
-
-export interface ExecutionPlan {
-  sequence: Array<{
-    type: 'EMAIL' | 'PHONE';
-    creatorId: string;
-    priority: number;
-    reasoning: string;
-  }>;
-  strategy_reasoning: string;
+  creatorId?: string;
 }
 
 export interface CampaignState {
   status: CampaignStatus;
   selectedCreators: Creator[];
-  sentContracts: Contract[];
+  sentContracts: any[];
   communications: Communication[];
-  error?: string;
-  executionPlan?: ExecutionPlan;
   creatorPreferences?: CreatorContactPreference[];
+  executionPlan?: any;
 }
 
-export interface Campaign {
+export interface Contract {
   id: string;
-  name: string;
-  description?: string;
-  brand: string;
-  goals: string;
-  target_audience: string;
-  budget: number;
-  deliverables: string;
-  timeline?: string;
-  status: string;
-  settings?: {
-    platform?: string;
-    min_followers?: number;
-    max_engagement_rate?: number;
+  campaign_id: string;
+  influencer_id: string;
+  contract_data: ContractData;
+  status: 'DRAFT' | 'SENT' | 'ACCEPTED' | 'REJECTED' | 'COMPLETED';
+  created_at: string;
+  updated_at: string;
+  pdf_url?: string;
+  campaigns?: {
+    name: string;
+    brand: string;
   };
-  campaign_influencers?: Array<{
-    influencer_id: string;
-    status: string;
-    match_score?: number;
-    match_reason?: string;
-    fee?: number;
-  }>;
-  influencers?: Array<any>; // Array of influencer objects
-} 
+  influencers?: {
+    name: string;
+    handle: string;
+    platform: string;
+    avatar_url: string;
+  };
+}
+
+export interface ContractData {
+  fee: number;
+  deadline: string;
+  template_id: string;
+  generated_at: string;
+}

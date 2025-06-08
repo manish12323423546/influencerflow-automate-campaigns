@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Search, Star, Users, TrendingUp, MessageSquare, Heart, MessageCircle, Phone, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { GmailService, GmailCreator, GmailCampaign } from '@/lib/services/gmailService';
 
 interface Creator {
   id: string;
@@ -69,6 +70,7 @@ const DiscoverCreators = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [nicheFilter, setNicheFilter] = useState<string>('all');
+  const [showShortlisted, setShowShortlisted] = useState(false);
   const [isCallInProgress, setIsCallInProgress] = useState<Record<string, boolean>>({});
   const [isGmailInProgress, setIsGmailInProgress] = useState<Record<string, boolean>>({});
   const [gmailResponses, setGmailResponses] = useState<Record<string, any>>({});
@@ -91,13 +93,18 @@ const DiscoverCreators = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        console.log('🔍 DiscoverCreators: Fetching influencers...');
         // Fetch creators
         const { data: creatorsData, error: creatorsError } = await supabase
           .from('influencers')
           .select('*')
           .order('followers_count', { ascending: false });
 
-        if (creatorsError) throw creatorsError;
+        if (creatorsError) {
+          console.error('❌ DiscoverCreators: Error fetching influencers:', creatorsError);
+          throw creatorsError;
+        }
+        console.log('✅ DiscoverCreators: Influencers fetched:', creatorsData?.length || 0);
         
         // Transform the data to match Creator interface
         const transformedData = (creatorsData || []).map(influencer => ({
@@ -116,20 +123,27 @@ const DiscoverCreators = () => {
         
         setCreators(transformedData);
 
+        console.log('🔍 DiscoverCreators: Fetching campaigns...');
         // Fetch campaigns
         const { data: campaignsData, error: campaignsError } = await supabase
           .from('campaigns')
           .select('*')
           .order('created_at', { ascending: false });
 
-        if (campaignsError) throw campaignsError;
-        setCampaigns(campaignsData || []);
+        if (campaignsError) {
+          console.error('❌ DiscoverCreators: Error fetching campaigns:', campaignsError);
+          // Don't throw here, just log and continue with empty campaigns
+          setCampaigns([]);
+        } else {
+          console.log('✅ DiscoverCreators: Campaigns fetched:', campaignsData?.length || 0);
+          setCampaigns(campaignsData || []);
+        }
 
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('❌ DiscoverCreators: Critical error fetching data:', error);
         toast({
           title: "Error loading data",
-          description: "Please try again later.",
+          description: "Some features may not be available. Please try refreshing the page.",
           variant: "destructive",
         });
       } finally {
@@ -141,6 +155,10 @@ const DiscoverCreators = () => {
   }, [toast]);
 
   const filteredCreators = creators.filter(creator => {
+    // First filter by shortlist if enabled
+    if (showShortlisted && !creator.isShortlisted) return false;
+    
+    // Then apply other filters
     const matchesSearch = creator.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          creator.handle.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPlatform = platformFilter === 'all' || creator.platform.toLowerCase() === platformFilter.toLowerCase();
@@ -294,57 +312,90 @@ const DiscoverCreators = () => {
   const handleGmailSend = async (campaignId: string) => {
     if (!selectedCreatorForGmail) return;
 
-    const selectedCampaign = campaigns.find(c => c.id === campaignId);
-    if (!selectedCampaign) return;
+    const creator = selectedCreatorForGmail;
+    const campaign = campaigns.find(c => c.id === campaignId);
+
+    if (!campaign) {
+      toast({
+        title: "Campaign not found",
+        description: "Selected campaign could not be found.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
-      setIsGmailInProgress(prev => ({ ...prev, [selectedCreatorForGmail.id]: true }));
-      
+      setIsGmailInProgress(prev => ({ ...prev, [creator.id]: true }));
+      setIsGmailModalOpen(false);
+
       toast({
         title: "Sending...",
-        description: `Sending Gmail workflow for ${selectedCreatorForGmail.name}...`,
+        description: `Sending Gmail workflow for ${creator.name}...`,
       });
 
-      console.log('Sending Gmail workflow for creator:', selectedCreatorForGmail.name);
-
-      const requestBody = {
-        gmail: selectedCreatorForGmail.gmail_gmail,
-        campaign: selectedCampaign,
-        creator: selectedCreatorForGmail
+      // Transform data for Gmail service
+      const gmailCreator: GmailCreator = {
+        id: creator.id,
+        name: creator.name,
+        gmail_gmail: creator.gmail_gmail,
+        handle: creator.handle,
+        platform: creator.platform,
+        followers_count: creator.followers_count,
+        engagement_rate: creator.engagement_rate
       };
 
-      console.log('Request body:', JSON.stringify(requestBody, null, 2));
+      const gmailCampaign: GmailCampaign = {
+        id: campaign.id,
+        name: campaign.name,
+        brand: campaign.brand,
+        description: campaign.description,
+        goals: campaign.goals,
+        target_audience: campaign.target_audience,
+        budget: campaign.budget,
+        deliverables: campaign.deliverables,
+        timeline: campaign.timeline
+      };
 
-      const response = await fetch("https://varhhh.app.n8n.cloud/webhook/08b089ba-1617-4d04-a5c7-f9b7d8ca57c4", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        body: JSON.stringify(requestBody)
-      });
+      // Use Gmail service to send email
+      const result = await GmailService.sendGmailWorkflow(gmailCreator, gmailCampaign);
 
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
+      setGmailResponses(prev => ({
+        ...prev,
+        [creator.id]: result
+      }));
 
-      setGmailResponses(prev => ({ ...prev, [selectedCreatorForGmail.id]: { status: 'sent', timestamp: new Date().toISOString() } }));
-      
-      toast({
-        title: "Request Sent Successfully",
-        description: `Gmail workflow request sent for ${selectedCreatorForGmail.name}. JSON body sent in proper format.`,
-      });
-      setIsGmailModalOpen(false);
-      setSelectedCreatorForGmail(null);
+      if (result.status === 'success') {
+        toast({
+          title: "Email Sent Successfully",
+          description: `Gmail workflow completed for ${creator.name}.`,
+        });
+      } else {
+        throw new Error(result.error || 'Failed to send email');
+      }
+
+
 
     } catch (error) {
       console.error('Error sending Gmail workflow:', error);
+      const errorResult = {
+        status: 'error' as const,
+        timestamp: new Date().toISOString(),
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+
+      setGmailResponses(prev => ({
+        ...prev,
+        [creator.id]: errorResult
+      }));
+
       toast({
-        title: "Workflow Failed",
+        title: "Failed to Send Email",
         description: "Unable to send Gmail workflow. Please try again.",
         variant: "destructive",
       });
     } finally {
-      setIsGmailInProgress(prev => ({ ...prev, [selectedCreatorForGmail.id]: false }));
+      setIsGmailInProgress(prev => ({ ...prev, [creator.id]: false }));
+      setSelectedCreatorForGmail(null);
     }
   };
 
@@ -384,20 +435,20 @@ const DiscoverCreators = () => {
       {/* Search and Filters */}
       <div className="flex flex-col lg:flex-row gap-4">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-snow/50" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             placeholder="Search creators..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="bg-zinc-800 border-zinc-700 text-snow placeholder:text-snow/50 focus:border-coral pl-10"
+            className="bg-white border-gray-200 text-gray-900 placeholder:text-gray-400 focus:border-coral pl-10 shadow-sm"
           />
         </div>
         
         <Select value={platformFilter} onValueChange={setPlatformFilter}>
-          <SelectTrigger className="w-40 bg-zinc-800 border-zinc-700 text-snow">
+          <SelectTrigger className="w-40 bg-white border-gray-200 text-gray-900 shadow-sm">
             <SelectValue placeholder="Platform" />
           </SelectTrigger>
-          <SelectContent className="bg-zinc-800 border-zinc-700">
+          <SelectContent className="bg-white border-gray-200">
             <SelectItem value="all">All Platforms</SelectItem>
             {uniquePlatforms.map(platform => (
               <SelectItem key={platform} value={platform.toLowerCase()}>{platform}</SelectItem>
@@ -406,26 +457,35 @@ const DiscoverCreators = () => {
         </Select>
 
         <Select value={nicheFilter} onValueChange={setNicheFilter}>
-          <SelectTrigger className="w-40 bg-zinc-800 border-zinc-700 text-snow">
+          <SelectTrigger className="w-40 bg-white border-gray-200 text-gray-900 shadow-sm">
             <SelectValue placeholder="Niche" />
           </SelectTrigger>
-          <SelectContent className="bg-zinc-800 border-zinc-700">
+          <SelectContent className="bg-white border-gray-200">
             <SelectItem value="all">All Niches</SelectItem>
             {uniqueIndustries.map(industry => (
               <SelectItem key={industry} value={industry.toLowerCase()}>{industry}</SelectItem>
             ))}
           </SelectContent>
         </Select>
+
+        <Button
+          variant={showShortlisted ? "default" : "outline"}
+          className={showShortlisted ? "bg-coral hover:bg-coral/90 text-white" : "border-gray-200 text-gray-600 hover:bg-gray-50"}
+          onClick={() => setShowShortlisted(!showShortlisted)}
+        >
+          <Heart className={`h-4 w-4 mr-2 ${showShortlisted ? 'fill-current' : ''}`} />
+          {showShortlisted ? 'Show All' : 'View Shortlisted'}
+        </Button>
       </div>
 
       {/* Campaign Selection Modal */}
       <Dialog open={isGmailModalOpen} onOpenChange={setIsGmailModalOpen}>
-        <DialogContent className="bg-zinc-800 border-zinc-700 text-snow">
+        <DialogContent className="bg-white border-gray-200 text-gray-900">
           <DialogHeader>
             <DialogTitle>Select Campaign for {selectedCreatorForGmail?.name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-snow/70">Choose a campaign to send Gmail workflow for:</p>
+            <p className="text-gray-600">Choose a campaign to send Gmail workflow for:</p>
             <div className="grid gap-2 max-h-60 overflow-y-auto">
               {campaigns.map((campaign) => (
                 <Button
@@ -433,11 +493,11 @@ const DiscoverCreators = () => {
                   variant="outline"
                   onClick={() => handleGmailSend(campaign.id)}
                   disabled={isGmailInProgress[selectedCreatorForGmail?.id || '']}
-                  className="justify-start border-zinc-700 text-snow hover:bg-zinc-700"
+                  className="justify-start border-gray-200 text-gray-900 hover:bg-gray-50"
                 >
                   <div className="text-left">
                     <div className="font-medium">{campaign.name}</div>
-                    <div className="text-xs text-snow/60">{campaign.brand} - {campaign.status}</div>
+                    <div className="text-xs text-gray-500">{campaign.brand} - {campaign.status}</div>
                   </div>
                 </Button>
               ))}
@@ -448,12 +508,14 @@ const DiscoverCreators = () => {
 
       {/* Influencer Leaderboard */}
       <div>
-        <h2 className="text-2xl font-semibold text-snow mb-4">Influencer Leaderboard</h2>
+        <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+          {showShortlisted ? 'Shortlisted Influencers' : 'Influencer Leaderboard'}
+        </h2>
         {filteredCreators.length === 0 ? (
-          <Card className="bg-zinc-800/50 border-zinc-700">
+          <Card className="bg-white border-gray-200 shadow-sm">
             <CardContent className="py-8">
-              <div className="text-center text-snow/60">
-                {creators.length === 0 
+              <div className="text-center text-gray-500">
+                {creators.length === 0
                   ? "No creators found in the database."
                   : "No creators match your current filters. Try adjusting your search criteria."
                 }
@@ -463,7 +525,7 @@ const DiscoverCreators = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredCreators.map((creator) => (
-              <Card key={creator.id} className="bg-zinc-800/50 border-zinc-700 hover:border-coral/50 transition-colors">
+              <Card key={creator.id} className="bg-white border-gray-200 hover:border-coral/50 hover:shadow-md transition-all duration-300">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center space-x-3">
@@ -473,15 +535,15 @@ const DiscoverCreators = () => {
                         className="h-12 w-12 rounded-full"
                       />
                       <div>
-                        <CardTitle className="text-lg text-snow">{creator.name}</CardTitle>
-                        <p className="text-snow/60 text-sm">{creator.handle}</p>
+                        <CardTitle className="text-lg text-gray-900">{creator.name}</CardTitle>
+                        <p className="text-gray-500 text-sm">{creator.handle}</p>
                       </div>
                     </div>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleShortlist(creator.id)}
-                      className={creator.isShortlisted ? 'text-coral' : 'text-snow/70 hover:text-coral'}
+                      className={creator.isShortlisted ? 'text-coral' : 'text-gray-500 hover:text-coral'}
                     >
                       <Heart className={`h-4 w-4 ${creator.isShortlisted ? 'fill-current' : ''}`} />
                     </Button>
@@ -500,25 +562,25 @@ const DiscoverCreators = () => {
                     
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <p className="text-snow/60">Followers</p>
-                        <p className="text-snow font-medium">{formatFollowers(creator.followers_count)}</p>
+                        <p className="text-gray-500">Followers</p>
+                        <p className="text-gray-900 font-medium">{formatFollowers(creator.followers_count)}</p>
                       </div>
                       <div>
-                        <p className="text-snow/60">Engagement</p>
-                        <p className="text-snow font-medium">{creator.engagement_rate.toFixed(1)}%</p>
+                        <p className="text-gray-500">Engagement</p>
+                        <p className="text-gray-900 font-medium">{creator.engagement_rate.toFixed(1)}%</p>
                       </div>
                     </div>
 
                     {/* Phone Number Display */}
-                    <div className="bg-zinc-700/30 rounded-md p-3">
-                      <p className="text-snow/60 text-xs mb-1">Phone Number</p>
-                      <p className="text-snow text-sm font-medium">{formatPhoneNumber(creator.phone_no)}</p>
+                    <div className="bg-gray-50 rounded-md p-3">
+                      <p className="text-gray-500 text-xs mb-1">Phone Number</p>
+                      <p className="text-gray-900 text-sm font-medium">{formatPhoneNumber(creator.phone_no)}</p>
                     </div>
 
                     {/* Gmail Display */}
-                    <div className="bg-zinc-700/30 rounded-md p-3">
-                      <p className="text-snow/60 text-xs mb-1">Gmail</p>
-                      <p className="text-snow text-sm font-medium">{formatGmail(creator.gmail_gmail)}</p>
+                    <div className="bg-gray-50 rounded-md p-3">
+                      <p className="text-gray-500 text-xs mb-1">Gmail</p>
+                      <p className="text-gray-900 text-sm font-medium">{formatGmail(creator.gmail_gmail)}</p>
                     </div>
 
                     {/* Gmail Response Display */}
@@ -535,7 +597,7 @@ const DiscoverCreators = () => {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="border-zinc-700 text-snow hover:bg-zinc-800"
+                        className="border-gray-200 text-gray-600 hover:bg-gray-50"
                       >
                         <MessageCircle className="h-4 w-4 mr-1" />
                         Message
@@ -550,7 +612,7 @@ const DiscoverCreators = () => {
                             ? 'bg-green-500 border-green-500 text-white'
                             : !creator.phone_no
                             ? 'bg-gray-500 border-gray-500 text-gray-300 cursor-not-allowed'
-                            : 'border-zinc-700 text-snow hover:bg-zinc-800'
+                            : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                         }`}
                       >
                         <Phone className="h-4 w-4 mr-1" />
@@ -566,7 +628,7 @@ const DiscoverCreators = () => {
                             ? 'bg-coral border-coral text-white'
                             : !creator.gmail_gmail
                             ? 'bg-gray-500 border-gray-500 text-gray-300 cursor-not-allowed'
-                            : 'border-zinc-700 text-snow hover:bg-zinc-800'
+                            : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                         }`}
                       >
                         <Mail className="h-4 w-4 mr-1" />
