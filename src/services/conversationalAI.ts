@@ -112,6 +112,21 @@ class ConversationalAIService {
       throw error;
     }
   }
+
+  async getCallTranscript(callId: string): Promise<any> {
+    try {
+      const response = await axios.get(
+        `${this.baseUrl}/convai/conversation/${callId}/transcript`,
+        {
+          headers: { 'xi-api-key': this.apiKey }
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error getting call transcript:', error);
+      throw error;
+    }
+  }
 }
 
-export const conversationalAIService = new ConversationalAIService(); 
+export const conversationalAIService = new ConversationalAIService();
