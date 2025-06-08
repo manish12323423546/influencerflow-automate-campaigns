@@ -6,11 +6,28 @@ import type { Database } from '@/types/supabase';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+// Validate URL and throw meaningful errors
+if (!supabaseUrl) {
+  throw new Error('Missing Supabase URL environment variable (VITE_SUPABASE_URL)');
 }
 
-// Import the supabase client like this:
-// import { supabase } from "@/integrations/supabase/client";
+if (!supabaseAnonKey) {
+  throw new Error('Missing Supabase Anon Key environment variable (VITE_SUPABASE_ANON_KEY)');
+}
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+// Ensure URL is properly formatted
+let validatedUrl: string;
+try {
+  const url = new URL(supabaseUrl);
+  validatedUrl = url.toString();
+} catch (error) {
+  throw new Error(`Invalid Supabase URL format: ${error.message}`);
+}
+
+// Create and export the Supabase client
+export const supabase = createClient<Database>(validatedUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+});
