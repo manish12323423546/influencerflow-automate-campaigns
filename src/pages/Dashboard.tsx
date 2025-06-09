@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Users, TrendingUp, DollarSign, Target, Bell, Activity, Settings, Plus,
-  BarChart3, FileText, CreditCard, Search, Headphones, Database, MessageSquare, MessageCircle, Mail
+  BarChart3, FileText, CreditCard, Search, Headphones, Database, MessageSquare, MessageCircle, Mail, Sparkles
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import CampaignsManager from '@/components/dashboard/CampaignsManager';
@@ -16,6 +16,7 @@ import OutreachManager from '@/components/dashboard/OutreachManager';
 import KnowledgeBaseManager from '@/components/dashboard/KnowledgeBaseManager';
 import EmailConversionManager from '@/components/dashboard/EmailConversionManager';
 import ReportsManager from '@/components/dashboard/ReportsManager';
+import RealTimeCreatorFinder from '@/components/dashboard/RealTimeCreatorFinder';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Campaign } from '@/types/campaign';
@@ -24,7 +25,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'campaigns' | 'discover' | 'contracts' | 'payments' | 'outreach' | 'knowledge' | 'conversations' | 'email-conversion' | 'reports'>('campaigns');
+  const [activeTab, setActiveTab] = useState<'campaigns' | 'discover' | 'contracts' | 'payments' | 'outreach' | 'knowledge' | 'conversations' | 'email-conversion' | 'reports' | 'real-time-creators'>('campaigns');
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [totalInfluencers, setTotalInfluencers] = useState(0);
@@ -35,7 +36,7 @@ const Dashboard = () => {
   // Handle URL parameters for tab and campaign selection
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['campaigns', 'discover', 'contracts', 'payments', 'reports', 'outreach', 'email-conversion', 'conversations', 'knowledge'].includes(tab)) {
+    if (tab && ['campaigns', 'discover', 'contracts', 'payments', 'reports', 'outreach', 'email-conversion', 'conversations', 'knowledge', 'real-time-creators'].includes(tab)) {
       setActiveTab(tab as any);
     }
   }, [searchParams]);
@@ -188,6 +189,7 @@ const Dashboard = () => {
   const navigationItems = [
     { id: 'campaigns', label: 'Campaigns', icon: Target, description: 'Manage your campaigns' },
     { id: 'discover', label: 'Discover Creators', icon: Users, description: 'Find perfect influencers' },
+    { id: 'real-time-creators', label: 'Real-Time Creators', icon: Sparkles, description: 'Find creators by hashtags' },
     { id: 'contracts', label: 'Contracts', icon: FileText, description: 'Manage contracts' },
     { id: 'payments', label: 'Payments', icon: CreditCard, description: 'Handle payments' },
     { id: 'reports', label: 'Reports', icon: BarChart3, description: 'Generate and view reports' },
@@ -350,6 +352,7 @@ const Dashboard = () => {
         <div className="space-y-6">
           {activeTab === 'campaigns' && <CampaignsManager campaigns={campaigns} />}
           {activeTab === 'discover' && <DiscoverCreators />}
+          {activeTab === 'real-time-creators' && <RealTimeCreatorFinder />}
           {activeTab === 'contracts' && <ContractsManager />}
           {activeTab === 'payments' && <PaymentsManager />}
           {activeTab === 'reports' && <ReportsManager preSelectedCampaign={searchParams.get('campaign')} />}

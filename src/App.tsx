@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import CreatorDashboard from "./pages/CreatorDashboard";
 import CreatorProfile from "./pages/CreatorProfile";
 import Settings from "./pages/Settings";
+import PostDetail from "@/pages/PostDetail";
 import NotFound from "./pages/NotFound";
 
 // Import components from new locations
@@ -35,6 +36,7 @@ const App = () => (
                 <Route path="/creator-dashboard" element={<ErrorBoundary><CreatorDashboard /></ErrorBoundary>} />
                 <Route path="/creator-profile" element={<ErrorBoundary><CreatorProfile /></ErrorBoundary>} />
                 <Route path="/settings" element={<ErrorBoundary><Settings /></ErrorBoundary>} />
+                <Route path="/post/:shortCode" element={<ErrorBoundary><PostDetail /></ErrorBoundary>} />
 
                 {/* Campaign Routes */}
                 <Route path="/campaigns/:id" element={<ErrorBoundary><CampaignDetail /></ErrorBoundary>} />
