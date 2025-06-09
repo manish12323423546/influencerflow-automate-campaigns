@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Search } from 'lucide-react';
+import { Search, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -21,6 +21,13 @@ export function InfluencerSearchModal({ open, onClose, onSelect }: InfluencerSea
   const [isLoading, setIsLoading] = useState(false);
   const [influencers, setInfluencers] = useState<Influencer[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Load influencers when modal opens
+  useEffect(() => {
+    if (open) {
+      handleSearch();
+    }
+  }, [open]);
 
   const handleSearch = async () => {
     setIsLoading(true);
@@ -89,9 +96,9 @@ export function InfluencerSearchModal({ open, onClose, onSelect }: InfluencerSea
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-zinc-900 border-zinc-800 text-snow">
+      <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Search Influencers</DialogTitle>
+          <DialogTitle className="text-gray-900">Search Influencers</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -100,24 +107,34 @@ export function InfluencerSearchModal({ open, onClose, onSelect }: InfluencerSea
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by name, platform, or niche..."
-              className="bg-zinc-800 border-zinc-700 text-snow"
+              className="bg-white border-gray-200 text-gray-900"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSearch();
+                }
+              }}
             />
             <Button
               onClick={handleSearch}
               disabled={isLoading}
-              className="bg-purple-500 hover:bg-purple-600"
+              className="bg-coral hover:bg-coral/90 text-white"
             >
-              <Search className="h-4 w-4" />
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Search className="h-4 w-4" />
+              )}
             </Button>
           </div>
 
           <div className="max-h-[400px] overflow-y-auto space-y-2">
             {isLoading ? (
-              <div className="text-center py-8 text-snow/70">
+              <div className="text-center py-8 text-gray-500">
+                <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
                 Searching influencers...
               </div>
             ) : influencers.length === 0 ? (
-              <div className="text-center py-8 text-snow/70">
+              <div className="text-center py-8 text-gray-500">
                 No influencers found. Try a different search term.
               </div>
             ) : (
@@ -126,45 +143,55 @@ export function InfluencerSearchModal({ open, onClose, onSelect }: InfluencerSea
                   key={influencer.id}
                   className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
                     selectedIds.has(influencer.id)
-                      ? 'bg-purple-500/20 border-purple-500'
-                      : 'bg-zinc-800 hover:bg-zinc-700 border-transparent'
+                      ? 'bg-coral/10 border-coral/50'
+                      : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
                   } border`}
                   onClick={() => toggleInfluencer(influencer.id)}
                 >
                   <div className="flex items-center space-x-3">
-                    {influencer.avatar_url && (
-                      <img
-                        src={influencer.avatar_url}
-                        alt={influencer.name}
-                        className="h-10 w-10 rounded-full"
-                      />
-                    )}
+                    <Checkbox
+                      checked={selectedIds.has(influencer.id)}
+                      onChange={() => toggleInfluencer(influencer.id)}
+                      className="data-[state=checked]:bg-coral data-[state=checked]:border-coral"
+                    />
+                    <Avatar>
+                      <AvatarImage src={influencer.avatar_url} />
+                      <AvatarFallback>{influencer.name[0]}</AvatarFallback>
+                    </Avatar>
                     <div>
-                      <h3 className="font-medium">{influencer.name}</h3>
-                      <p className="text-sm text-snow/70">
+                      <h3 className="font-medium text-gray-900">{influencer.name}</h3>
+                      <p className="text-sm text-gray-600">
                         {influencer.platform} • {influencer.followers_count.toLocaleString()} followers
                       </p>
-                      <p className="text-xs text-snow/50">
+                      <p className="text-xs text-gray-500">
                         {influencer.industry}
                       </p>
                     </div>
                   </div>
+                  <Badge variant="outline" className="text-xs">
+                    {influencer.engagement_rate}% engagement
+                  </Badge>
                 </div>
               ))
             )}
           </div>
 
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSelect}
-              disabled={selectedIds.size === 0}
-              className="bg-purple-500 hover:bg-purple-600"
-            >
-              Add Selected ({selectedIds.size})
-            </Button>
+          <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+            <p className="text-sm text-gray-600">
+              {selectedIds.size} influencer{selectedIds.size !== 1 ? 's' : ''} selected
+            </p>
+            <div className="flex space-x-2">
+              <Button variant="outline" onClick={onClose} className="border-gray-200 text-gray-900 hover:bg-gray-50">
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSelect}
+                disabled={selectedIds.size === 0}
+                className="bg-coral hover:bg-coral/90 text-white"
+              >
+                Add Selected ({selectedIds.size})
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>

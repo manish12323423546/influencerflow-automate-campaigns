@@ -16,6 +16,7 @@ import { AutomationInterface } from '@/components/campaign/AutomationInterface';
 import { CampaignState } from '@/lib/agents/types';
 import { nanoid } from 'nanoid';
 import { v4 as uuidv4 } from 'uuid';
+import { logger } from '@/lib/logger';
 
 interface InfluencerWithMatch extends Influencer {
   match_score?: number;
@@ -44,7 +45,7 @@ const CreateCampaign = () => {
     if (!campaignId) {
       const newId = uuidv4();
       setCampaignId(newId);
-      console.log('Generated new campaign ID:', newId);
+      logger.info('Generated new campaign ID:', newId);
     }
   }, [campaignId, setCampaignId]);
 
@@ -182,7 +183,7 @@ const CreateCampaign = () => {
         description: `Found ${enrichedInfluencers.length} influencers that match your campaign.`,
       });
     } catch (error) {
-      console.error('Error finding influencers:', error);
+      logger.error('Error finding influencers:', error);
       toast({
         title: "Error finding influencers",
         description: "Please try again or select influencers manually.",
@@ -249,7 +250,7 @@ const CreateCampaign = () => {
         .single();
 
       if (campaignError) {
-        console.error('Campaign creation error:', campaignError);
+        logger.error('Campaign creation error:', campaignError);
         throw new Error(campaignError.message);
       }
 
@@ -259,7 +260,7 @@ const CreateCampaign = () => {
 
       // Update campaign ID in store with the server-generated UUID
       setCampaignId(campaign.id);
-      console.log('Campaign created with ID:', campaign.id);
+      logger.info('Campaign created with ID:', campaign.id);
 
       // Create campaign-influencer relationships
       const { error: relationError } = await supabase
@@ -276,7 +277,7 @@ const CreateCampaign = () => {
         );
 
       if (relationError) {
-        console.error('Error creating campaign-influencer relationships:', relationError);
+        logger.error('Error creating campaign-influencer relationships:', relationError);
         throw relationError;
       }
 
@@ -310,7 +311,7 @@ const CreateCampaign = () => {
       });
 
     } catch (error) {
-      console.error('Error creating campaign:', error);
+      logger.error('Error creating campaign:', error);
       toast({
         title: "Error creating campaign",
         description: error instanceof Error ? error.message : "Please try again.",
@@ -383,7 +384,7 @@ const CreateCampaign = () => {
                       if (!campaignId) {
                         const newId = uuidv4();
                         setCampaignId(newId);
-                        console.log('Set new campaign ID for automatic mode:', newId);
+                        logger.info('Set new campaign ID for automatic mode:', newId);
                       }
                     }}
                   >
@@ -407,7 +408,7 @@ const CreateCampaign = () => {
                       // Reset campaign ID for manual mode if needed
                       if (campaignId && !campaignPersisted) {
                         setCampaignId('');
-                        console.log('Reset campaign ID for manual mode');
+                        logger.info('Reset campaign ID for manual mode');
                       }
                     }}
                   >

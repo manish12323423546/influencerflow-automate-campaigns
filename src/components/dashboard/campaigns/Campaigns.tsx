@@ -7,11 +7,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Plus, ArrowLeft, Bell, Filter, Calendar, DollarSign } from 'lucide-react';
+import { Search, Plus, ArrowLeft, Bell, Filter, Calendar, DollarSign, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import NotificationCenter from '@/components/NotificationCenter';
 import { supabase } from '@/integrations/supabase/client';
 import type { Campaign } from '@/types/campaign';
+import { logger } from '@/lib/logger';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 const Campaigns = () => {
   const navigate = useNavigate();
@@ -21,6 +31,10 @@ const Campaigns = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(null);
 
   // Mock user data
   const mockUser = {
@@ -41,7 +55,7 @@ const Campaigns = () => {
         
         setCampaigns(data || []);
       } catch (error) {
-        console.error('Error fetching campaigns:', error);
+        logger.error('Error fetching campaigns:', error);
         toast({
           title: "Error loading campaigns",
           description: "Please try again later.",
@@ -93,6 +107,170 @@ const Campaigns = () => {
   };
 
   const stats = getCampaignStats();
+
+  const handleDeleteCampaign = async () => {
+    if (!campaignToDelete) return;
+
+    // Validate confirmation text
+    if (deleteConfirmText !== campaignToDelete.name) {
+      toast({
+        title: "Confirmation required",
+        description: "Please type the campaign name exactly to confirm deletion.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      logger.info('Starting campaign deletion process for campaign:', campaignToDelete.id);
+
+      // Delete related data in the correct order to avoid foreign key constraints
+
+      // 1. Delete posts first (no dependencies)
+      const { error: postsError } = await supabase
+        .from('posts')
+        .delete()
+        .eq('campaign_id', campaignToDelete.id);
+
+      if (postsError) {
+        logger.error('Error deleting posts:', postsError);
+        // Don't throw here as posts might not exist
+      }
+
+      // 2. Delete performance reports
+      const { error: performanceReportsError } = await supabase
+        .from('performance_reports')
+        .delete()
+        .eq('campaign_id', campaignToDelete.id);
+
+      if (performanceReportsError) {
+        logger.error('Error deleting performance reports:', performanceReportsError);
+        // Don't throw here as reports might not exist
+      }
+
+      // 3. Delete contracts
+      const { error: contractsError } = await supabase
+        .from('contracts')
+        .delete()
+        .eq('campaign_id', campaignToDelete.id);
+
+      if (contractsError) {
+        logger.error('Error deleting contracts:', contractsError);
+        throw new Error(`Failed to delete contracts: ${contractsError.message}`);
+      }
+
+      // 4. Delete campaign automation logs
+      const { error: logsError } = await supabase
+        .from('campaign_automation_logs')
+        .delete()
+        .eq('campaign_id', campaignToDelete.id);
+
+      if (logsError) {
+        logger.error('Error deleting automation logs:', logsError);
+        // Don't throw here as logs might not exist
+      }
+
+      // 5. Delete campaign metrics
+      const { error: metricsError } = await supabase
+        .from('campaign_metrics')
+        .delete()
+        .eq('campaign_id', campaignToDelete.id);
+
+      if (metricsError) {
+        logger.error('Error deleting campaign metrics:', metricsError);
+        // Don't throw here as metrics might not exist
+      }
+
+      // 6. Delete report metrics that reference this campaign
+      const { error: reportMetricsError } = await supabase
+        .from('report_metrics')
+        .delete()
+        .eq('campaign_id', campaignToDelete.id);
+
+      if (reportMetricsError) {
+        logger.error('Error deleting report metrics:', reportMetricsError);
+        // Don't throw here as report metrics might not exist
+      }
+
+      // 7. Update reports to remove this campaign from campaign_ids arrays
+      const { data: reportsWithCampaign, error: reportsSelectError } = await supabase
+        .from('reports')
+        .select('id, campaign_ids')
+        .contains('campaign_ids', [campaignToDelete.id]);
+
+      if (!reportsSelectError && reportsWithCampaign) {
+        for (const report of reportsWithCampaign) {
+          const updatedCampaignIds = report.campaign_ids.filter((id: string) => id !== campaignToDelete.id);
+
+          if (updatedCampaignIds.length === 0) {
+            // If no campaigns left, delete the report
+            await supabase.from('reports').delete().eq('id', report.id);
+          } else {
+            // Update the report with remaining campaign IDs
+            await supabase
+              .from('reports')
+              .update({ campaign_ids: updatedCampaignIds })
+              .eq('id', report.id);
+          }
+        }
+      }
+
+      // 8. Delete campaign influencers
+      const { error: influencersError } = await supabase
+        .from('campaign_influencers')
+        .delete()
+        .eq('campaign_id', campaignToDelete.id);
+
+      if (influencersError) {
+        logger.error('Error deleting campaign influencers:', influencersError);
+        throw new Error(`Failed to delete campaign influencers: ${influencersError.message}`);
+      }
+
+      // 5. Finally delete the campaign itself
+      const { error: campaignError } = await supabase
+        .from('campaigns')
+        .delete()
+        .eq('id', campaignToDelete.id);
+
+      if (campaignError) {
+        logger.error('Error deleting campaign:', campaignError);
+        throw new Error(`Failed to delete campaign: ${campaignError.message}`);
+      }
+
+      logger.info('Campaign deletion completed successfully');
+
+      // Update local state to remove the deleted campaign
+      setCampaigns(prev => prev.filter(c => c.id !== campaignToDelete.id));
+
+      toast({
+        title: "Campaign deleted",
+        description: "The campaign and all related data have been successfully deleted.",
+      });
+
+      // Close dialog and reset state
+      setDeleteDialogOpen(false);
+      setCampaignToDelete(null);
+      setDeleteConfirmText('');
+
+    } catch (error) {
+      logger.error('Error deleting campaign:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete campaign. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const openDeleteDialog = (campaign: Campaign) => {
+    setCampaignToDelete(campaign);
+    setDeleteConfirmText('');
+    setDeleteDialogOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -336,6 +514,14 @@ const Campaigns = () => {
                           >
                             Edit
                           </Button>
+                          <Button
+                            onClick={() => openDeleteDialog(campaign)}
+                            variant="ghost"
+                            size="sm"
+                            className="text-gray-600 hover:text-red-500 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </motion.tr>
@@ -352,6 +538,63 @@ const Campaigns = () => {
         isOpen={showNotifications}
         onClose={() => setShowNotifications(false)}
       />
+
+      {/* Delete Campaign Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="bg-white">
+          <DialogHeader>
+            <DialogTitle>Delete Campaign</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete the campaign and all related data including contracts, metrics, and automation logs.
+            </DialogDescription>
+          </DialogHeader>
+          {campaignToDelete && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label htmlFor="confirm-text" className="text-sm font-medium text-gray-700">
+                  Type <span className="font-bold text-red-600">{campaignToDelete.name}</span> to confirm:
+                </label>
+                <Input
+                  id="confirm-text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder="Enter campaign name"
+                  className="bg-white border-gray-200"
+                  disabled={isDeleting}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setCampaignToDelete(null);
+                setDeleteConfirmText('');
+              }}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              className="bg-red-500 hover:bg-red-600 text-white"
+              onClick={handleDeleteCampaign}
+              disabled={isDeleting || !campaignToDelete || deleteConfirmText !== campaignToDelete.name}
+            >
+              {isDeleting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Deleting...
+                </>
+              ) : (
+                'Delete Campaign'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

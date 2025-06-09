@@ -3,7 +3,8 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle, AlertCircle, Clock, Users, Mail, Phone, FileText, Send } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { CheckCircle, AlertCircle, Clock, Users, Mail, Phone, FileText, Send, X } from 'lucide-react';
 
 interface AutomationReportProps {
   campaignId: string;
@@ -39,10 +40,20 @@ export const AutomationReport: React.FC<AutomationReportProps> = ({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Automation Report</h2>
-        <Badge variant={reportData.status === 'COMPLETED' ? 'default' : 'secondary'}>
-          {reportData.status}
-        </Badge>
+        <div className="flex items-center space-x-4">
+          <h2 className="text-2xl font-bold">Automation Report</h2>
+          <Badge variant={reportData.status === 'COMPLETED' ? 'default' : 'secondary'}>
+            {reportData.status}
+          </Badge>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onClose}
+          className="hover:bg-gray-100 text-gray-500 hover:text-gray-700"
+        >
+          <X className="h-4 w-4" />
+        </Button>
       </div>
 
       <Card>

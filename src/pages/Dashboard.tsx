@@ -18,6 +18,7 @@ import EmailConversionManager from '@/components/dashboard/EmailConversionManage
 import ReportsManager from '@/components/dashboard/ReportsManager';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 import type { Campaign } from '@/types/campaign';
 
 const Dashboard = () => {
@@ -40,71 +41,80 @@ const Dashboard = () => {
     }
   }, [searchParams]);
 
+  // Function to fetch campaigns data
+  const fetchCampaigns = async () => {
+    try {
+      logger.info('Fetching campaigns...');
+      const { data: campaignsData, error: campaignsError } = await supabase
+        .from('campaigns')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (campaignsError) {
+        logger.error('Campaigns fetch error:', campaignsError);
+        throw campaignsError;
+      }
+      logger.info('Campaigns fetched:', campaignsData?.length || 0);
+      setCampaigns(campaignsData || []);
+    } catch (error) {
+      logger.error('Error fetching campaigns:', error);
+    }
+  };
+
   // Fetch all data from Supabase
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        console.log('🔄 Starting dashboard data fetch...');
+        logger.info('Starting dashboard data fetch...');
 
         // Fetch campaigns
-        console.log('📊 Fetching campaigns...');
-        const { data: campaignsData, error: campaignsError } = await supabase
-          .from('campaigns')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (campaignsError) {
-          console.error('❌ Campaigns fetch error:', campaignsError);
-          throw campaignsError;
-        }
-        console.log('✅ Campaigns fetched:', campaignsData?.length || 0);
-        setCampaigns(campaignsData || []);
+        await fetchCampaigns();
 
         // Fetch influencers count
-        console.log('👥 Fetching influencers count...');
+        logger.info('Fetching influencers count...');
         const { count: influencersCount, error: influencersError } = await supabase
           .from('influencers')
           .select('*', { count: 'exact', head: true });
 
         if (influencersError) {
-          console.error('❌ Influencers count error:', influencersError);
+          logger.error('Influencers count error:', influencersError);
           // Don't throw here, just log and continue
         }
-        console.log('✅ Influencers count:', influencersCount || 0);
+        logger.info('Influencers count:', influencersCount || 0);
         setTotalInfluencers(influencersCount || 0);
 
         // Fetch contracts count
-        console.log('📄 Fetching contracts count...');
+        logger.info('Fetching contracts count...');
         const { count: contractsCount, error: contractsError } = await supabase
           .from('contracts')
           .select('*', { count: 'exact', head: true });
 
         if (contractsError) {
-          console.error('❌ Contracts count error:', contractsError);
+          logger.error('Contracts count error:', contractsError);
           // Don't throw here, just log and continue
         }
-        console.log('✅ Contracts count:', contractsCount || 0);
+        logger.info('Contracts count:', contractsCount || 0);
         setTotalContracts(contractsCount || 0);
 
         // Fetch payments total
-        console.log('💰 Fetching payments total...');
+        logger.info('Fetching payments total...');
         const { data: paymentsData, error: paymentsError } = await supabase
           .from('payments')
           .select('amount')
           .eq('status', 'completed');
 
         if (paymentsError) {
-          console.error('❌ Payments fetch error:', paymentsError);
+          logger.error('Payments fetch error:', paymentsError);
           // Don't throw here, just log and continue
         }
         const totalPaid = (paymentsData || []).reduce((sum, payment) => sum + Number(payment.amount), 0);
-        console.log('✅ Payments total:', totalPaid);
+        logger.info('Payments total:', totalPaid);
         setTotalPayments(totalPaid);
 
-        console.log('🎉 Dashboard data fetch completed successfully!');
+        logger.info('Dashboard data fetch completed successfully!');
 
       } catch (error) {
-        console.error('❌ Critical error fetching dashboard data:', error);
+        logger.error('Critical error fetching dashboard data:', error);
         toast({
           title: "Error loading dashboard data",
           description: "Some data may not be available. Please try refreshing the page.",
@@ -124,17 +134,17 @@ const Dashboard = () => {
     if (widget) {
       // Listen for widget initialization
       widget.addEventListener('elevenlabs-convai:ready', () => {
-        console.log('Widget is ready');
+        logger.info('Widget is ready');
       });
 
       // Listen for conversation start
       widget.addEventListener('elevenlabs-convai:call', (event: any) => {
-        console.log('Starting conversation');
+        logger.info('Starting conversation');
         
         // Configure client tools and initial conversation
         event.detail.config.clientTools = {
           testConversation: ({ message }) => {
-            console.log('Test conversation message:', message);
+            logger.info('Test conversation message:', message);
             return { success: true };
           }
         };
@@ -150,7 +160,7 @@ const Dashboard = () => {
 
       // Listen for conversation end
       widget.addEventListener('elevenlabs-convai:end', () => {
-        console.log('Conversation ended');
+        logger.info('Conversation ended');
       });
     }
 
@@ -348,7 +358,7 @@ const Dashboard = () => {
         </div>
         {/* Active Tab Content */}
         <div className="space-y-6">
-          {activeTab === 'campaigns' && <CampaignsManager campaigns={campaigns} />}
+          {activeTab === 'campaigns' && <CampaignsManager campaigns={campaigns} onCampaignsUpdate={fetchCampaigns} />}
           {activeTab === 'discover' && <DiscoverCreators />}
           {activeTab === 'contracts' && <ContractsManager />}
           {activeTab === 'payments' && <PaymentsManager />}

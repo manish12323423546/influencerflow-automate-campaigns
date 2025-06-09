@@ -31,6 +31,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { validateElevenLabsEnvVars } from '@/lib/utils';
+import { logger } from '@/lib/logger';
+import { recalculateCampaignStatistics } from '@/lib/utils/campaignStatistics';
 
 interface Campaign {
   id: string;
@@ -96,6 +99,7 @@ interface PerformanceMetric {
 interface AddInfluencerDialogProps {
   campaignId: string;
   onInfluencerAdded: () => void;
+  fetchCampaignDetails: () => Promise<void>;
 }
 
 interface InfluencerProfile {
@@ -110,7 +114,7 @@ interface InfluencerProfile {
   gmail_gmail?: string | null;
 }
 
-const AddInfluencerDialog = ({ campaignId, onInfluencerAdded }: AddInfluencerDialogProps) => {
+const AddInfluencerDialog = ({ campaignId, onInfluencerAdded, fetchCampaignDetails }: AddInfluencerDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [influencers, setInfluencers] = useState<InfluencerProfile[]>([]);
@@ -120,30 +124,43 @@ const AddInfluencerDialog = ({ campaignId, onInfluencerAdded }: AddInfluencerDia
 
   useEffect(() => {
     const fetchInfluencers = async () => {
-      const { data, error } = await supabase
-        .from('influencers')
-        .select('*')
-        .ilike('name', `%${searchTerm}%`);
-      
-      if (error) {
-        console.error('Error fetching influencers:', error);
-        return;
-      }
+      setLoading(true);
+      try {
+        let query = supabase
+          .from('influencers')
+          .select('*')
+          .order('followers_count', { ascending: false });
 
-      setInfluencers((data || []).map(inf => ({
-        id: inf.id,
-        name: inf.name,
-        handle: inf.handle,
-        avatar_url: inf.avatar_url,
-        platform: inf.platform,
-        followers_count: inf.followers_count,
-        engagement_rate: inf.engagement_rate,
-        phone_no: inf.phone_no?.toString(),
-        gmail_gmail: inf.gmail_gmail
-      })));
+        if (searchTerm.trim()) {
+          query = query.or(`name.ilike.%${searchTerm}%,handle.ilike.%${searchTerm}%,industry.ilike.%${searchTerm}%`);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+          logger.error('Error fetching influencers:', error);
+          return;
+        }
+
+        setInfluencers((data || []).map(inf => ({
+          id: inf.id,
+          name: inf.name,
+          handle: inf.handle,
+          avatar_url: inf.avatar_url,
+          platform: inf.platform,
+          followers_count: inf.followers_count,
+          engagement_rate: inf.engagement_rate,
+          phone_no: inf.phone_no?.toString(),
+          gmail_gmail: inf.gmail_gmail
+        })));
+      } catch (error) {
+        logger.error('Error fetching influencers:', error);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    if (open && searchTerm.length > 2) {
+    if (open) {
       fetchInfluencers();
     }
   }, [open, searchTerm]);
@@ -165,11 +182,14 @@ const AddInfluencerDialog = ({ campaignId, onInfluencerAdded }: AddInfluencerDia
         title: "Influencer added",
         description: "The influencer has been added to the campaign successfully.",
       });
-      
+
+      // Manually recalculate statistics and refresh campaign data
+      await recalculateCampaignStatistics(campaignId);
+      await fetchCampaignDetails();
       onInfluencerAdded();
       setOpen(false);
     } catch (error) {
-      console.error('Error adding influencer:', error);
+      logger.error('Error adding influencer:', error);
       toast({
         title: "Error",
         description: "Failed to add influencer. Please try again.",
@@ -205,37 +225,53 @@ const AddInfluencerDialog = ({ campaignId, onInfluencerAdded }: AddInfluencerDia
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Type to search influencers..."
               className="bg-white border-gray-200"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  // Trigger search on Enter key
+                }
+              }}
             />
           </div>
           <div className="max-h-[300px] overflow-y-auto">
-            {influencers.map((influencer) => (
-              <div
-                key={influencer.id}
-                className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg cursor-pointer"
-                onClick={() => handleAddInfluencer(influencer.id)}
-              >
-                <div className="flex items-center gap-2">
-                  <Avatar>
-                    <AvatarImage src={influencer.avatar_url} />
-                    <AvatarFallback>{influencer.name[0]}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">{influencer.name}</p>
-                    <p className="text-sm text-gray-600">@{influencer.handle}</p>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-coral hover:bg-coral/10"
-                  disabled={loading}
-                >
-                  Add
-                </Button>
+            {loading ? (
+              <div className="text-center py-8 text-gray-500">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-coral mx-auto mb-2"></div>
+                Loading influencers...
               </div>
-            ))}
-            {searchTerm.length > 2 && influencers.length === 0 && (
-              <p className="text-center text-snow/60 py-4">No influencers found</p>
+            ) : influencers.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                No influencers found. Try a different search term.
+              </div>
+            ) : (
+              influencers.map((influencer) => (
+                <div
+                  key={influencer.id}
+                  className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg cursor-pointer border border-gray-100 mb-2"
+                  onClick={() => handleAddInfluencer(influencer.id)}
+                >
+                  <div className="flex items-center gap-3">
+                    <Avatar>
+                      <AvatarImage src={influencer.avatar_url} />
+                      <AvatarFallback>{influencer.name[0]}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium text-gray-900">{influencer.name}</p>
+                      <p className="text-sm text-gray-600">@{influencer.handle}</p>
+                      <p className="text-xs text-gray-500">
+                        {influencer.platform} • {influencer.followers_count.toLocaleString()} followers
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-coral hover:bg-coral/10"
+                    disabled={loading}
+                  >
+                    Add
+                  </Button>
+                </div>
+              ))
             )}
           </div>
         </div>
@@ -323,33 +359,18 @@ const CampaignDetail = () => {
   const [selectedInfluencer, setSelectedInfluencer] = useState<InfluencerProfile | null>(null);
   const [removingInfluencerId, setRemovingInfluencerId] = useState<string | null>(null);
   const [isCallInProgress, setIsCallInProgress] = useState<Record<string, boolean>>({});
-  const [gmailResponses, setGmailResponses] = useState<Record<string, { 
+  const [gmailResponses, setGmailResponses] = useState<Record<string, {
     status: 'sending' | 'success' | 'error';
     timestamp?: string;
     response?: unknown;
     error?: string;
   }>>({});
-
-  const validateEnvVariables = () => {
-    const requiredVars = {
-      VITE_ELEVENLABS_API_KEY: import.meta.env.VITE_ELEVENLABS_API_KEY,
-      VITE_ELEVENLABS_AGENT_ID: import.meta.env.VITE_ELEVENLABS_AGENT_ID,
-      VITE_ELEVENLABS_PHONE_NUMBER_ID: import.meta.env.VITE_ELEVENLABS_PHONE_NUMBER_ID
-    };
-
-    const missingVars = Object.entries(requiredVars)
-      .filter(([_, value]) => !value)
-      .map(([key]) => key);
-
-    if (missingVars.length > 0) {
-      throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
-    }
-
-    return requiredVars;
-  };
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handlePhoneCall = async (influencerId: string, influencerName: string, phoneNumber: string | null) => {
-    console.log('📞 Call Button Clicked:', {
+    logger.info('📞 Call Button Clicked:', {
       influencerId,
       influencerName,
       phoneNumber,
@@ -357,7 +378,7 @@ const CampaignDetail = () => {
     });
 
     if (!phoneNumber) {
-      console.warn('❌ Phone call failed: No phone number available', {
+      logger.warn('❌ Phone call failed: No phone number available', {
         influencerId,
         influencerName
       });
@@ -370,15 +391,15 @@ const CampaignDetail = () => {
     }
 
     try {
-      const env = validateEnvVariables();
+      const env = validateElevenLabsEnvVars();
       
-      console.log('🔄 Setting call in progress state for influencer:', influencerId);
+      logger.info('🔄 Setting call in progress state for influencer:', influencerId);
       setIsCallInProgress(prev => {
-        console.log('Previous call states:', prev);
+        logger.info('Previous call states:', prev);
         return { ...prev, [influencerId]: true };
       });
 
-      console.log('📤 Preparing API request to Eleven Labs:', {
+      logger.info('📤 Preparing API request to Eleven Labs:', {
         url: "https://api.elevenlabs.io/v1/convai/twilio/outbound-call",
         method: "POST",
         influencerName,
@@ -399,7 +420,7 @@ const CampaignDetail = () => {
         to_number: `+${phoneNumber}`
       };
 
-      console.log('📦 Request Body:', JSON.stringify(requestBody, null, 2));
+      logger.info('📦 Request Body:', JSON.stringify(requestBody, null, 2));
 
       const response = await fetch("https://api.elevenlabs.io/v1/convai/twilio/outbound-call", {
         method: "POST",
@@ -410,17 +431,17 @@ const CampaignDetail = () => {
         body: JSON.stringify(requestBody),
       });
 
-      console.log('📥 API Response Status:', {
+      logger.info('📥 API Response Status:', {
         status: response.status,
         statusText: response.statusText,
         headers: Object.fromEntries(response.headers.entries())
       });
 
       const responseData = await response.json();
-      console.log('📥 API Response Body:', JSON.stringify(responseData, null, 2));
+      logger.info('📥 API Response Body:', JSON.stringify(responseData, null, 2));
 
       if (response.ok) {
-        console.log('✅ Call initiated successfully:', {
+        logger.info('✅ Call initiated successfully:', {
           influencerId,
           influencerName,
           responseData
@@ -430,7 +451,7 @@ const CampaignDetail = () => {
           description: `Connected with ${influencerName}`,
         });
       } else {
-        console.error('❌ API Error Response:', {
+        logger.error('❌ API Error Response:', {
           status: response.status,
           statusText: response.statusText,
           body: responseData
@@ -438,7 +459,7 @@ const CampaignDetail = () => {
         throw new Error('Failed to initiate call');
       }
     } catch (error) {
-      console.error('❌ Error in handlePhoneCall:', {
+      logger.error('❌ Error in handlePhoneCall:', {
         error: error instanceof Error ? error.message : String(error),
         influencerId,
         influencerName,
@@ -450,9 +471,9 @@ const CampaignDetail = () => {
         variant: "destructive",
       });
     } finally {
-      console.log('🔄 Resetting call in progress state for influencer:', influencerId);
+      logger.info('🔄 Resetting call in progress state for influencer:', influencerId);
       setIsCallInProgress(prev => {
-        console.log('Final call states:', prev);
+        logger.info('Final call states:', prev);
         return { ...prev, [influencerId]: false };
       });
     }
@@ -578,7 +599,7 @@ const CampaignDetail = () => {
         }
       };
 
-      console.log('Sending Gmail workflow with data:', JSON.stringify(requestBody, null, 2));
+      logger.info('Sending Gmail workflow with data:', JSON.stringify(requestBody, null, 2));
 
       const response = await fetch("https://sdsd12.app.n8n.cloud/webhook/08b089ba-1617-4d04-a5c7-f9b7d8ca57c4", {
         method: "POST",
@@ -609,7 +630,7 @@ const CampaignDetail = () => {
       });
 
     } catch (error) {
-      console.error('Error sending Gmail workflow:', error);
+      logger.error('Error sending Gmail workflow:', error);
       setGmailResponses(prev => ({
         ...prev,
         [influencerId]: {
@@ -627,75 +648,75 @@ const CampaignDetail = () => {
   };
 
   useEffect(() => {
-    const fetchCampaignDetails = async () => {
-      if (!id) return;
-
-      try {
-        setIsLoading(true);
-        
-        const { data, error } = await supabase
-          .from('campaigns')
-          .select(`
-            *,
-            campaign_influencers (
-              id,
-              fee,
-              status,
-              match_score,
-              match_reason,
-              influencer:influencers (
-                id,
-                handle,
-                name,
-                avatar_url,
-                platform,
-                followers_count,
-                engagement_rate,
-                phone_no,
-                gmail_gmail
-              )
-            )
-          `)
-          .eq('id', id)
-          .single();
-
-        if (error) throw error;
-
-        if (!data) {
-          toast({
-            title: "Campaign not found",
-            description: "The requested campaign could not be found.",
-            variant: "destructive",
-          });
-          navigate('/campaigns');
-          return;
-        }
-
-        const campaignData = {
-          ...data,
-          spent: data.campaign_influencers?.reduce((total, ci) => total + (ci.fee || 0), 0) || 0,
-          reach: data.campaign_influencers?.reduce((total, ci) => 
-            total + (ci.influencer?.followers_count || 0), 0) || 0,
-          engagement_rate: data.campaign_influencers?.reduce((total, ci) => 
-            total + (ci.influencer?.engagement_rate || 0), 0) / 
-            (data.campaign_influencers?.length || 1) || 0
-        };
-
-        setCampaign(campaignData as unknown as Campaign);
-      } catch (error) {
-        console.error('Error fetching campaign details:', error);
-        toast({
-          title: "Error loading campaign",
-          description: "There was a problem loading the campaign details. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchCampaignDetails();
   }, [id, navigate, toast]);
+
+  const fetchCampaignDetails = async () => {
+    if (!id) return;
+
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('campaigns')
+        .select(`
+          *,
+          campaign_influencers (
+            id,
+            fee,
+            status,
+            match_score,
+            match_reason,
+            influencer:influencers (
+              id,
+              handle,
+              name,
+              avatar_url,
+              platform,
+              followers_count,
+              engagement_rate,
+              phone_no,
+              gmail_gmail
+            )
+          )
+        `)
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+
+      if (!data) {
+        toast({
+          title: "Campaign not found",
+          description: "The requested campaign could not be found.",
+          variant: "destructive",
+        });
+        navigate('/campaigns');
+        return;
+      }
+
+      const campaignData = {
+        ...data,
+        spent: data.campaign_influencers?.reduce((total, ci) => total + (ci.fee || 0), 0) || 0,
+        reach: data.campaign_influencers?.reduce((total, ci) => 
+          total + (ci.influencer?.followers_count || 0), 0) || 0,
+        engagement_rate: data.campaign_influencers?.reduce((total, ci) => 
+          total + (ci.influencer?.engagement_rate || 0), 0) / 
+          (data.campaign_influencers?.length || 1) || 0
+      };
+
+      setCampaign(campaignData as unknown as Campaign);
+    } catch (error) {
+      logger.error('Error fetching campaign details:', error);
+      toast({
+        title: "Error loading campaign",
+        description: "There was a problem loading the campaign details. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     // Update isEditing when location state changes
@@ -737,7 +758,7 @@ const CampaignDetail = () => {
     if (!campaign || !editedCampaign) return;
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('campaigns')
         .update({
           name: editedCampaign.name,
@@ -762,7 +783,7 @@ const CampaignDetail = () => {
         description: "Campaign details have been updated successfully.",
       });
     } catch (error) {
-      console.error('Error saving campaign:', error);
+      logger.error('Error saving campaign:', error);
       toast({
         title: "Error saving changes",
         description: "There was a problem saving your changes. Please try again.",
@@ -832,7 +853,7 @@ const CampaignDetail = () => {
 
         navigate('/outreach', { state: { selectedConversationId: newConv.id } });
       } catch (error) {
-        console.error('Error creating conversation:', error);
+        logger.error('Error creating conversation:', error);
         toast({
           title: "Error",
           description: "Failed to start conversation",
@@ -847,7 +868,7 @@ const CampaignDetail = () => {
   const handleRemoveInfluencer = async (campaignInfluencerId: string) => {
     try {
       setRemovingInfluencerId(campaignInfluencerId);
-      
+
       const { error } = await supabase
         .from('campaign_influencers')
         .delete()
@@ -855,20 +876,16 @@ const CampaignDetail = () => {
 
       if (error) throw error;
 
-      setCampaign(prev => {
-        if (!prev) return null;
-        return {
-          ...prev,
-          campaign_influencers: prev.campaign_influencers?.filter(ci => ci.id !== campaignInfluencerId)
-        };
-      });
+      // Manually recalculate statistics and refresh campaign data
+      await recalculateCampaignStatistics(campaign.id);
+      await fetchCampaignDetails();
 
       toast({
         title: "Influencer removed",
         description: "The influencer has been removed from the campaign.",
       });
     } catch (error) {
-      console.error('Error removing influencer:', error);
+      logger.error('Error removing influencer:', error);
       toast({
         title: "Error",
         description: "Failed to remove influencer. Please try again.",
@@ -879,19 +896,172 @@ const CampaignDetail = () => {
     }
   };
 
+  const handleDeleteCampaign = async () => {
+    if (!campaign) return;
+
+    // Validate confirmation text
+    if (deleteConfirmText !== campaign.name) {
+      toast({
+        title: "Confirmation required",
+        description: "Please type the campaign name exactly to confirm deletion.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      logger.info('Starting campaign deletion process for campaign:', campaign.id);
+
+      // Delete related data in the correct order to avoid foreign key constraints
+
+      // 1. Delete posts first (no dependencies)
+      const { error: postsError } = await supabase
+        .from('posts')
+        .delete()
+        .eq('campaign_id', campaign.id);
+
+      if (postsError) {
+        logger.error('Error deleting posts:', postsError);
+        // Don't throw here as posts might not exist
+      }
+
+      // 2. Delete performance reports
+      const { error: performanceReportsError } = await supabase
+        .from('performance_reports')
+        .delete()
+        .eq('campaign_id', campaign.id);
+
+      if (performanceReportsError) {
+        logger.error('Error deleting performance reports:', performanceReportsError);
+        // Don't throw here as reports might not exist
+      }
+
+      // 3. Delete contracts
+      const { error: contractsError } = await supabase
+        .from('contracts')
+        .delete()
+        .eq('campaign_id', campaign.id);
+
+      if (contractsError) {
+        logger.error('Error deleting contracts:', contractsError);
+        throw new Error(`Failed to delete contracts: ${contractsError.message}`);
+      }
+
+      // 4. Delete campaign automation logs
+      const { error: logsError } = await supabase
+        .from('campaign_automation_logs')
+        .delete()
+        .eq('campaign_id', campaign.id);
+
+      if (logsError) {
+        logger.error('Error deleting automation logs:', logsError);
+        // Don't throw here as logs might not exist
+      }
+
+      // 5. Delete campaign metrics
+      const { error: metricsError } = await supabase
+        .from('campaign_metrics')
+        .delete()
+        .eq('campaign_id', campaign.id);
+
+      if (metricsError) {
+        logger.error('Error deleting campaign metrics:', metricsError);
+        // Don't throw here as metrics might not exist
+      }
+
+      // 6. Delete report metrics that reference this campaign
+      const { error: reportMetricsError } = await supabase
+        .from('report_metrics')
+        .delete()
+        .eq('campaign_id', campaign.id);
+
+      if (reportMetricsError) {
+        logger.error('Error deleting report metrics:', reportMetricsError);
+        // Don't throw here as report metrics might not exist
+      }
+
+      // 7. Update reports to remove this campaign from campaign_ids arrays
+      const { data: reportsWithCampaign, error: reportsSelectError } = await supabase
+        .from('reports')
+        .select('id, campaign_ids')
+        .contains('campaign_ids', [campaign.id]);
+
+      if (!reportsSelectError && reportsWithCampaign) {
+        for (const report of reportsWithCampaign) {
+          const updatedCampaignIds = report.campaign_ids.filter((id: string) => id !== campaign.id);
+
+          if (updatedCampaignIds.length === 0) {
+            // If no campaigns left, delete the report
+            await supabase.from('reports').delete().eq('id', report.id);
+          } else {
+            // Update the report with remaining campaign IDs
+            await supabase
+              .from('reports')
+              .update({ campaign_ids: updatedCampaignIds })
+              .eq('id', report.id);
+          }
+        }
+      }
+
+      // 8. Delete campaign influencers
+      const { error: influencersError } = await supabase
+        .from('campaign_influencers')
+        .delete()
+        .eq('campaign_id', campaign.id);
+
+      if (influencersError) {
+        logger.error('Error deleting campaign influencers:', influencersError);
+        throw new Error(`Failed to delete campaign influencers: ${influencersError.message}`);
+      }
+
+      // 5. Finally delete the campaign itself
+      const { error: campaignError } = await supabase
+        .from('campaigns')
+        .delete()
+        .eq('id', campaign.id);
+
+      if (campaignError) {
+        logger.error('Error deleting campaign:', campaignError);
+        throw new Error(`Failed to delete campaign: ${campaignError.message}`);
+      }
+
+      logger.info('Campaign deletion completed successfully');
+
+      toast({
+        title: "Campaign deleted",
+        description: "The campaign and all related data have been successfully deleted.",
+      });
+
+      // Navigate back to campaigns list
+      navigate('/dashboard');
+
+    } catch (error) {
+      logger.error('Error deleting campaign:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete campaign. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   useEffect(() => {
     const widget = document.querySelector('elevenlabs-convai');
     
     const handleReady = () => {
-      console.log('Widget is ready');
+      logger.info('Widget is ready');
     };
 
     const handleCall = (event: CustomEvent) => {
-      console.log('Starting conversation');
+      logger.info('Starting conversation');
       if (event.detail?.config) {
         event.detail.config.clientTools = {
           testConversation: ({ message }: { message: string }) => {
-            console.log('Test conversation message:', message);
+            logger.info('Test conversation message:', message);
             return { success: true };
           }
         };
@@ -899,7 +1069,7 @@ const CampaignDetail = () => {
     };
 
     const handleEnd = () => {
-      console.log('Conversation ended');
+      logger.info('Conversation ended');
     };
 
     if (widget) {
@@ -1007,7 +1177,7 @@ const CampaignDetail = () => {
                 </>
               )}
             </Button>
-            <Dialog>
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50">
                   <Trash2 className="h-4 w-4" />
@@ -1017,50 +1187,51 @@ const CampaignDetail = () => {
                 <DialogHeader>
                   <DialogTitle>Delete Campaign</DialogTitle>
                   <DialogDescription>
-                    Are you sure you want to delete this campaign? This action cannot be undone.
+                    This action cannot be undone. This will permanently delete the campaign and all related data including contracts, metrics, and automation logs.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="flex justify-end gap-3 mt-4">
-                  <Button variant="outline" onClick={() => {}}>Cancel</Button>
-                  <Button 
-                    variant="destructive" 
-                    className="bg-red-500 hover:bg-red-600 text-white"
-                    onClick={async () => {
-                      try {
-                        // First delete all campaign_influencers
-                        const { error: influencersError } = await supabase
-                          .from('campaign_influencers')
-                          .delete()
-                          .eq('campaign_id', campaign.id);
-
-                        if (influencersError) throw influencersError;
-
-                        // Then delete the campaign
-                        const { error: campaignError } = await supabase
-                          .from('campaigns')
-                          .delete()
-                          .eq('id', campaign.id);
-
-                        if (campaignError) throw campaignError;
-
-                        toast({
-                          title: "Campaign deleted",
-                          description: "The campaign has been successfully deleted.",
-                        });
-                        navigate('/dashboard');
-                      } catch (error) {
-                        console.error('Error deleting campaign:', error);
-                        toast({
-                          title: "Error",
-                          description: "Failed to delete campaign. Please try again.",
-                          variant: "destructive",
-                        });
-                      }
-                    }}
-                  >
-                    Delete Campaign
-                  </Button>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <label htmlFor="confirm-text" className="text-sm font-medium text-gray-700">
+                      Type <span className="font-bold text-red-600">{campaign.name}</span> to confirm:
+                    </label>
+                    <Input
+                      id="confirm-text"
+                      value={deleteConfirmText}
+                      onChange={(e) => setDeleteConfirmText(e.target.value)}
+                      placeholder="Enter campaign name"
+                      className="bg-white border-gray-200"
+                      disabled={isDeleting}
+                    />
+                  </div>
                 </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setDeleteDialogOpen(false);
+                      setDeleteConfirmText('');
+                    }}
+                    disabled={isDeleting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    className="bg-red-500 hover:bg-red-600 text-white"
+                    onClick={handleDeleteCampaign}
+                    disabled={isDeleting || deleteConfirmText !== campaign.name}
+                  >
+                    {isDeleting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Deleting...
+                      </>
+                    ) : (
+                      'Delete Campaign'
+                    )}
+                  </Button>
+                </DialogFooter>
               </DialogContent>
             </Dialog>
           </div>
@@ -1232,6 +1403,7 @@ const CampaignDetail = () => {
                 onInfluencerAdded={() => {
                   window.location.reload();
                 }}
+                fetchCampaignDetails={fetchCampaignDetails}
               />
             </CardHeader>
             <CardContent>

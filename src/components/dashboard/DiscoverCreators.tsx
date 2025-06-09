@@ -9,6 +9,8 @@ import { Search, Star, Users, TrendingUp, MessageSquare, Heart, MessageCircle, P
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { GmailService, GmailCreator, GmailCampaign } from '@/lib/services/gmailService';
+import { validateElevenLabsEnvVars } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 interface Creator {
   id: string;
@@ -81,7 +83,7 @@ const DiscoverCreators = () => {
     try {
       validateEnvVariables();
     } catch (error) {
-      console.error('Environment validation failed:', error);
+      logger.error('Environment validation failed:', error);
       toast({
         title: "Configuration Error",
         description: error instanceof Error ? error.message : "Invalid environment configuration",
@@ -93,7 +95,7 @@ const DiscoverCreators = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        console.log('🔍 DiscoverCreators: Fetching influencers...');
+        logger.info('🔍 DiscoverCreators: Fetching influencers...');
         // Fetch creators
         const { data: creatorsData, error: creatorsError } = await supabase
           .from('influencers')
@@ -101,10 +103,10 @@ const DiscoverCreators = () => {
           .order('followers_count', { ascending: false });
 
         if (creatorsError) {
-          console.error('❌ DiscoverCreators: Error fetching influencers:', creatorsError);
+          logger.error('❌ DiscoverCreators: Error fetching influencers:', creatorsError);
           throw creatorsError;
         }
-        console.log('✅ DiscoverCreators: Influencers fetched:', creatorsData?.length || 0);
+        logger.info('✅ DiscoverCreators: Influencers fetched:', creatorsData?.length || 0);
         
         // Transform the data to match Creator interface
         const transformedData = (creatorsData || []).map(influencer => ({
@@ -123,7 +125,7 @@ const DiscoverCreators = () => {
         
         setCreators(transformedData);
 
-        console.log('🔍 DiscoverCreators: Fetching campaigns...');
+        logger.info('🔍 DiscoverCreators: Fetching campaigns...');
         // Fetch campaigns
         const { data: campaignsData, error: campaignsError } = await supabase
           .from('campaigns')
@@ -131,16 +133,16 @@ const DiscoverCreators = () => {
           .order('created_at', { ascending: false });
 
         if (campaignsError) {
-          console.error('❌ DiscoverCreators: Error fetching campaigns:', campaignsError);
+          logger.error('❌ DiscoverCreators: Error fetching campaigns:', campaignsError);
           // Don't throw here, just log and continue with empty campaigns
           setCampaigns([]);
         } else {
-          console.log('✅ DiscoverCreators: Campaigns fetched:', campaignsData?.length || 0);
+          logger.info('✅ DiscoverCreators: Campaigns fetched:', campaignsData?.length || 0);
           setCampaigns(campaignsData || []);
         }
 
       } catch (error) {
-        console.error('❌ DiscoverCreators: Critical error fetching data:', error);
+        logger.error('❌ DiscoverCreators: Critical error fetching data:', error);
         toast({
           title: "Error loading data",
           description: "Some features may not be available. Please try refreshing the page.",
@@ -186,7 +188,7 @@ const DiscoverCreators = () => {
   };
 
   const handlePhoneCall = async (creatorId: string, creatorName: string, phoneNumber: number | null) => {
-    console.log('📞 Call Button Clicked:', {
+    logger.info('📞 Call Button Clicked:', {
       creatorId,
       creatorName,
       phoneNumber,
@@ -194,7 +196,7 @@ const DiscoverCreators = () => {
     });
 
     if (!phoneNumber) {
-      console.warn('❌ Phone call failed: No phone number available', {
+      logger.warn('❌ Phone call failed: No phone number available', {
         creatorId,
         creatorName
       });
@@ -208,15 +210,15 @@ const DiscoverCreators = () => {
 
     try {
       // Validate environment variables before making the call
-      const env = validateEnvVariables();
+      const env = validateElevenLabsEnvVars();
       
-      console.log('🔄 Setting call in progress state for creator:', creatorId);
+      logger.info('🔄 Setting call in progress state for creator:', creatorId);
       setIsCallInProgress(prev => {
-        console.log('Previous call states:', prev);
+        logger.info('Previous call states:', prev);
         return { ...prev, [creatorId]: true };
       });
 
-      console.log('📤 Preparing API request to Eleven Labs:', {
+      logger.info('📤 Preparing API request to Eleven Labs:', {
         url: "https://api.elevenlabs.io/v1/convai/twilio/outbound-call",
         method: "POST",
         creatorName,
@@ -237,7 +239,7 @@ const DiscoverCreators = () => {
         to_number: `+${phoneNumber}`
       };
 
-      console.log('📦 Request Body:', JSON.stringify(requestBody, null, 2));
+      logger.info('📦 Request Body:', JSON.stringify(requestBody, null, 2));
 
       const response = await fetch("https://api.elevenlabs.io/v1/convai/twilio/outbound-call", {
         method: "POST",
@@ -248,17 +250,17 @@ const DiscoverCreators = () => {
         body: JSON.stringify(requestBody),
       });
 
-      console.log('📥 API Response Status:', {
+      logger.info('📥 API Response Status:', {
         status: response.status,
         statusText: response.statusText,
         headers: Object.fromEntries(response.headers.entries())
       });
 
       const responseData = await response.json();
-      console.log('📥 API Response Body:', JSON.stringify(responseData, null, 2));
+      logger.info('📥 API Response Body:', JSON.stringify(responseData, null, 2));
 
       if (response.ok) {
-        console.log('✅ Call initiated successfully:', {
+        logger.info('✅ Call initiated successfully:', {
           creatorId,
           creatorName,
           responseData
@@ -268,7 +270,7 @@ const DiscoverCreators = () => {
           description: `Connected with ${creatorName}`,
         });
       } else {
-        console.error('❌ API Error Response:', {
+        logger.error('❌ API Error Response:', {
           status: response.status,
           statusText: response.statusText,
           body: responseData
@@ -276,7 +278,7 @@ const DiscoverCreators = () => {
         throw new Error('Failed to initiate call');
       }
     } catch (error) {
-      console.error('❌ Error in handlePhoneCall:', {
+      logger.error('❌ Error in handlePhoneCall:', {
         error: error instanceof Error ? error.message : String(error),
         creatorId,
         creatorName,
@@ -288,9 +290,9 @@ const DiscoverCreators = () => {
         variant: "destructive",
       });
     } finally {
-      console.log('🔄 Resetting call in progress state for creator:', creatorId);
+      logger.info('🔄 Resetting call in progress state for creator:', creatorId);
       setIsCallInProgress(prev => {
-        console.log('Final call states:', prev);
+        logger.info('Final call states:', prev);
         return { ...prev, [creatorId]: false };
       });
     }
@@ -376,7 +378,7 @@ const DiscoverCreators = () => {
 
 
     } catch (error) {
-      console.error('Error sending Gmail workflow:', error);
+      logger.error('Error sending Gmail workflow:', error);
       const errorResult = {
         status: 'error' as const,
         timestamp: new Date().toISOString(),

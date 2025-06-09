@@ -12,9 +12,10 @@ import type { Campaign } from '@/types/campaign';
 
 interface CampaignsManagerProps {
   campaigns: Campaign[];
+  onCampaignsUpdate?: () => void;
 }
 
-const CampaignsManager = ({ campaigns: initialCampaigns }: CampaignsManagerProps) => {
+const CampaignsManager = ({ campaigns: initialCampaigns, onCampaignsUpdate }: CampaignsManagerProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [campaigns, setCampaigns] = useState<Campaign[]>(initialCampaigns);
@@ -23,6 +24,11 @@ const CampaignsManager = ({ campaigns: initialCampaigns }: CampaignsManagerProps
   const [brandFilter, setBrandFilter] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(false);
   const [loadingCampaignId, setLoadingCampaignId] = useState<string | null>(null);
+
+  // Update campaigns when initialCampaigns changes
+  useEffect(() => {
+    setCampaigns(initialCampaigns);
+  }, [initialCampaigns]);
 
   // Fetch campaign details from Supabase
   const fetchCampaignDetails = async (campaignId: string) => {
@@ -126,6 +132,10 @@ const CampaignsManager = ({ campaigns: initialCampaigns }: CampaignsManagerProps
 
   const handleViewCampaign = async (campaignId: string) => {
     await fetchCampaignDetails(campaignId);
+    // Trigger refresh when user returns from campaign detail view
+    if (onCampaignsUpdate) {
+      onCampaignsUpdate();
+    }
   };
 
   return (

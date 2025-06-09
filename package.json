@@ -76,10 +76,12 @@
     "postcss": "^8.4.35",
     "vite": "^5.0.12"
   },
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "build:dev": "vite build --mode development"
+    "build:dev": "vite build --mode development",
+    "update-browserslist": "npx update-browserslist-db@latest"
   }
 }

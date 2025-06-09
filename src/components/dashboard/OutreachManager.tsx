@@ -10,6 +10,7 @@ import { Search, Phone, Mail, MessageSquare, ChevronLeft } from 'lucide-react';
 import ChatInterface from '@/components/chat/ChatInterface';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { logger } from '@/lib/logger';
 import {
   Dialog,
   DialogContent,
@@ -83,9 +84,9 @@ export default function OutreachManager() {
   const [showChats, setShowChats] = useState(false);
 
   useEffect(() => {
-    console.log('🔍 OutreachManager: Auth state:', { user: !!user, authLoading });
+    logger.info('OutreachManager: Auth state:', { user: !!user, authLoading });
     if (!authLoading) {
-      console.log('✅ OutreachManager: Fetching data...');
+      logger.info('OutreachManager: Fetching data...');
       fetchInfluencers();
       fetchCampaigns();
     }
@@ -95,7 +96,7 @@ export default function OutreachManager() {
 
   const fetchCampaigns = async () => {
     try {
-      console.log('🔍 OutreachManager: Fetching campaigns...');
+      logger.info('OutreachManager: Fetching campaigns...');
 
       // Build query based on authentication status
       let query = supabase
@@ -106,23 +107,23 @@ export default function OutreachManager() {
 
       // If user is authenticated, filter by user_id
       if (user) {
-        console.log('🔐 OutreachManager: Filtering campaigns by user ID:', user.id);
+        logger.info('OutreachManager: Filtering campaigns by user ID:', user.id);
         query = query.eq('user_id', user.id);
       } else {
-        console.log('🌐 OutreachManager: No user authentication, showing all active campaigns');
+        logger.info('OutreachManager: No user authentication, showing all active campaigns');
       }
 
       const { data, error } = await query;
 
       if (error) {
-        console.error('❌ OutreachManager: Error fetching campaigns:', error);
+        logger.error('OutreachManager: Error fetching campaigns:', error);
         throw error;
       }
 
-      console.log('✅ OutreachManager: Campaigns fetched:', data?.length || 0);
+      logger.info('OutreachManager: Campaigns fetched:', data?.length || 0);
       setCampaigns(data || []);
     } catch (error) {
-      console.error('❌ OutreachManager: Error fetching campaigns:', error);
+      logger.error('OutreachManager: Error fetching campaigns:', error);
       toast({
         title: 'Error',
         description: 'Failed to fetch campaigns. Please try again.',
@@ -133,7 +134,7 @@ export default function OutreachManager() {
 
   const fetchInfluencers = async () => {
     try {
-      console.log('🔍 OutreachManager: Fetching campaign influencers...');
+      logger.info('OutreachManager: Fetching campaign influencers...');
 
       // Build query based on authentication status
       let query = supabase
@@ -168,19 +169,19 @@ export default function OutreachManager() {
 
       // If user is authenticated, filter by user_id
       if (user) {
-        console.log('🔐 OutreachManager: Filtering by user ID:', user.id);
+        logger.info('OutreachManager: Filtering by user ID:', user.id);
         query = query.eq('campaign.user_id', user.id);
       } else {
-        console.log('🌐 OutreachManager: No user authentication, showing all active campaigns');
+        logger.info('OutreachManager: No user authentication, showing all active campaigns');
       }
 
       const { data, error } = await query;
 
       if (error) {
-        console.error('❌ OutreachManager: Error fetching campaign influencers:', error);
+        logger.error('OutreachManager: Error fetching campaign influencers:', error);
         throw error;
       }
-      console.log('✅ OutreachManager: Campaign influencers fetched:', data?.length || 0);
+      logger.info('OutreachManager: Campaign influencers fetched:', data?.length || 0);
 
       // Transform the data to match the Influencer interface
       const influencersData: Influencer[] = (data as unknown as Array<{
@@ -214,7 +215,7 @@ export default function OutreachManager() {
 
       setInfluencers(influencersData);
     } catch (error) {
-      console.error('Error fetching influencers:', error);
+      logger.error('Error fetching influencers:', error);
       toast({
         title: "Error",
         description: "Failed to load influencers",
@@ -394,7 +395,7 @@ export default function OutreachManager() {
       });
 
     } catch (error) {
-      console.error('Error sending Gmail workflow:', error);
+      logger.error('Error sending Gmail workflow:', error);
       setGmailResponses(prev => ({
         ...prev,
         [influencer.id]: {

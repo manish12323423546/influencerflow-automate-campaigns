@@ -21,6 +21,7 @@ import {
   GetInfluencerAnalyticsTool,
   CreateContractDraftTool
 } from '@/lib/agents/tools/influencerTools';
+import { logger } from '../../lib/logger';
 
 interface Conversation {
   agent_id: string;
@@ -106,15 +107,15 @@ const ConversationsManager = () => {
 
   useEffect(() => {
     if (selectedConversation) {
-      console.log('🎬 Starting transcript fetch for conversation:', selectedConversation.conversation_id);
+      logger.info('🎬 Starting transcript fetch for conversation:', selectedConversation.conversation_id);
       
       getConversationTranscript(selectedConversation.conversation_id)
         .then((msgs) => {
-          console.log('📝 Setting transcripts:', msgs);
+          logger.info('📝 Setting transcripts:', msgs);
           setTranscripts(msgs);
         })
         .catch((err) => {
-          console.error('🚨 Transcript fetch error:', err);
+          logger.error('🚨 Transcript fetch error:', err);
           toast({
             title: 'Transcript Error',
             description: 'Failed to load transcript.',
@@ -122,10 +123,10 @@ const ConversationsManager = () => {
           });
         });
     } else {
-      console.log('🧹 Clearing transcripts - no conversation selected');
+      logger.info('🧹 Clearing transcripts - no conversation selected');
       setTranscripts([]);
     }
-  }, [selectedConversation, toast]);
+  }, [selectedConversation]);
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -167,7 +168,7 @@ const ConversationsManager = () => {
       setNextCursor(data.next_cursor);
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching conversations:', error);
+      logger.error('Error fetching conversations:', error);
       toast({
         title: "Error",
         description: "Failed to load conversations. Please check your API key and try again.",
@@ -205,7 +206,7 @@ const ConversationsManager = () => {
         description: "Conversation deleted successfully",
       });
     } catch (error) {
-      console.error('Error deleting conversation:', error);
+      logger.error('Error deleting conversation:', error);
       toast({
         title: "Error",
         description: "Failed to delete conversation",
@@ -252,7 +253,7 @@ const ConversationsManager = () => {
         audioRef.current.play();
       }
     } catch (error) {
-      console.error('Error fetching audio:', error);
+      logger.error('Error fetching audio:', error);
       toast({
         title: "Error",
         description: "Failed to load audio",
@@ -414,7 +415,7 @@ const ConversationsManager = () => {
         description: "Transcript downloaded successfully",
       });
     } catch (error) {
-      console.error('Error downloading transcript:', error);
+      logger.error('Error downloading transcript:', error);
       toast({
         title: "Error",
         description: "Failed to download transcript",
@@ -424,11 +425,11 @@ const ConversationsManager = () => {
   };
 
   const initializeAgent = async (agentType: 'outreach' | 'campaign' | 'contract') => {
-    console.log('🎯 Initializing agent type:', agentType);
+    logger.info('🎯 Initializing agent type:', agentType);
     const openAIApiKey = import.meta.env.VITE_OPENAI_API_KEY?.trim();
     
     if (!openAIApiKey || !openAIApiKey.startsWith('sk-')) {
-      console.error('❌ Invalid OpenAI API key');
+      logger.error('❌ Invalid OpenAI API key');
       toast({
         title: "Configuration Error",
         description: "Invalid OpenAI API key. Please make sure your VITE_OPENAI_API_KEY starts with 'sk-'",
@@ -438,7 +439,7 @@ const ConversationsManager = () => {
     }
 
     try {
-      console.log('🛠️ Creating tools for agent');
+      logger.info('🛠️ Creating tools for agent');
       const tools = [
         new SearchInfluencersTool(),
         new GetCampaignDetailsTool(),
@@ -447,7 +448,7 @@ const ConversationsManager = () => {
         new CreateContractDraftTool()
       ];
 
-      console.log('📝 Setting up system prompt for:', agentType);
+      logger.info('📝 Setting up system prompt for:', agentType);
       let systemPrompt = '';
       switch (agentType) {
         case 'outreach':
@@ -470,7 +471,7 @@ const ConversationsManager = () => {
           break;
       }
 
-      console.log('🤖 Creating new ConversationAgent instance');
+      logger.info('🤖 Creating new ConversationAgent instance');
       const newAgent = new ConversationAgent({
         openAIApiKey,
         tools,
@@ -479,9 +480,9 @@ const ConversationsManager = () => {
         temperature: 0.7
       });
 
-      console.log('🚀 Initializing agent...');
+      logger.info('🚀 Initializing agent...');
       await newAgent.initialize();
-      console.log('✅ Agent initialized successfully');
+      logger.info('✅ Agent initialized successfully');
       setAgent(newAgent);
       
       toast({
@@ -489,7 +490,7 @@ const ConversationsManager = () => {
         description: `${agentType.charAt(0).toUpperCase() + agentType.slice(1)} assistant is ready!`,
       });
     } catch (error) {
-      console.error('❌ Error initializing agent:', error);
+      logger.error('❌ Error initializing agent:', error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to initialize AI assistant",
@@ -626,11 +627,11 @@ const ConversationsManager = () => {
     if (!message.trim()) return;
 
     if (mode.type === 'agent' && agent) {
-      console.log('📤 Sending message to agent:', message);
+      logger.info('📤 Sending message to agent:', message);
       
       // Create a new conversation if none exists
       if (!activeConversation) {
-        console.log('🆕 Creating new conversation');
+        logger.info('🆕 Creating new conversation');
         setActiveConversation({
           id: Date.now().toString(),
           messages: []
@@ -638,7 +639,7 @@ const ConversationsManager = () => {
       }
 
       // Add user message immediately
-      console.log('👤 Adding user message to conversation');
+      logger.info('👤 Adding user message to conversation');
       setActiveConversation(prev => ({
         id: prev?.id || Date.now().toString(),
         messages: [
@@ -653,9 +654,9 @@ const ConversationsManager = () => {
 
       setIsAgentTyping(true);
       try {
-        console.log('⏳ Waiting for agent response...');
+        logger.info('⏳ Waiting for agent response...');
         const response = await agent.sendMessage(message);
-        console.log('✅ Received agent response:', {
+        logger.info('✅ Received agent response:', {
           length: response.output.length,
           preview: response.output.substring(0, 50) + '...'
         });
@@ -673,7 +674,7 @@ const ConversationsManager = () => {
           ]
         }));
       } catch (error) {
-        console.error('❌ Error from agent:', error);
+        logger.error('❌ Error from agent:', error);
         toast({
           title: 'Error',
           description: 'Failed to get response from AI assistant',
@@ -1065,4 +1066,4 @@ const ConversationsManager = () => {
   );
 };
 
-export default ConversationsManager; 
+export default ConversationsManager;
