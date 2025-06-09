@@ -40,7 +40,7 @@ const PostDetail: React.FC = () => {
   if (!post) {
     return (
       <div className="p-6">
-        <Button variant="secondary" onClick={() => navigate(-1)} className="mb-4">
+        <Button variant="secondary" onClick={() => navigate('/dashboard?tab=real-time-creators')} className="mb-4">
           Back
         </Button>
         <h2 className="text-xl font-semibold">Post not found</h2>
@@ -51,7 +51,7 @@ const PostDetail: React.FC = () => {
 
   return (
     <div className="p-6 space-y-6">
-      <Button variant="secondary" onClick={() => navigate(-1)}>
+      <Button variant="secondary" onClick={() => navigate('/dashboard?tab=real-time-creators')} className="mb-4">
         Back
       </Button>
       <Card>

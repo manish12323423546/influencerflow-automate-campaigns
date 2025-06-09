@@ -32,6 +32,7 @@ interface Post {
   timestamp: string;
   displayUrl: string;
   hashtags: string[];
+  isSponsored?: boolean;
 }
 
 const RealTimeCreatorFinder = () => {
@@ -51,6 +52,9 @@ const RealTimeCreatorFinder = () => {
   const [selectedPost, setSelectedPost] = useState<Post | null>(() => {
     try { return JSON.parse(localStorage.getItem('rtcf_selectedPost') || 'null'); } catch { return null; }
   });
+  const [mode, setMode] = useState<'manual'|'ai'>('manual');
+  const [purpose, setPurpose] = useState('');
+  const [suggestions, setSuggestions] = useState<string[]>([]);
 
   // Clear localStorage and reset all state
   const clearStorage = () => {
@@ -90,25 +94,64 @@ const RealTimeCreatorFinder = () => {
     }
   };
 
+  // AI post filtering: select top posts via OpenAI
+  const filterPostsByAI = async (postsList: Post[]): Promise<Post[]> => {
+    try {
+      const OPENAI_KEY = import.meta.env.VITE_OPENAI_API_KEY;
+      const summary = postsList.map(p => ({
+        shortCode: p.shortCode,
+        caption: p.caption,
+        likes: p.likesCount,
+        comments: p.commentsCount,
+        timestamp: p.timestamp,
+        sponsored: p.isSponsored ?? false
+      }));
+      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_KEY}` },
+        body: JSON.stringify({
+          model: 'gpt-4.1-mini',
+          messages: [
+            { role: 'system', content: 'Select the top 5 Instagram posts based on engagement (likes and comments), recency (timestamp), and exclude sponsored content. Return a JSON array of shortCode strings.' },
+            { role: 'user', content: `Here are the posts data: ${JSON.stringify(summary)}` }
+          ],
+          temperature: 0.7,
+          max_tokens: 300
+        }),
+      });
+      const data = await resp.json();
+      const text = data.choices?.[0]?.message?.content || '[]';
+      const codes: string[] = JSON.parse(text);
+      return postsList.filter(p => codes.includes(p.shortCode));
+    } catch (err) {
+      console.error('AI filtering failed, showing all posts:', err);
+      return postsList;
+    }
+  };
+
   const searchCreators = async () => {
     if (hashtags.length === 0) return;
     console.log('searchCreators called with hashtags:', hashtags);
     setIsLoading(true);
     try {
-      // Search for posts with the given hashtags
       const postsResult = await instagramService.searchHashtags(hashtags);
-      console.log('searchCreators: fetched posts count:', postsResult.length);
-      setPosts(postsResult);
+      let finalPosts = postsResult;
+      if (mode === 'ai') {
+        console.log('Filtering posts via AI...');
+        finalPosts = await filterPostsByAI(postsResult);
+      }
+      console.log('searchCreators: final posts count:', finalPosts.length);
+      setPosts(finalPosts);
       toast({
-        title: "Posts fetched!",
-        description: `Found ${postsResult.length} posts for your hashtags.`,
+        title: 'Posts fetched!',
+        description: `Found ${finalPosts.length} posts for your hashtags.`,
       });
     } catch (error) {
       console.error('Error searching creators:', error);
       toast({
-        title: "Error searching creators",
-        description: "There was a problem fetching post data. Please try again.",
-        variant: "destructive",
+        title: 'Error searching creators',
+        description: 'There was a problem fetching post data. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -144,6 +187,41 @@ const RealTimeCreatorFinder = () => {
     }
   };
 
+  const generateHashtags = async () => {
+    if (!purpose.trim()) return;
+    setIsLoading(true);
+    try {
+      const OPENAI_KEY = import.meta.env.VITE_OPENAI_API_KEY;
+      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${OPENAI_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4.1-mini',
+          messages: [
+            { role: 'system', content: 'You generate concise Instagram hashtags.' },
+            { role: 'user', content: `Generate 3 relevant hashtags for: ${purpose}` }
+          ],
+          temperature: 0.7,
+          max_tokens: 60,
+        }),
+      });
+      const data = await resp.json();
+      const text = data.choices?.[0]?.message?.content || '';
+      const tags = text.split(/[\s,]+/).map(t => t.replace(/^#/, '').trim()).filter(t => t).slice(0,3);
+      setSuggestions(tags);
+      // Auto-populate hashtags with AI suggestions
+      setHashtags(tags);
+    } catch (err) {
+      console.error('Error generating hashtags:', err);
+      toast({ title: 'AI error', description: 'Failed to generate hashtags.', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -152,50 +230,117 @@ const RealTimeCreatorFinder = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Input
-                placeholder="Enter hashtag (e.g., fashion)"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={handleKeyPress}
-              />
-              <Button onClick={handleAddHashtag}>Add</Button>
+            {/* Mode selection */}
+            <div className="flex gap-2">
+              <Button onClick={() => setMode('manual')} variant={mode==='manual'?undefined:'outline'}>Manual</Button>
+              <Button onClick={() => setMode('ai')} variant={mode==='ai'?undefined:'outline'}>AI</Button>
             </div>
-            
-            {hashtags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {hashtags.map(tag => (
-                  <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                    #{tag}
-                    <button
-                      onClick={() => handleRemoveHashtag(tag)}
-                      className="ml-1 hover:text-destructive"
+            {mode === 'manual' && (
+              <>
+                <div className="flex items-center space-x-2">
+                  <Input
+                    placeholder="Enter hashtag (e.g., fashion)"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                  />
+                  <Button onClick={handleAddHashtag}>Add</Button>
+                </div>
+                {hashtags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {hashtags.map(tag => (
+                      <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                        #{tag}
+                        <button
+                          onClick={() => handleRemoveHashtag(tag)}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                    <Button
+                      onClick={searchCreators}
+                      disabled={isLoading}
+                      className="ml-2"
                     >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-                <Button
-                  onClick={searchCreators}
-                  disabled={isLoading}
-                  className="ml-2"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Searching...
-                    </>
-                  ) : (
-                    <>
-                      <Search className="mr-2 h-4 w-4" />
-                      Search Posts
-                    </>
-                  )}
-                </Button>
-                <Button variant="destructive" onClick={clearStorage} className="ml-2">
-                  Clear Storage
-                </Button>
-              </div>
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Searching...
+                        </>
+                      ) : (
+                        <>
+                          <Search className="mr-2 h-4 w-4" />
+                          Search Posts
+                        </>
+                      )}
+                    </Button>
+                    <Button variant="destructive" onClick={clearStorage} className="ml-2">
+                      Clear Storage
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+            {mode === 'ai' && (
+              <>
+                <div className="flex items-center space-x-2">
+                  <Input
+                    placeholder="Describe what you need hashtags for"
+                    value={purpose}
+                    onChange={(e) => setPurpose(e.target.value)}
+                  />
+                  <Button onClick={generateHashtags} disabled={isLoading}>
+                    {isLoading ? 'Generating...' : 'Generate Hashtags'}
+                  </Button>
+                </div>
+                {suggestions.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {suggestions.map(tag => (
+                      <Badge key={tag} className="cursor-pointer" onClick={() => setHashtags([...hashtags, tag])}>
+                        #{tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                {/* After selecting suggestions, show hashtags list and search controls */}
+                {hashtags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {hashtags.map(tag => (
+                      <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                        #{tag}
+                        <button
+                          onClick={() => handleRemoveHashtag(tag)}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                    <Button
+                      onClick={searchCreators}
+                      disabled={isLoading}
+                      className="ml-2"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Searching...
+                        </>
+                      ) : (
+                        <>
+                          <Search className="mr-2 h-4 w-4" />
+                          Search Posts
+                        </>
+                      )}
+                    </Button>
+                    <Button variant="destructive" onClick={clearStorage} className="ml-2">
+                      Clear Storage
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </CardContent>
