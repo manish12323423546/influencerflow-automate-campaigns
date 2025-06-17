@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CreditCard, Clock, CheckCircle, XCircle, DollarSign, Plus } from 'lucide-react';
+import { CreditCard, Clock, CheckCircle, XCircle, DollarSign, Plus, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { PaymentManager } from '@/components/payments/PaymentManager';
@@ -30,62 +30,96 @@ const PaymentsManager = () => {
   const { toast } = useToast();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshLoading, setRefreshLoading] = useState(false);
   const [showPaymentManager, setShowPaymentManager] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [showRazorpayDialog, setShowRazorpayDialog] = useState(false);
 
+
+
+  const fetchPayments = async () => {
+    setIsLoading(true);
+    try {
+      // First fetch payments
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from('payments')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (paymentsError) throw paymentsError;
+      if (!paymentsData) return;
+
+      // Fetch related data for each payment
+      const paymentsWithDetails = await Promise.all(
+        paymentsData.map(async (payment) => {
+          // Get campaign details
+          const { data: campaignData } = await supabase
+            .from('campaigns')
+            .select('name')
+            .eq('id', payment.campaign_id)
+            .single();
+
+          // Get influencer details
+          const { data: influencerData } = await supabase
+            .from('influencers')
+            .select('name')
+            .eq('id', payment.influencer_id)
+            .single();
+
+          return {
+            ...payment,
+            campaign: campaignData || { name: 'Unknown Campaign' },
+            influencer: influencerData || { name: 'Unknown Influencer' }
+          };
+        })
+      );
+
+      setPayments(paymentsWithDetails);
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+      toast({
+        title: "Error loading payments",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchPayments = async () => {
-      try {
-        // First fetch payments
-        const { data: paymentsData, error: paymentsError } = await supabase
-          .from('payments')
-          .select('*')
-          .order('created_at', { ascending: false });
+    fetchPayments();
 
-        if (paymentsError) throw paymentsError;
-        if (!paymentsData) return;
-
-        // Fetch related data for each payment
-        const paymentsWithDetails = await Promise.all(
-          paymentsData.map(async (payment) => {
-            // Get campaign details
-            const { data: campaignData } = await supabase
-              .from('campaigns')
-              .select('name')
-              .eq('id', payment.campaign_id)
-              .single();
-
-            // Get influencer details
-            const { data: influencerData } = await supabase
-              .from('influencers')
-              .select('name')
-              .eq('id', payment.influencer_id)
-              .single();
-
-            return {
-              ...payment,
-              campaign: campaignData || { name: 'Unknown Campaign' },
-              influencer: influencerData || { name: 'Unknown Influencer' }
-            };
-          })
-        );
-
-        setPayments(paymentsWithDetails);
-      } catch (error) {
-        console.error('Error fetching payments:', error);
-        toast({
-          title: "Error loading payments",
-          description: "Please try again later.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
+    // Listen for payment refresh events
+    const handlePaymentRefresh = () => {
+      fetchPayments();
     };
 
-    fetchPayments();
+    window.addEventListener('paymentsRefresh', handlePaymentRefresh);
+
+    return () => {
+      window.removeEventListener('paymentsRefresh', handlePaymentRefresh);
+    };
   }, [toast]);
+
+  const handleRefresh = async () => {
+    setRefreshLoading(true);
+    try {
+      await fetchPayments();
+      toast({
+        title: "Payments Refreshed",
+        description: "Payment list has been updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Refresh Failed",
+        description: "Failed to refresh payments. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setRefreshLoading(false);
+    }
+  };
 
   const getPaymentStatusColor = (status: string) => {
     switch (status) {
@@ -210,7 +244,18 @@ const PaymentsManager = () => {
         <TabsContent value="payments">
           <Card className="bg-white border-gray-200 shadow-sm">
             <CardHeader>
-              <CardTitle className="text-gray-900">Pending Payments</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-gray-900">Pending Payments</CardTitle>
+                <Button
+                  onClick={handleRefresh}
+                  size="sm"
+                  variant="outline"
+                  disabled={refreshLoading}
+                  className="text-gray-600 hover:text-coral hover:border-coral"
+                >
+                  <RefreshCw className={`w-4 h-4 ${refreshLoading ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
@@ -228,8 +273,14 @@ const PaymentsManager = () => {
                 <TableBody>
                   {pendingPayments.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                        No pending payments found.
+                      <TableCell colSpan={7} className="text-center py-8">
+                        <div className="flex flex-col items-center space-y-2">
+                          <DollarSign className="w-8 h-8 text-gray-400" />
+                          <p className="text-gray-500 font-medium">No pending payments found</p>
+                          <p className="text-sm text-gray-400">
+                            Payment records are automatically created when contracts are accepted
+                          </p>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -285,7 +336,18 @@ const PaymentsManager = () => {
         <TabsContent value="transactions">
           <Card className="bg-white border-gray-200 shadow-sm">
             <CardHeader>
-              <CardTitle className="text-gray-900">Transaction History</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-gray-900">Transaction History</CardTitle>
+                <Button
+                  onClick={handleRefresh}
+                  size="sm"
+                  variant="outline"
+                  disabled={refreshLoading}
+                  className="text-gray-600 hover:text-coral hover:border-coral"
+                >
+                  <RefreshCw className={`w-4 h-4 ${refreshLoading ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
@@ -302,8 +364,14 @@ const PaymentsManager = () => {
                 <TableBody>
                   {completedPayments.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                        No transaction history found.
+                      <TableCell colSpan={6} className="text-center py-8">
+                        <div className="flex flex-col items-center space-y-2">
+                          <CheckCircle className="w-8 h-8 text-gray-400" />
+                          <p className="text-gray-500 font-medium">No transaction history found</p>
+                          <p className="text-sm text-gray-400">
+                            Completed and failed payments will appear here
+                          </p>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -355,7 +423,9 @@ const PaymentsManager = () => {
           }}
           onSuccess={() => {
             // Refresh payments list
-            window.location.reload();
+            fetchPayments();
+            setShowRazorpayDialog(false);
+            setSelectedPayment(null);
           }}
           amount={selectedPayment.amount}
           description={selectedPayment.milestone_description || `Payment for ${selectedPayment.campaign?.name}`}

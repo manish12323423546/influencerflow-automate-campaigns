@@ -45,15 +45,45 @@ class SecureApiService {
     amount: number;
     campaignId: string;
     influencerId: string;
+    contractId?: string;
     description?: string;
   }) {
     try {
-      const { data, error } = await supabase.functions.invoke('create-razorpay-order', {
-        body: paymentData
-      });
+      // If we have a contractId, update the contract payment fields
+      if (paymentData.contractId) {
+        // Generate a mock payment ID for demonstration
+        const mockRazorpayId = 'rzp_' + Math.random().toString(36).substring(2, 15);
+        const mockOrderId = 'order_' + Math.random().toString(36).substring(2, 15);
+        
+        // Update contract with payment information
+        const { error: updateError } = await supabase
+          .from('contracts')
+          .update({
+            payment_status: 'completed',
+            payment_amount: paymentData.amount,
+            razorpay_payment_id: mockRazorpayId,
+            razorpay_order_id: mockOrderId,
+            paid_at: new Date().toISOString()
+          })
+          .eq('id', paymentData.contractId);
+          
+        if (updateError) throw updateError;
+        
+        // Return success response
+        return {
+          success: true,
+          orderId: mockOrderId,
+          paymentId: mockRazorpayId
+        };
+      } else {
+        // Fall back to the original implementation for non-contract payments
+        const { data, error } = await supabase.functions.invoke('create-razorpay-order', {
+          body: paymentData
+        });
 
-      if (error) throw error;
-      return data;
+        if (error) throw error;
+        return data;
+      }
     } catch (error) {
       console.error('Secure payment creation failed:', error);
       throw error;

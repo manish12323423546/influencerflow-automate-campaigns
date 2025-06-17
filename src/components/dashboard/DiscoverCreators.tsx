@@ -9,6 +9,7 @@ import { Search, Star, Users, TrendingUp, MessageSquare, Heart, MessageCircle, P
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { GmailService, GmailCreator, GmailCampaign } from '@/lib/services/gmailService';
+import { cleanEnvVar } from '@/lib/utils';
 import { validateElevenLabsEnvVars } from '@/lib/utils';
 import { logger } from '@/lib/logger';
 
@@ -48,9 +49,9 @@ interface Campaign {
 
 const validateEnvVariables = () => {
   const required = {
-    VITE_ELEVENLABS_API_KEY: import.meta.env.VITE_ELEVENLABS_API_KEY,
-    VITE_ELEVENLABS_AGENT_ID: import.meta.env.VITE_ELEVENLABS_AGENT_ID,
-    VITE_ELEVENLABS_PHONE_NUMBER_ID: import.meta.env.VITE_ELEVENLABS_PHONE_NUMBER_ID
+    VITE_ELEVENLABS_API_KEY: cleanEnvVar(import.meta.env.VITE_ELEVENLABS_API_KEY),
+    VITE_ELEVENLABS_AGENT_ID: cleanEnvVar(import.meta.env.VITE_ELEVENLABS_AGENT_ID),
+    VITE_ELEVENLABS_PHONE_NUMBER_ID: cleanEnvVar(import.meta.env.VITE_ELEVENLABS_PHONE_NUMBER_ID)
   };
 
   const missing = Object.entries(required)

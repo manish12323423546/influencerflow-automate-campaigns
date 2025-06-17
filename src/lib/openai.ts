@@ -1,8 +1,9 @@
 import { type Campaign } from '@/types/campaign';
 import { type Influencer } from '@/types/influencer';
+import { cleanEnvVar } from '@/lib/utils';
 
 // Get API key from environment variable
-const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY?.trim();
+const OPENAI_API_KEY = cleanEnvVar(import.meta.env.VITE_OPENAI_API_KEY);
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 
 // Validate API key format

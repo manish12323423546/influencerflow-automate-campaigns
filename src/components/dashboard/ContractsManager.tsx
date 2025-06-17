@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, FileText, Download, Eye, User, Building, Target } from 'lucide-react';
+import { Plus, FileText, Download, Eye, User, Building, Target, TestTube } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ContractsList from '@/components/contracts/ContractsList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
+import SimpleEdgeFunctionTest from '@/components/test/SimpleEdgeFunctionTest';
 
 interface ContractAutomation {
   id: number;
@@ -85,13 +86,13 @@ const ContractsManager = () => {
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 bg-gray-100">
-          <TabsTrigger 
-            value="local-contracts" 
+          <TabsTrigger
+            value="local-contracts"
             className="data-[state=active]:bg-coral data-[state=active]:text-white"
           >
             Local Contracts
           </TabsTrigger>
-          <TabsTrigger 
+          <TabsTrigger
             value="contract-automation"
             className="data-[state=active]:bg-coral data-[state=active]:text-white"
           >

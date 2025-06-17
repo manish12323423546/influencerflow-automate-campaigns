@@ -347,6 +347,8 @@ const InfluencerProfileDialog = ({ influencer, onClose, open }: InfluencerProfil
   );
 };
 
+const ACTIVE_CONTRACT_STATUSES = ['SENT', 'ACCEPTED', 'COMPLETED'];
+
 const CampaignDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -368,6 +370,8 @@ const CampaignDetail = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [activeContracts, setActiveContracts] = useState<any[]>([]);
+  const [contractsLoading, setContractsLoading] = useState(false);
 
   const handlePhoneCall = async (influencerId: string, influencerName: string, phoneNumber: string | null) => {
     logger.info('📞 Call Button Clicked:', {
@@ -1087,6 +1091,27 @@ const CampaignDetail = () => {
     };
   }, []);
 
+  // Fetch active contracts for this campaign
+  useEffect(() => {
+    const fetchActiveContracts = async () => {
+      if (!campaign?.id) return;
+      setContractsLoading(true);
+      const { data, error } = await supabase
+        .from('contracts')
+        .select(`id, influencer_id, status, contract_data, pdf_url, influencer:influencers(id, name, handle, platform, avatar_url)`)
+        .eq('campaign_id', campaign.id)
+        .in('status', ACTIVE_CONTRACT_STATUSES)
+        .order('created_at', { ascending: false });
+      if (!error && data) {
+        setActiveContracts(data);
+      } else {
+        setActiveContracts([]);
+      }
+      setContractsLoading(false);
+    };
+    fetchActiveContracts();
+  }, [campaign?.id]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -1512,7 +1537,9 @@ const CampaignDetail = () => {
               <CardTitle className="text-gray-900">Active Contracts</CardTitle>
             </CardHeader>
             <CardContent>
-              {campaign.campaign_influencers?.some(ci => ci.status === 'confirmed' || ci.status === 'completed') ? (
+              {contractsLoading ? (
+                <div className="text-center py-12">Loading contracts...</div>
+              ) : activeContracts.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow className="border-gray-200">
@@ -1521,43 +1548,58 @@ const CampaignDetail = () => {
                       <TableHead className="text-gray-600">Fee</TableHead>
                       <TableHead className="text-gray-600">Deliverables</TableHead>
                       <TableHead className="text-gray-600">Timeline</TableHead>
+                      <TableHead className="text-gray-600">PDF</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {campaign.campaign_influencers
-                      .filter(ci => ci.status === 'confirmed' || ci.status === 'completed')
-                      .map((ci) => (
-                        <TableRow key={ci.id} className="border-gray-200">
+                    {activeContracts.map((contract) => {
+                      const contractData = typeof contract.contract_data === 'string'
+                        ? JSON.parse(contract.contract_data)
+                        : contract.contract_data || {};
+                      return (
+                        <TableRow key={contract.id} className="border-gray-200">
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <Avatar>
-                                <AvatarImage src={ci.influencer.avatar_url} />
-                                <AvatarFallback>{ci.influencer.name[0]}</AvatarFallback>
+                                <AvatarImage src={contract.influencer?.avatar_url} />
+                                <AvatarFallback>{contract.influencer?.name?.[0]}</AvatarFallback>
                               </Avatar>
                               <div>
-                                <p className="font-medium text-gray-900">{ci.influencer.name}</p>
-                                <p className="text-sm text-gray-600">@{ci.influencer.handle}</p>
+                                <p className="font-medium text-gray-900">{contract.influencer?.name}</p>
+                                <p className="text-sm text-gray-600">@{contract.influencer?.handle}</p>
                               </div>
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge className={getStatusColor(ci.status)}>
-                              {ci.status}
+                            <Badge className={getStatusColor(contract.status)}>
+                              {contract.status}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-gray-900">
-                            ${ci.fee?.toLocaleString() || 0}
+                            ${contractData.fee?.toLocaleString?.() || contractData.fee || 0}
                           </TableCell>
                           <TableCell className="text-gray-600">
-                            {campaign.deliverables?.split(',').map((item, index) => (
-                              <div key={index} className="text-sm">{item.trim()}</div>
-                            ))}
+                            {contractData.deliverables
+                              ? Array.isArray(contractData.deliverables)
+                                ? contractData.deliverables.map((item: any, idx: number) => (
+                                    <div key={idx} className="text-sm">{item.type || item}</div>
+                                  ))
+                                : contractData.deliverables
+                              : 'N/A'}
                           </TableCell>
                           <TableCell className="text-gray-600">
-                            {campaign.timeline || 'Not set'}
+                            {contractData.deadline || contractData.endDate || 'Not set'}
+                          </TableCell>
+                          <TableCell>
+                            {contract.pdf_url ? (
+                              <a href={contract.pdf_url} target="_blank" rel="noopener noreferrer" className="text-coral underline">PDF</a>
+                            ) : (
+                              <span className="text-gray-400">N/A</span>
+                            )}
                           </TableCell>
                         </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               ) : (
@@ -1565,7 +1607,7 @@ const CampaignDetail = () => {
                   <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No Active Contracts</h3>
                   <p className="text-gray-600">
-                    There are no confirmed or completed contracts in this campaign yet.
+                    There are no active contracts in this campaign yet.
                   </p>
                 </div>
               )}

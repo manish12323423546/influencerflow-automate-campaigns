@@ -1,5 +1,10 @@
+// This file uses Deno/Supabase Edge Functions imports and the Deno global, which are only available in the Edge runtime.
+// TypeScript errors are suppressed locally for compatibility.
+// @ts-ignore: Deno Edge Function import, only available in Deno runtime
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// @ts-ignore: Deno Edge Function import, only available in Deno runtime
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// @ts-ignore: Deno Edge Function import, only available in Deno runtime
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
 
 const corsHeaders = {
@@ -14,8 +19,11 @@ serve(async (req) => {
 
   try {
     // ─── 1. authClient: check the incoming Bearer <jwt> and get user ──────────────
+    // @ts-ignore: Deno global only available in Edge runtime
     const authClient = createClient(
+      // @ts-ignore: Deno global only available in Edge runtime
       Deno.env.get("SUPABASE_URL")!,
+      // @ts-ignore: Deno global only available in Edge runtime
       Deno.env.get("SUPABASE_ANON_KEY")!,
       {
         global: {
@@ -36,8 +44,11 @@ serve(async (req) => {
     }
 
     // ─── 2. serviceClient: use service‐role key for all DB/storage operations ──────
+    // @ts-ignore: Deno global only available in Edge runtime
     const serviceClient = createClient(
+      // @ts-ignore: Deno global only available in Edge runtime
       Deno.env.get("SUPABASE_URL")!,
+      // @ts-ignore: Deno global only available in Edge runtime
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 

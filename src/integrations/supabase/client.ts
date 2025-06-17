@@ -19,7 +19,8 @@ if (!supabaseAnonKey) {
 let validatedUrl: string;
 try {
   const url = new URL(supabaseUrl);
-  validatedUrl = url.toString();
+  // Remove trailing slash to prevent double slashes in function URLs
+  validatedUrl = url.toString().replace(/\/$/, '');
 } catch (error) {
   throw new Error(`Invalid Supabase URL format: ${error.message}`);
 }

@@ -12,12 +12,14 @@ import { useAuth } from '@/hooks/useAuth';
 interface SecurePaymentFormProps {
   campaignId: string;
   influencerId: string;
+  contractId?: string;
   onPaymentSuccess?: () => void;
 }
 
 export const SecurePaymentForm: React.FC<SecurePaymentFormProps> = ({
   campaignId,
   influencerId,
+  contractId,
   onPaymentSuccess
 }) => {
   const { user } = useAuth();
@@ -46,6 +48,7 @@ export const SecurePaymentForm: React.FC<SecurePaymentFormProps> = ({
         amount: Number(amount),
         campaignId,
         influencerId,
+        contractId,
         description: description || `Payment for campaign ${campaignId}`
       };
 

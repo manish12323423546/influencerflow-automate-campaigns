@@ -1,6 +1,10 @@
-
+// This file uses Deno/Supabase Edge Functions imports and the Deno global, which are only available in the Edge runtime.
+// TypeScript errors are suppressed locally for compatibility.
+// @ts-ignore: Deno Edge Function import, only available in Deno runtime
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+// @ts-ignore: Deno Edge Function import, only available in Deno runtime
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+// @ts-ignore: Deno Edge Function import, only available in Deno runtime
 import { hmac } from "https://deno.land/x/hmac@v2.0.1/mod.ts"
 
 const corsHeaders = {
@@ -15,14 +19,18 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get('Authorization')!
+    // @ts-ignore: Deno global only available in Edge runtime
     const supabaseClient = createClient(
+      // @ts-ignore: Deno global only available in Edge runtime
       Deno.env.get('SUPABASE_URL') ?? '',
+      // @ts-ignore: Deno global only available in Edge runtime
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: authHeader } } }
     )
 
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, paymentData } = await req.json()
 
+    // @ts-ignore: Deno global only available in Edge runtime
     const razorpayKeySecret = Deno.env.get('RAZORPAY_KEY_SECRET')
     if (!razorpayKeySecret) {
       throw new Error('Razorpay secret key not configured')

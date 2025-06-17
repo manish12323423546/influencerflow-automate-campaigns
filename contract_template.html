@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Influencer Collaboration Agreement</title>
+  <style>
+    body {
+      font-family: 'Helvetica Neue', sans-serif;
+      color: #333;
+      padding: 40px;
+      max-width: 800px;
+      margin: auto;
+      background-color: #fff;
+      line-height: 1.6;
+    }
+
+    .header {
+      text-align: center;
+      border-bottom: 2px solid #6d0f64;
+      padding-bottom: 20px;
+      margin-bottom: 40px;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      color: #6d0f64;
+      margin: 0;
+    }
+
+    .meta {
+      font-size: 14px;
+      color: #777;
+      margin-top: 5px;
+    }
+
+    .section {
+      margin-bottom: 30px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #6d0f64;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #e0e0e0;
+      padding-bottom: 5px;
+    }
+
+    .section p {
+      margin: 0;
+      padding: 4px 0;
+    }
+
+    .info-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    .info-table td {
+      padding: 8px 10px;
+      border: 1px solid #e0e0e0;
+    }
+
+    .highlight {
+      background-color: #f8f2f7;
+    }
+
+    .signature-section {
+      margin-top: 60px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .signature-block {
+      width: 45%;
+      text-align: center;
+    }
+
+    .signature-line {
+      margin-top: 60px;
+      border-top: 1px solid #000;
+      padding-top: 4px;
+    }
+
+    .footer {
+      margin-top: 60px;
+      font-size: 12px;
+      color: #999;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Influencer Collaboration Agreement</h1>
+    <div class="meta">Date: {{date}}</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Campaign Overview</div>
+    <table class="info-table">
+      <tr class="highlight">
+        <td><strong>Influencer Name</strong></td>
+        <td>{{influencer_name}}</td>
+      </tr>
+      <tr>
+        <td><strong>Brand Name</strong></td>
+        <td>{{brand_name}}</td>
+      </tr>
+      <tr class="highlight">
+        <td><strong>Campaign Title</strong></td>
+        <td>{{campaign_title}}</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Campaign Goal</div>
+    <p>{{campaign_goal}}</p>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Deliverables</div>
+    <p>{{deliverables}}</p>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Content Requirements</div>
+    <p>{{campaign_requirements}}</p>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Special Instructions</div>
+    <p>{{special_instructions}}</p>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Compensation</div>
+    <table class="info-table">
+      <tr>
+        <td><strong>Deal Amount</strong></td>
+        <td>₹{{deal_amount}}</td>
+      </tr>
+      <tr>
+        <td><strong>Payment Method</strong></td>
+        <td>{{payment_method}}</td>
+      </tr>
+      <tr>
+        <td><strong>Payment Terms</strong></td>
+        <td>{{payment_terms}}</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="signature-section">
+    <div class="signature-block">
+      <div class="signature-line">{{brand_representative}}</div>
+      <p>Brand Representative</p>
+    </div>
+    <div class="signature-block">
+      <div class="signature-line">{{influencer_name}}</div>
+      <p>Influencer</p>
+    </div>
+  </div>
+
+  <div class="footer">
+    This is a system-generated document. Please retain a copy for your records.
+  </div>
+
+</body>
+</html>

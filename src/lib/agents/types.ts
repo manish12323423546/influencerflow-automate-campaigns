@@ -91,6 +91,13 @@ export interface Contract {
 export interface ContractData {
   fee: number;
   deadline: string;
-  template_id: string;
   generated_at: string;
+  campaign_title?: string;
+  campaign_goal?: string;
+  deliverables?: string;
+  campaign_requirements?: string;
+  special_instructions?: string;
+  payment_method?: string;
+  payment_terms?: string;
+  brand_representative?: string;
 }

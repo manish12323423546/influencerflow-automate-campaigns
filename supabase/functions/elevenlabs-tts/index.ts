@@ -1,5 +1,8 @@
-
+// This file uses Deno/Supabase Edge Functions imports and the Deno global, which are only available in the Edge runtime.
+// TypeScript errors are suppressed locally for compatibility.
+// @ts-ignore: Deno Edge Function import, only available in Deno runtime
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+// @ts-ignore: Deno Edge Function import, only available in Deno runtime
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
@@ -14,8 +17,11 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get('Authorization')!
+    // @ts-ignore: Deno global only available in Edge runtime
     const supabaseClient = createClient(
+      // @ts-ignore: Deno global only available in Edge runtime
       Deno.env.get('SUPABASE_URL') ?? '',
+      // @ts-ignore: Deno global only available in Edge runtime
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: authHeader } } }
     )
@@ -27,6 +33,7 @@ serve(async (req) => {
 
     const { text, voice_id = "21m00Tcm4TlvDq8ikWAM" } = await req.json()
 
+    // @ts-ignore: Deno global only available in Edge runtime
     const elevenlabsApiKey = Deno.env.get('ELEVENLABS_API_KEY')
     if (!elevenlabsApiKey) {
       throw new Error('ElevenLabs API key not configured')

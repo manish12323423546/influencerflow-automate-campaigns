@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Card, CardContent } from '@/components/ui/card';
@@ -19,6 +19,7 @@ type Report = Database['public']['Tables']['reports']['Row'];
 type ReportInsert = Database['public']['Tables']['reports']['Insert'];
 type CampaignMetric = Database['public']['Tables']['campaign_metrics']['Row'];
 type ReportMetricInsert = Database['public']['Tables']['report_metrics']['Insert'];
+type ReportRequest = Database['public']['Tables']['report_requests']['Insert'];
 
 interface Campaign {
   id: string;
@@ -37,7 +38,7 @@ interface GenerateReportModalProps {
 const GenerateReportModal = ({ open, onOpenChange, onReportGenerated, preSelectedCampaign }: GenerateReportModalProps) => {
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
-  const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>([]);
+  const [selectedCampaign, setSelectedCampaign] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
@@ -59,18 +60,14 @@ const GenerateReportModal = ({ open, onOpenChange, onReportGenerated, preSelecte
   useEffect(() => {
     if (preSelectedCampaign && campaigns && campaigns.length > 0) {
       const campaignExists = campaigns.some(c => c.id === preSelectedCampaign);
-      if (campaignExists && !selectedCampaigns.includes(preSelectedCampaign)) {
-        setSelectedCampaigns([preSelectedCampaign]);
+      if (campaignExists && selectedCampaign !== preSelectedCampaign) {
+        setSelectedCampaign(preSelectedCampaign);
       }
     }
-  }, [preSelectedCampaign, campaigns, selectedCampaigns]);
+  }, [preSelectedCampaign, campaigns, selectedCampaign]);
 
-  const handleCampaignToggle = (campaignId: string) => {
-    setSelectedCampaigns(prev =>
-      prev.includes(campaignId)
-        ? prev.filter(id => id !== campaignId)
-        : [...prev, campaignId]
-    );
+  const handleCampaignSelect = (campaignId: string) => {
+    setSelectedCampaign(campaignId);
   };
 
   const handleGenerateReport = async () => {
@@ -83,10 +80,10 @@ const GenerateReportModal = ({ open, onOpenChange, onReportGenerated, preSelecte
       return;
     }
 
-    if (selectedCampaigns.length === 0) {
+    if (!selectedCampaign) {
       toast({
         title: "Missing Information",
-        description: "Please select at least one campaign",
+        description: "Please select a campaign",
         variant: "destructive",
       });
       return;
@@ -95,102 +92,145 @@ const GenerateReportModal = ({ open, onOpenChange, onReportGenerated, preSelecte
     setIsGenerating(true);
 
     try {
-      // Convert campaign IDs to UUIDs and dates to strings
-      const campaignUUIDs = selectedCampaigns.map(id => id as string);
+      // Get current user if available
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // Get selected campaign details for PDF naming
+      const selectedCampaignData = campaigns?.find(c => c.id === selectedCampaign);
+      const campaignName = selectedCampaignData?.name || 'Campaign';
+      
+      // Convert campaign ID and dates to strings
       const startDateStr = startDate.toISOString().split('T')[0];
       const endDateStr = endDate.toISOString().split('T')[0];
 
-      // Create report first with initial values
-      const { data: initialReport, error: createError } = await supabase
-        .from('reports')
-        .insert({
-          campaign_ids: campaignUUIDs,
-          range_start: startDateStr,
-          range_end: endDateStr,
-          total_impressions: 0,
-          total_clicks: 0,
-          total_conversions: 0,
-          total_spend: 0
-        })
+      // For anonymous users, we'll use the edge function directly instead of inserting into the database
+      if (!user) {
+        // Call the generate-report edge function directly with the necessary data
+        const { data: reportData, error: reportError } = await supabase.functions
+          .invoke('generate-report', {
+            body: { 
+              isAnonymous: true,
+              reportData: {
+                range_start: startDateStr,
+                range_end: endDateStr,
+                campaign_name: campaignName,
+                filters_json: {
+                  campaign_id: selectedCampaign
+                }
+              }
+            }
+          });
+
+        if (reportError) {
+          console.error('Error from generate-report function:', reportError);
+          throw new Error('Failed to generate report: ' + reportError.message);
+        }
+
+        // Handle successful report generation for anonymous users
+        toast({
+          title: "Report Generated",
+          description: "Your report has been generated. Downloading will start shortly.",
+        });
+
+        // For anonymous users, we'll store the report in localStorage instead of opening it
+        if (reportData && reportData.downloadUrl) {
+          // Store the report data in localStorage for later download
+          try {
+            const anonymousReports = JSON.parse(localStorage.getItem('anonymousReports') || '[]');
+            anonymousReports.push({
+              id: `anonymous-${Date.now()}`,
+              url: reportData.downloadUrl,
+              name: campaignName,
+              date: new Date().toISOString(),
+              fileName: `${campaignName}-report-${format(new Date(), 'yyyy-MM-dd')}.pdf`
+            });
+            localStorage.setItem('anonymousReports', JSON.stringify(anonymousReports));
+            
+            console.log('Anonymous report saved for later download');
+          } catch (e) {
+            console.error('Error saving anonymous report to localStorage:', e);
+          }
+        }
+
+        onReportGenerated();
+        onOpenChange(false);
+        
+        // Reset form
+        setStartDate(undefined);
+        setEndDate(undefined);
+        setSelectedCampaign('');
+        
+        return;
+      }
+      
+      // For authenticated users, continue with the normal flow
+      const userId = user.id;
+
+      // Create a report request
+      const reportRequest: ReportRequest = {
+        brand_user_id: userId,
+        range_start: startDateStr,
+        range_end: endDateStr,
+        filters_json: {
+          campaign_id: selectedCampaign,
+          campaign_name: campaignName
+        },
+        status: 'processing'
+      };
+
+      // Insert the report request
+      const { data: createdRequest, error: createError } = await supabase
+        .from('report_requests')
+        .insert(reportRequest)
         .select()
         .single();
 
       if (createError) throw createError;
-      if (!initialReport) throw new Error('Failed to create report');
+      if (!createdRequest) throw new Error('Failed to create report request');
 
-      // Get metrics for each campaign
-      const { data: metrics, error: metricsError } = await supabase
-        .from('campaign_metrics')
-        .select('*')
-        .in('campaign_id', campaignUUIDs)
-        .gte('date', startDateStr)
-        .lte('date', endDateStr);
-
-      if (metricsError) throw metricsError;
-
-      // Calculate totals from available metrics
-      const totals = {
-        impressions: 0,
-        clicks: 0,
-        conversions: 0,
-        spend: 0
-      };
-
-      if (metrics && metrics.length > 0) {
-        // Store individual metrics
-        const reportMetrics = metrics.map(metric => ({
-          report_id: initialReport.id,
-          campaign_id: metric.campaign_id,
-          date: metric.date,
-          impressions: metric.impressions || 0,
-          clicks: metric.clicks || 0,
-          conversions: metric.conversions || 0,
-          spend: metric.spend || 0
-        }));
-
-        // Insert report metrics
-        const { error: metricsInsertError } = await supabase
-          .from('report_metrics')
-          .insert(reportMetrics);
-
-        if (metricsInsertError) throw metricsInsertError;
-
-        // Calculate totals
-        metrics.forEach(metric => {
-          totals.impressions += metric.impressions || 0;
-          totals.clicks += metric.clicks || 0;
-          totals.conversions += metric.conversions || 0;
-          totals.spend += metric.spend || 0;
+      // Call the generate-report edge function
+      const { data: reportData, error: reportError } = await supabase.functions
+        .invoke('generate-report', {
+          body: { reportRequestId: createdRequest.id }
         });
 
-        // Update report with totals
-        const { error: updateError } = await supabase
-          .from('reports')
-          .update({
-            total_impressions: totals.impressions,
-            total_clicks: totals.clicks,
-            total_conversions: totals.conversions,
-            total_spend: totals.spend
-          })
-          .eq('id', initialReport.id);
+      if (reportError) {
+        console.error('Error from generate-report function:', reportError);
+        // Update the report request status to failed
+        await supabase
+          .from('report_requests')
+          .update({ status: 'failed' })
+          .eq('id', createdRequest.id);
 
-        if (updateError) throw updateError;
+        throw new Error('Failed to generate report: ' + reportError.message);
       }
 
-      toast({
-        title: "Report Generated",
-        description: metrics && metrics.length > 0 
-          ? "Your report has been generated successfully."
-          : "Report created, but no metrics were found for the selected date range.",
-      });
+      // Check if the report was successfully created
+      if (reportData && reportData.success) {
+        toast({
+          title: "Report Generation Started",
+          description: "Your report is being processed and will be available shortly.",
+        });
+        
+        console.log("Report generation successful:", reportData);
+      } else {
+        toast({
+          title: "Report Generation Issue",
+          description: "Your report has been queued but there might be an issue. Please check the reports tab in a few moments.",
+          variant: "destructive",
+        });
+        
+        console.warn("Report generation had issues:", reportData);
+      }
 
+      // Trigger the callback to refresh the reports list
       onReportGenerated();
       onOpenChange(false);
       
       // Reset form
       setStartDate(undefined);
       setEndDate(undefined);
-      setSelectedCampaigns([]);
+      setSelectedCampaign('');
       
     } catch (error) {
       console.error('Error generating report:', error);
@@ -273,7 +313,7 @@ const GenerateReportModal = ({ open, onOpenChange, onReportGenerated, preSelecte
 
           {/* Campaign Selection */}
           <div className="space-y-4">
-            <Label className="text-gray-900">Select Campaigns</Label>
+            <Label className="text-gray-900">Select Campaign</Label>
             {campaignsLoading ? (
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="h-6 w-6 animate-spin text-coral" />
@@ -281,23 +321,21 @@ const GenerateReportModal = ({ open, onOpenChange, onReportGenerated, preSelecte
               </div>
             ) : (
               <Card className="bg-white border-gray-200 max-h-60 overflow-y-auto">
-                <CardContent className="p-4 space-y-3">
+                <CardContent className="p-4">
                   {campaigns && campaigns.length > 0 ? (
-                    campaigns.map((campaign) => (
-                      <div key={campaign.id} className="flex items-center space-x-3">
-                        <Checkbox
-                          id={campaign.id}
-                          checked={selectedCampaigns.includes(campaign.id)}
-                          onCheckedChange={() => handleCampaignToggle(campaign.id)}
-                        />
-                        <div className="flex-1">
-                          <Label htmlFor={campaign.id} className="text-gray-900 cursor-pointer">
-                            {campaign.name}
-                          </Label>
-                          <p className="text-sm text-gray-600">{campaign.brand} • {campaign.status}</p>
+                    <RadioGroup value={selectedCampaign} onValueChange={handleCampaignSelect}>
+                      {campaigns.map((campaign) => (
+                        <div key={campaign.id} className="flex items-center space-x-3">
+                          <RadioGroupItem value={campaign.id} id={campaign.id} />
+                          <div className="flex-1">
+                            <Label htmlFor={campaign.id} className="text-gray-900 cursor-pointer">
+                              {campaign.name}
+                            </Label>
+                            <p className="text-sm text-gray-600">{campaign.brand} • {campaign.status}</p>
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      ))}
+                    </RadioGroup>
                   ) : (
                     <p className="text-gray-600 text-center py-4">No campaigns found</p>
                   )}

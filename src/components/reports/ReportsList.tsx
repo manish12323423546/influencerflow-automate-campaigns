@@ -7,23 +7,73 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Download, Calendar, FileText, Clock, TrendingUp, MousePointerClick, Target, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 import type { Database } from '@/types/supabase';
 
-type Report = Database['public']['Tables']['reports']['Row'];
+type ReportRequest = Database['public']['Tables']['report_requests']['Row'];
 
 const ReportsList = () => {
-  const [reports, setReports] = useState<Report[]>([]);
+  const [reports, setReports] = useState<ReportRequest[]>([]);
+  const { toast } = useToast();
 
   const { data: reportsData, isLoading } = useQuery({
-    queryKey: ['reports'],
+    queryKey: ['report-requests'],
     queryFn: async () => {
+      // First get all completed reports with PDF URLs
       const { data, error } = await supabase
-        .from('reports')
+        .from('report_requests')
         .select('*')
+        .eq('status', 'completed')
+        .not('pdf_url', 'is', null)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as Report[];
+      
+      // For each report, try to get the campaign name if we have a campaign ID
+      const reportsWithCampaignNames = await Promise.all(
+        (data || []).map(async (report) => {
+          try {
+            if (report.filters_json && typeof report.filters_json === 'object') {
+              const filters = report.filters_json as any;
+              
+              // If we already have a campaign name, use it
+              if (filters.campaign_name) {
+                return report;
+              }
+              
+              // If we have a campaign ID, try to get the campaign name
+              const campaignId = filters.campaign_id || 
+                (filters.campaign_ids && Array.isArray(filters.campaign_ids) && filters.campaign_ids.length === 1 
+                  ? filters.campaign_ids[0] : null);
+              
+              if (campaignId) {
+                const { data: campaignData } = await supabase
+                  .from('campaigns')
+                  .select('name')
+                  .eq('id', campaignId)
+                  .single();
+                
+                if (campaignData && campaignData.name) {
+                  // Update the filters_json with the campaign name
+                  return {
+                    ...report,
+                    filters_json: {
+                      ...filters,
+                      campaign_name: campaignData.name
+                    }
+                  };
+                }
+              }
+            }
+            return report;
+          } catch (e) {
+            console.error('Error fetching campaign name:', e);
+            return report;
+          }
+        })
+      );
+      
+      return reportsWithCampaignNames as ReportRequest[];
     },
   });
 
@@ -36,25 +86,45 @@ const ReportsList = () => {
   // Real-time subscription for report updates
   useEffect(() => {
     const channel = supabase
-      .channel('reports-changes')
+      .channel('report-requests-changes')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'reports'
+          table: 'report_requests'
         },
         (payload) => {
           console.log('Report update received:', payload);
           
+          const newReport = payload.new as ReportRequest;
+          
           if (payload.eventType === 'INSERT') {
-            setReports(prev => [payload.new as Report, ...prev]);
+            // Only add new reports that are completed and have a PDF URL
+            if (newReport.status === 'completed' && newReport.pdf_url) {
+              setReports(prev => [newReport, ...prev]);
+            }
           } else if (payload.eventType === 'UPDATE') {
-            setReports(prev => 
-              prev.map(report => 
-                report.id === payload.new.id ? payload.new as Report : report
-              )
-            );
+            // If the report is now completed and has a PDF URL, add or update it
+            if (newReport.status === 'completed' && newReport.pdf_url) {
+              setReports(prev => {
+                // Check if the report already exists in our list
+                const exists = prev.some(report => report.id === newReport.id);
+                
+                if (exists) {
+                  // Update existing report
+                  return prev.map(report => 
+                    report.id === newReport.id ? newReport : report
+                  );
+                } else {
+                  // Add as a new report
+                  return [newReport, ...prev];
+                }
+              });
+            } else {
+              // If the report no longer meets our criteria, remove it
+              setReports(prev => prev.filter(report => report.id !== newReport.id));
+            }
           } else if (payload.eventType === 'DELETE') {
             setReports(prev => prev.filter(report => report.id !== payload.old.id));
           }
@@ -67,59 +137,134 @@ const ReportsList = () => {
     };
   }, []);
 
-  const handleDownload = async (report: Report) => {
+  const handleDownload = async (report: ReportRequest) => {
+    if (!report.pdf_url) {
+      toast({
+        title: "Download Error",
+        description: "Report file is not available for download yet. Please wait for processing to complete.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      // Create CSV content
-      const csvContent = [
-        'Campaign Performance Report',
-        `Date Range: ${format(new Date(report.range_start), 'MMM dd, yyyy')} - ${format(new Date(report.range_end), 'MMM dd, yyyy')}`,
-        '',
-        'Overall Performance',
-        'Metric,Value',
-        `Impressions,${report.total_impressions.toLocaleString()}`,
-        `Clicks,${report.total_clicks.toLocaleString()}`,
-        `Conversions,${report.total_conversions.toLocaleString()}`,
-        `Spend,$${report.total_spend.toLocaleString()}`,
-        `CTR,${((report.total_clicks / report.total_impressions) * 100).toFixed(2)}%`,
-        `CVR,${((report.total_conversions / report.total_clicks) * 100).toFixed(2)}%`,
-        `CPA,$${(report.total_spend / report.total_conversions).toFixed(2)}`
-      ].join('\n');
+      // Get a fresh signed URL for download
+      const { data, error } = await supabase.storage
+        .from("reports")
+        .createSignedUrl(report.pdf_url, 60, { download: true });
       
-      // Create and download the CSV file
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = `report-${format(new Date(report.created_at), 'yyyy-MM-dd')}.csv`;
+      if (error) {
+        console.error("Error creating signed URL:", error);
+        throw new Error("Failed to generate download link");
+      }
       
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      if (!data || !data.signedUrl) {
+        throw new Error("Failed to generate download link");
+      }
+      
+      // Open the signed URL in a new tab
+      window.open(data.signedUrl, '_blank');
     } catch (error) {
       console.error('Error downloading report:', error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to download the report. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
-  const getStatusBadge = (status: Report['status']) => {
+  const getStatusBadge = (status: ReportRequest['status']) => {
     switch (status) {
-      case 'ready':
-        return <Badge className="bg-green-500 hover:bg-green-600">Ready</Badge>;
+      case 'completed':
+        return (
+          <Badge className="bg-green-500 hover:bg-green-600 flex items-center space-x-1">
+            <span className="h-2 w-2 rounded-full bg-white animate-pulse"></span>
+            <span>Ready</span>
+          </Badge>
+        );
+      case 'processing':
+        return (
+          <Badge variant="secondary" className="flex items-center space-x-1">
+            <span className="h-2 w-2 rounded-full bg-blue-400 animate-pulse"></span>
+            <span>Processing</span>
+          </Badge>
+        );
       case 'failed':
-        return <Badge variant="destructive">Failed</Badge>;
+        return (
+          <Badge variant="destructive" className="flex items-center space-x-1">
+            <span className="h-2 w-2 rounded-full bg-red-300"></span>
+            <span>Failed</span>
+          </Badge>
+        );
       default:
-        return <Badge variant="secondary">{status}</Badge>;
+        return (
+          <Badge variant="secondary" className="flex items-center space-x-1">
+            <span className="h-2 w-2 rounded-full bg-gray-400"></span>
+            <span>{status}</span>
+          </Badge>
+        );
     }
   };
 
-  const getCampaignIds = (report: Report) => {
-    if (report.campaign_ids && Array.isArray(report.campaign_ids)) {
-      return report.campaign_ids.length > 2 
-        ? `${report.campaign_ids.slice(0, 2).join(', ')} +${report.campaign_ids.length - 2} more`
-        : report.campaign_ids.join(', ');
+  const getCampaignName = (report: ReportRequest) => {
+    // For debugging - log the report filters_json to console
+    console.log('Report filters_json:', report.id, report.filters_json);
+    
+    try {
+      // Handle new single campaign format
+      if (report.filters_json && typeof report.filters_json === 'object') {
+        // Type assertion to handle the dynamic nature of filters_json
+        const filters = report.filters_json as any;
+        
+        // First priority: Use campaign_name if available
+        if (filters.campaign_name && typeof filters.campaign_name === 'string') {
+          return filters.campaign_name;
+        }
+        
+        // Check for campaign_id with campaign_name format (some implementations store it this way)
+        if (filters.campaign_id && typeof filters.campaign_id === 'string' && 
+            filters.campaign_id.includes(':') && filters.campaign_id.split(':').length > 1) {
+          return filters.campaign_id.split(':')[1].trim();
+        }
+        
+        // Second priority: Handle campaign_names array if available
+        if (filters.campaign_names && Array.isArray(filters.campaign_names) && filters.campaign_names.length > 0) {
+          return filters.campaign_names.length > 2 
+            ? `${filters.campaign_names.slice(0, 2).join(', ')} +${filters.campaign_names.length - 2} more`
+            : filters.campaign_names.join(', ');
+        }
+        
+        // Third priority: Handle legacy format for backward compatibility
+        const campaignIds = filters.campaign_ids || filters.campaigns;
+        
+        if (campaignIds && Array.isArray(campaignIds)) {
+          if (campaignIds.length === 1) {
+            // If it's a single campaign ID, try to extract a name if it's in format "id:name"
+            const campaignId = campaignIds[0];
+            if (typeof campaignId === 'string' && campaignId.includes(':')) {
+              return campaignId.split(':')[1].trim();
+            }
+            return `Campaign ${campaignId}`;
+          } else {
+            return campaignIds.length > 2 
+              ? `${campaignIds.slice(0, 2).join(', ')} +${campaignIds.length - 2} more`
+              : campaignIds.join(', ');
+          }
+        }
+        
+        // Check for single campaign_id
+        if (filters.campaign_id) {
+          return `Campaign ${filters.campaign_id}`;
+        }
+      }
+      
+      // If we get here, we couldn't find a campaign name
+      return 'Campaign Report';
+    } catch (error) {
+      console.error('Error parsing campaign name:', error, report);
+      return 'Campaign Report';
     }
-    return 'All Campaigns';
   };
 
   if (isLoading) {
@@ -161,12 +306,36 @@ const ReportsList = () => {
         <Table>
           <TableHeader>
             <TableRow className="border-zinc-800">
-              <TableHead className="text-snow/70">Date Range</TableHead>
-              <TableHead className="text-snow/70">Campaigns</TableHead>
-              <TableHead className="text-snow/70">Metrics</TableHead>
-              <TableHead className="text-snow/70">Status</TableHead>
-              <TableHead className="text-snow/70">Generated</TableHead>
-              <TableHead className="text-snow/70">Actions</TableHead>
+              <TableHead className="text-snow/70">
+                <div className="flex items-center space-x-2">
+                  <Calendar className="h-4 w-4 text-coral" />
+                  <span>Date Range</span>
+                </div>
+              </TableHead>
+              <TableHead className="text-snow/70">
+                <div className="flex items-center space-x-2">
+                  <Target className="h-4 w-4 text-coral" />
+                  <span>Campaign</span>
+                </div>
+              </TableHead>
+              <TableHead className="text-snow/70">
+                <div className="flex items-center space-x-2">
+                  <TrendingUp className="h-4 w-4 text-coral" />
+                  <span>Status</span>
+                </div>
+              </TableHead>
+              <TableHead className="text-snow/70">
+                <div className="flex items-center space-x-2">
+                  <Clock className="h-4 w-4 text-coral" />
+                  <span>Generated</span>
+                </div>
+              </TableHead>
+              <TableHead className="text-snow/70">
+                <div className="flex items-center space-x-2">
+                  <FileText className="h-4 w-4 text-coral" />
+                  <span>Actions</span>
+                </div>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -180,26 +349,14 @@ const ReportsList = () => {
                     </span>
                   </div>
                 </TableCell>
-                <TableCell className="text-snow/80">
-                  {getCampaignIds(report)}
-                </TableCell>
-                <TableCell className="text-snow/80">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center" title="Impressions">
-                      <TrendingUp className="h-4 w-4 text-coral mr-1" />
-                      {report.total_impressions.toLocaleString()}
-                    </div>
-                    <div className="flex items-center" title="Clicks">
-                      <MousePointerClick className="h-4 w-4 text-coral mr-1" />
-                      {report.total_clicks.toLocaleString()}
-                    </div>
-                    <div className="flex items-center" title="Conversions">
-                      <Target className="h-4 w-4 text-coral mr-1" />
-                      {report.total_conversions.toLocaleString()}
-                    </div>
-                    <div className="flex items-center" title="Spend">
-                      <DollarSign className="h-4 w-4 text-coral mr-1" />
-                      {report.total_spend.toLocaleString()}
+                <TableCell className="text-snow">
+                  <div className="flex items-center space-x-2">
+                    <Target className="h-4 w-4 text-coral" />
+                    <div className="flex flex-col">
+                      <span className="font-medium text-snow">{getCampaignName(report)}</span>
+                      {report.filters_json && typeof report.filters_json === 'object' && (report.filters_json as any).campaign_id && (
+                        <span className="text-xs text-snow/60">ID: {(report.filters_json as any).campaign_id}</span>
+                      )}
                     </div>
                   </div>
                 </TableCell>
@@ -212,9 +369,10 @@ const ReportsList = () => {
                 <TableCell>
                   <Button
                     onClick={() => handleDownload(report)}
+                    disabled={report.status !== 'completed' || !report.pdf_url}
                     size="sm"
                     variant="outline"
-                    className="border-coral text-coral hover:bg-coral hover:text-white"
+                    className="border-coral text-coral hover:bg-coral hover:text-white disabled:opacity-50"
                   >
                     <Download className="h-4 w-4 mr-1" />
                     Download

@@ -3,7 +3,43 @@ import { supabase } from '@/integrations/supabase/client';
 import { ChatOpenAI } from "@langchain/openai";
 import { CEOAgent } from './CEOAgent';
 import { GmailService, GmailCreator, GmailCampaign } from '@/lib/services/gmailService';
-import { AutomationLoggingService, AutomationStep, AutomationError } from '@/lib/services/automationLoggingService';
+import { AutomationLoggingService } from '@/lib/services/automationLoggingService';
+import { validateElevenLabsEnvVars } from '@/lib/utils';
+import { logger } from '@/lib/logger';
+
+// Define interfaces for automation logging
+interface AutomationStep {
+  step_name: string;
+  step_type: string;
+  status: 'STARTED' | 'COMPLETED' | 'FAILED';
+  started_at: string;
+  completed_at?: string;
+  details?: any;
+}
+
+interface AutomationError {
+  error_type: string;
+  error_message: string;
+  timestamp: string;
+  context?: any;
+}
+
+// Extended Campaign interface with additional properties
+interface ExtendedCampaign extends Campaign {
+  settings?: {
+    platform?: string;
+    min_followers?: number;
+    max_engagement_rate?: number;
+  };
+  campaign_influencers?: Array<{
+    influencer_id: string;
+    status: string;
+    match_score: number;
+    match_reason: string;
+    fee: number;
+  }>;
+  influencers?: any[];
+}
 
 export class CampaignAutomationAgent {
   private campaignId: string;
@@ -18,12 +54,10 @@ export class CampaignAutomationAgent {
   private loggingService: AutomationLoggingService;
   private automationSessionId: string;
   private currentLogId: string | null = null;
-  private automationStartTime: number = 0;
-  
+
   // Add rate limiting and control parameters
   private readonly MIN_DELAY_BETWEEN_ACTIONS = 5000; // 5 seconds minimum between actions
   private readonly MAX_ACTIONS_PER_MINUTE = 10;
-  private readonly MAX_RETRIES = 3;
   private actionCount: number = 0;
   private lastActionTime: number = 0;
   private isExecuting: boolean = false;
@@ -62,20 +96,16 @@ export class CampaignAutomationAgent {
   private async startAutomationLogging(): Promise<void> {
     try {
       this.log('Starting automation logging...');
-      this.automationStartTime = Date.now();
 
       this.log(`Campaign ID: ${this.campaignId}, User ID: ${this.userId}, Mode: ${this.mode}`);
 
-      this.currentLogId = await this.loggingService.startAutomationLog({
-        campaign_id: this.campaignId,
-        automation_session_id: this.automationSessionId,
-        user_id: this.userId,
-        automation_mode: this.mode,
-        total_steps: 5, // INITIATED, CREATOR_SEARCH, CONTRACT_PHASE, OUTREACH, COMPLETED
-        current_step: 'Initializing automation agent'
-      });
+      this.currentLogId = await this.loggingService.startAutomationSession(
+        this.campaignId,
+        this.userId,
+        this.mode
+      );
 
-      this.log(`Automation log created with ID: ${this.currentLogId}`);
+      this.log(`Automation session created with ID: ${this.currentLogId}`);
 
       await this.logStep({
         step_name: 'Initialization',
@@ -87,7 +117,7 @@ export class CampaignAutomationAgent {
 
       this.log('Automation logging started successfully');
     } catch (error) {
-      console.error('Failed to start automation logging:', error);
+      logger.error('Failed to start automation logging:', error);
       this.log(`Automation logging failed: ${error}`);
       // Don't throw the error to prevent automation from failing
     }
@@ -101,10 +131,16 @@ export class CampaignAutomationAgent {
 
     try {
       this.log(`Logging step: ${step.step_name} - ${step.status}`);
-      await this.loggingService.addStepLog(this.currentLogId, step);
+      await this.loggingService.logAutomationStep(
+        this.currentLogId,
+        step.step_name,
+        `${step.step_type}: ${step.status}`,
+        'info',
+        step.details
+      );
       this.log(`Successfully logged step: ${step.step_name}`);
     } catch (error) {
-      console.error('Failed to log step:', error);
+      logger.error('Failed to log step:', error);
       this.log(`Failed to log step ${step.step_name}: ${error}`);
     }
   }
@@ -117,10 +153,15 @@ export class CampaignAutomationAgent {
 
     try {
       this.log(`Logging error: ${error.error_type} - ${error.error_message}`);
-      await this.loggingService.addErrorLog(this.currentLogId, error);
+      await this.loggingService.logAutomationError(
+        this.currentLogId,
+        error.error_message,
+        error.error_type,
+        error.context
+      );
       this.log('Successfully logged error');
     } catch (error) {
-      console.error('Failed to log error:', error);
+      logger.error('Failed to log error:', error);
       this.log(`Failed to log error: ${error}`);
     }
   }
@@ -133,10 +174,10 @@ export class CampaignAutomationAgent {
 
     try {
       this.log(`Updating automation metrics: ${JSON.stringify(updates)}`);
-      await this.loggingService.updateAutomationLog(this.currentLogId, updates);
+      await this.loggingService.updateAutomationProgress(this.currentLogId, updates);
       this.log('Successfully updated automation metrics');
     } catch (error) {
-      console.error('Failed to update automation metrics:', error);
+      logger.error('Failed to update automation metrics:', error);
       this.log(`Failed to update automation metrics: ${error}`);
     }
   }
@@ -292,7 +333,7 @@ export class CampaignAutomationAgent {
   }
 
   private log(message: string) {
-    console.log(`[Campaign ${this.campaignId}] ${message}`);
+    logger.info(`[Campaign ${this.campaignId}] ${message}`);
   }
 
   private async updateState(newState: Partial<CampaignState>) {
@@ -305,7 +346,7 @@ export class CampaignAutomationAgent {
     this.onProgress(this.state);
   }
 
-  private async getCampaignWithSettings(): Promise<Campaign> {
+  private async getCampaignWithSettings(): Promise<ExtendedCampaign> {
     const maxRetries = 5;
     const retryDelay = 2000;
     let lastError: Error | null = null;
@@ -313,7 +354,7 @@ export class CampaignAutomationAgent {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         this.log(`Attempt ${attempt}/${maxRetries}: Starting campaign fetch...`);
-        
+
         // First, get the campaign with its settings and influencers
         const { data: campaign, error: campaignError } = await supabase
           .from('campaigns')
@@ -339,13 +380,13 @@ export class CampaignAutomationAgent {
         }
 
         // Get all influencer IDs from campaign_influencers
-        const influencerIds = campaign.campaign_influencers?.map(ci => ci.influencer_id) || [];
-        
+        const influencerIds = campaign.campaign_influencers?.map((ci: any) => ci.influencer_id) || [];
+
         // Wait for campaign_influencers to be populated
         if (influencerIds.length === 0 && attempt < maxRetries) {
           throw new Error('Campaign influencers not yet populated');
         }
-        
+
         // Fetch influencer details
         const { data: influencers, error: influencersError } = await supabase
           .from('influencers')
@@ -360,17 +401,18 @@ export class CampaignAutomationAgent {
         return {
           ...campaign,
           influencers: influencers || [],
-          settings: campaign.campaign_settings || {}
-        };
+          settings: campaign.campaign_settings || {},
+          campaign_influencers: campaign.campaign_influencers || []
+        } as ExtendedCampaign;
 
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        
+
         if (attempt === maxRetries) {
           this.log(`Failed to fetch campaign after ${maxRetries} attempts: ${lastError.message}`);
           throw lastError;
         }
-        
+
         this.log(`Attempt ${attempt} failed, waiting ${retryDelay}ms before retry...`);
         await new Promise(resolve => setTimeout(resolve, retryDelay));
       }
@@ -408,8 +450,9 @@ export class CampaignAutomationAgent {
           name: creator.name,
           email: creator.gmail_gmail,
           metrics: {
-            followers: creator.followers_count,
-            engagement: creator.engagement_rate
+            followers: creator.followers_count || 0,
+            engagement: creator.engagement_rate || 0,
+            relevanceScore: 85 // Default relevance score for pre-selected creators
           }
         }));
 
@@ -451,8 +494,9 @@ export class CampaignAutomationAgent {
         name: creator.name,
         email: creator.gmail_gmail,
         metrics: {
-          followers: creator.followers_count,
-          engagement: creator.engagement_rate
+          followers: creator.followers_count || 0,
+          engagement: creator.engagement_rate || 0,
+          relevanceScore: Math.floor(Math.random() * 20) + 70 // Random relevance score between 70-90
         }
       }));
 
@@ -809,7 +853,7 @@ export class CampaignAutomationAgent {
   private async makePhoneCall(creator: Creator) {
     try {
       // Validate environment variables before making the call
-      const env = this.validateEnvVariables();
+      const env = validateElevenLabsEnvVars();
 
       // Get creator's phone number from Supabase
       const { data: creatorData, error: creatorError } = await supabase
@@ -946,22 +990,4 @@ export class CampaignAutomationAgent {
 
     this.lastActionTime = Date.now();
   }
-
-  private validateEnvVariables() {
-    const required = {
-      VITE_ELEVENLABS_API_KEY: import.meta.env.VITE_ELEVENLABS_API_KEY,
-      VITE_ELEVENLABS_AGENT_ID: import.meta.env.VITE_ELEVENLABS_AGENT_ID,
-      VITE_ELEVENLABS_PHONE_NUMBER_ID: import.meta.env.VITE_ELEVENLABS_PHONE_NUMBER_ID
-    };
-
-    const missing = Object.entries(required)
-      .filter(([_, value]) => !value)
-      .map(([key]) => key);
-
-    if (missing.length > 0) {
-      throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
-    }
-
-    return required;
-  }
-} 
+}

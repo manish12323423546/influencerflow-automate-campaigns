@@ -12,6 +12,22 @@ export interface Report {
   total_spend: number;
 }
 
+export interface ReportRequest {
+  id: string;
+  brand_user_id: string;
+  range_start: string;
+  range_end: string;
+  filters_json: {
+    campaign_ids?: string[];
+    campaigns?: string[];
+    [key: string]: any;
+  };
+  status: 'processing' | 'completed' | 'failed';
+  pdf_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ReportMetric {
   id: string;
   report_id: string;
@@ -43,6 +59,11 @@ export type Database = {
         Row: Report;
         Insert: Omit<Report, 'id' | 'created_at' | 'updated_at' | 'status'>;
         Update: Partial<Report>;
+      };
+      report_requests: {
+        Row: ReportRequest;
+        Insert: Omit<ReportRequest, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<ReportRequest>;
       };
       report_metrics: {
         Row: ReportMetric;

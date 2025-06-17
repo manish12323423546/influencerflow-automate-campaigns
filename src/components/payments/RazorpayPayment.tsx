@@ -53,6 +53,7 @@ interface RazorpayPaymentProps {
   onSuccess: () => void;
   campaignId?: string;
   influencerId?: string;
+  contractId?: string;
   milestoneId?: string;
   amount?: number;
   description?: string;
@@ -64,6 +65,7 @@ const RazorpayPayment = ({
   onSuccess, 
   campaignId, 
   influencerId, 
+  contractId,
   milestoneId,
   amount: defaultAmount,
   description 
@@ -119,13 +121,36 @@ const RazorpayPayment = ({
       const testUserId = '00000000-0000-0000-0000-000000000000';
       const paymentCampaignId = campaignId && campaignId !== '1' && campaignId !== '2' && campaignId !== '3' ? campaignId : null;
       const paymentInfluencerId = influencerId && influencerId.includes('-') ? influencerId : null;
+      const paymentContractId = contractId && contractId.includes('-') ? contractId : null;
       const paymentMilestoneId = milestoneId && milestoneId.includes('-') ? milestoneId : null;
+      
+      // Check if a payment already exists for this contract
+      if (paymentContractId) {
+        const { data: existingPayments, error: checkError } = await supabase
+          .from('payments')
+          .select('*')
+          .eq('contract_id', paymentContractId)
+          .eq('status', 'completed');
+        
+        if (checkError) {
+          console.error('Failed to check existing payments:', checkError);
+        } else if (existingPayments && existingPayments.length > 0) {
+          toast({
+            title: "Payment Already Exists",
+            description: "This contract has already been paid.",
+            variant: "destructive"
+          });
+          setLoading(false);
+          return;
+        }
+      }
       
       const { data: payment, error: paymentError } = await supabase
         .from('payments')
         .insert({
           campaign_id: paymentCampaignId,
           influencer_id: paymentInfluencerId,
+          contract_id: paymentContractId,
           brand_user_id: testUserId,
           amount: parseFloat(paymentData.amount),
           currency: paymentData.currency,
@@ -158,6 +183,7 @@ const RazorpayPayment = ({
           payment_id: payment.id,
           campaign_id: paymentCampaignId || '',
           influencer_id: paymentInfluencerId || '',
+          contract_id: paymentContractId || '',
           milestone_id: paymentMilestoneId || ''
         },
         handler: async function(response) {

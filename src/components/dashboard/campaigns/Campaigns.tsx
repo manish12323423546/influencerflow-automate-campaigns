@@ -111,6 +111,16 @@ const Campaigns = () => {
   const handleDeleteCampaign = async () => {
     if (!campaignToDelete) return;
 
+    // Prevent deletion of active campaigns
+    if (campaignToDelete.status === 'active') {
+      toast({
+        title: 'Cannot Delete Active Campaign',
+        description: 'You cannot delete a campaign that is currently active.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     // Validate confirmation text
     if (deleteConfirmText !== campaignToDelete.name) {
       toast({
@@ -267,6 +277,14 @@ const Campaigns = () => {
   };
 
   const openDeleteDialog = (campaign: Campaign) => {
+    if (campaign.status === 'active') {
+      toast({
+        title: 'Cannot Delete Active Campaign',
+        description: 'You cannot delete a campaign that is currently active.',
+        variant: 'destructive',
+      });
+      return;
+    }
     setCampaignToDelete(campaign);
     setDeleteConfirmText('');
     setDeleteDialogOpen(true);
@@ -519,6 +537,7 @@ const Campaigns = () => {
                             variant="ghost"
                             size="sm"
                             className="text-gray-600 hover:text-red-500 hover:bg-red-50"
+                            disabled={campaign.status === 'active'}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

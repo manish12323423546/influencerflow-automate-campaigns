@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Campaign Performance Report</title>
+  <style>
+    body {
+      font-family: 'Helvetica Neue', sans-serif;
+      color: #333;
+      padding: 40px;
+      max-width: 800px;
+      margin: auto;
+      background-color: #fff;
+      line-height: 1.6;
+    }
+
+    .header {
+      text-align: center;
+      border-bottom: 2px solid #6d0f64;
+      padding-bottom: 20px;
+      margin-bottom: 40px;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      color: #6d0f64;
+      margin: 0;
+    }
+
+    .meta {
+      font-size: 14px;
+      color: #777;
+      margin-top: 5px;
+    }
+
+    .section {
+      margin-bottom: 30px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #6d0f64;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #e0e0e0;
+      padding-bottom: 5px;
+    }
+
+    .section p {
+      margin: 0;
+      padding: 4px 0;
+    }
+
+    .info-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    .info-table td, .info-table th {
+      padding: 8px 10px;
+      border: 1px solid #e0e0e0;
+    }
+    
+    .info-table th {
+      background-color: #f8f2f7;
+      font-weight: bold;
+    }
+
+    .highlight {
+      background-color: #f8f2f7;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    
+    .status-completed {
+      background-color: #d1f7c4;
+      color: #2e7d32;
+    }
+    
+    .status-in-progress {
+      background-color: #fff8e1;
+      color: #f57c00;
+    }
+    
+    .status-pending {
+      background-color: #e3f2fd;
+      color: #1976d2;
+    }
+    
+    .chart-container {
+      margin: 20px 0;
+      text-align: center;
+    }
+    
+    .footer {
+      margin-top: 60px;
+      font-size: 12px;
+      color: #999;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>{{campaign_name}} - Performance Report</h1>
+    <div class="meta">Generated on: {{generated_date}}</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Report Overview</div>
+    <table class="info-table">
+      <tr class="highlight">
+        <td><strong>Report Period</strong></td>
+        <td>{{report_start_date}} to {{report_end_date}}</td>
+      </tr>
+      <tr>
+        <td><strong>Campaign Name</strong></td>
+        <td>{{campaign_name}}</td>
+      </tr>
+      <tr class="highlight">
+        <td><strong>Brand Name</strong></td>
+        <td>{{brand_name}}</td>
+      </tr>
+      <tr>
+        <td><strong>Campaign Status</strong></td>
+        <td>{{campaign_status}}</td>
+      </tr>
+      <tr class="highlight">
+        <td><strong>Campaign Budget</strong></td>
+        <td>₹{{campaign_budget}}</td>
+      </tr>
+      <tr>
+        <td><strong>Campaign Spent</strong></td>
+        <td>₹{{campaign_spent}}</td>
+      </tr>
+      <tr class="highlight">
+        <td><strong>Campaign ROI</strong></td>
+        <td>{{campaign_roi}}x</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Influencer Overview</div>
+    <table class="info-table">
+      <tr>
+        <td><strong>Total Influencers</strong></td>
+        <td>{{total_influencers}}</td>
+      </tr>
+      <tr class="highlight">
+        <td><strong>Total Followers Reach</strong></td>
+        <td>{{total_followers}}</td>
+      </tr>
+      <tr>
+        <td><strong>Average Engagement Rate</strong></td>
+        <td>{{avg_engagement_rate}}%</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Influencer Details</div>
+    <table class="info-table">
+      <thead>
+        <tr>
+          <th>Influencer Name</th>
+          <th>Followers</th>
+          <th>Engagement Rate</th>
+          <th>Contract Status</th>
+          <th>Payment Amount</th>
+          <th>Outreach Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{influencer_rows}}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Outreach Statistics</div>
+    <table class="info-table">
+      <tr>
+        <td><strong>Total Influencers Contacted</strong></td>
+        <td>{{total_influencers_contacted}}</td>
+      </tr>
+      <tr>
+        <td><strong>Email Outreach</strong></td>
+        <td>{{email_outreach_count}}</td>
+      </tr>
+      <tr>
+        <td><strong>Call Outreach</strong></td>
+        <td>{{call_outreach_count}}</td>
+      </tr>
+      <tr>
+        <td><strong>Response Rate</strong></td>
+        <td>{{response_rate}}%</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Contract Status</div>
+    <table class="info-table">
+      <tr>
+        <td><strong>Contracts Created</strong></td>
+        <td>{{contracts_created}}</td>
+      </tr>
+      <tr class="highlight">
+        <td><strong>Contracts Signed</strong></td>
+        <td>{{contracts_signed}}</td>
+      </tr>
+      <tr>
+        <td><strong>Contracts Pending</strong></td>
+        <td>{{contracts_pending}}</td>
+      </tr>
+      <tr class="highlight">
+        <td><strong>Contracts Completed</strong></td>
+        <td>{{contracts_completed}}</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Contract Details</div>
+    <table class="info-table">
+      <thead>
+        <tr>
+          <th>Influencer Name</th>
+          <th>Contract Status</th>
+          <th>Contract Value</th>
+          <th>Payment Status</th>
+          <th>Created Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{contract_rows}}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Payment Summary</div>
+    <table class="info-table">
+      <tr>
+        <td><strong>Total Contract Value</strong></td>
+        <td>₹{{total_contract_value}}</td>
+      </tr>
+      <tr class="highlight">
+        <td><strong>Payments Completed</strong></td>
+        <td>₹{{payments_completed}}</td>
+      </tr>
+      <tr>
+        <td><strong>Payments Pending</strong></td>
+        <td>₹{{payments_pending}}</td>
+      </tr>
+      <tr class="highlight">
+        <td><strong>Total Payment Amount</strong></td>
+        <td>₹{{total_payment_amount}}</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Performance Metrics</div>
+    <table class="info-table">
+      <tr>
+        <td><strong>Total Impressions</strong></td>
+        <td>{{total_impressions}}</td>
+      </tr>
+      <tr>
+        <td><strong>Total Clicks</strong></td>
+        <td>{{total_clicks}}</td>
+      </tr>
+      <tr>
+        <td><strong>Total Conversions</strong></td>
+        <td>{{total_conversions}}</td>
+      </tr>
+      <tr>
+        <td><strong>Conversion Rate</strong></td>
+        <td>{{conversion_rate}}%</td>
+      </tr>
+      <tr>
+        <td><strong>Cost Per Click</strong></td>
+        <td>₹{{cost_per_click}}</td>
+      </tr>
+      <tr>
+        <td><strong>Cost Per Conversion</strong></td>
+        <td>₹{{cost_per_conversion}}</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="footer">
+    <p>This is a system-generated report. Please retain a copy for your records.</p>
+    <p>© {{current_year}} InfluencerFlow - All rights reserved</p>
+  </div>
+
+</body>
+</html>
