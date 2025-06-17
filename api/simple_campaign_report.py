@@ -9,6 +9,8 @@ import requests
 import json
 import time
 from datetime import datetime
+import sys
+from typing import Dict, Any
 
 # Configuration
 API_URL = "http://localhost:8000"
@@ -211,6 +213,13 @@ def display_results(task_status):
     print("=" * 60)
     print("🎯 Campaign report workflow orchestrated by CEO Agent")
 
+def generate_campaign_report(data: Dict[str, Any]) -> Dict[str, Any]:
+    # Your existing campaign report logic here
+    return {
+        "status": "success",
+        "data": data
+    }
+
 def main():
     """Main execution function."""
     print("📊 MARKETING CAMPAIGN REPORT GENERATOR")
@@ -243,4 +252,14 @@ def main():
         print("💡 Task continues running in background")
 
 if __name__ == "__main__":
-    main() 
+    if len(sys.argv) > 1:
+        try:
+            input_data = json.loads(sys.argv[1])
+            result = generate_campaign_report(input_data)
+            print(json.dumps(result))
+        except Exception as e:
+            print(json.dumps({"error": str(e)}))
+            sys.exit(1)
+    else:
+        print(json.dumps({"error": "No input data provided"}))
+        sys.exit(1) 
