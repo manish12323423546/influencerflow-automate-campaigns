@@ -11,6 +11,9 @@ import CreatorDashboard from "./pages/CreatorDashboard";
 import CreatorProfile from "./pages/CreatorProfile";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import { CopilotKit } from "@copilotkit/react-core";
+import "@copilotkit/react-ui/styles.css";
+import TestCopilot from "./test-copilot";
 
 // Import components from new locations
 import { CampaignDetail, CreateCampaign, Campaigns } from "@/components/dashboard/campaigns";
@@ -25,26 +28,33 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <ErrorBoundary>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
-                <Route path="/creator-dashboard" element={<ErrorBoundary><CreatorDashboard /></ErrorBoundary>} />
-                <Route path="/creator-profile" element={<ErrorBoundary><CreatorProfile /></ErrorBoundary>} />
-                <Route path="/settings" element={<ErrorBoundary><Settings /></ErrorBoundary>} />
+          <CopilotKit
+            runtimeUrl="http://localhost:3001/api/copilotkit"
+            agent="campaign_agent"
+          >
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <ErrorBoundary>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
+                  <Route path="/creator-dashboard" element={<ErrorBoundary><CreatorDashboard /></ErrorBoundary>} />
+                  <Route path="/creator-profile" element={<ErrorBoundary><CreatorProfile /></ErrorBoundary>} />
+                  <Route path="/settings" element={<ErrorBoundary><Settings /></ErrorBoundary>} />
 
-                {/* Campaign Routes */}
-                <Route path="/campaigns/:id" element={<ErrorBoundary><CampaignDetail /></ErrorBoundary>} />
-                <Route path="/campaigns/create" element={<ErrorBoundary><CreateCampaign /></ErrorBoundary>} />
-                <Route path="/campaigns" element={<ErrorBoundary><Campaigns /></ErrorBoundary>} />
+                  {/* Campaign Routes */}
+                  <Route path="/campaigns/:id" element={<ErrorBoundary><CampaignDetail /></ErrorBoundary>} />
+                  <Route path="/campaigns/create" element={<ErrorBoundary><CreateCampaign /></ErrorBoundary>} />
+                  <Route path="/campaigns" element={<ErrorBoundary><Campaigns /></ErrorBoundary>} />
 
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </ErrorBoundary>
-          </BrowserRouter>
+                  <Route path="/test-copilot" element={<TestCopilot />} />
+
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </ErrorBoundary>
+            </BrowserRouter>
+          </CopilotKit>
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>

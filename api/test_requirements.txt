@@ -1,0 +1,29 @@
+# Testing Requirements for AI Agents API
+# Core testing framework
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.0.0
+
+# FastAPI testing
+httpx>=0.24.0
+websockets>=11.0.0
+
+# Mocking and async testing
+pytest-mock>=3.10.0
+asynctest>=0.13.0
+
+# Additional testing utilities
+factory-boy>=3.2.0
+faker>=18.0.0
+
+# Coverage reporting
+coverage>=7.0.0
+
+# Test data generation
+hypothesis>=6.0.0
+
+# Performance testing
+pytest-benchmark>=4.0.0
+
+# Parallel test execution
+pytest-xdist>=3.0.0 

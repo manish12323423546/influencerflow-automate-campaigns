@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Users, TrendingUp, DollarSign, Target, Bell, Activity, Settings, Plus,
-  BarChart3, FileText, CreditCard, Search, Headphones, Database, MessageSquare, MessageCircle, Mail
+  BarChart3, FileText, CreditCard, Search, Headphones, Database, MessageSquare, MessageCircle, Mail, Bot
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import CampaignsManager from '@/components/dashboard/CampaignsManager';
@@ -16,6 +16,7 @@ import OutreachManager from '@/components/dashboard/OutreachManager';
 import KnowledgeBaseManager from '@/components/dashboard/KnowledgeBaseManager';
 import EmailConversionManager from '@/components/dashboard/EmailConversionManager';
 import ReportsManager from '@/components/dashboard/ReportsManager';
+import AIAgentManager from '@/components/dashboard/AIAgentManager';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Campaign } from '@/types/campaign';
@@ -24,7 +25,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'campaigns' | 'discover' | 'contracts' | 'payments' | 'outreach' | 'knowledge' | 'conversations' | 'email-conversion' | 'reports'>('campaigns');
+  const [activeTab, setActiveTab] = useState<'campaigns' | 'discover' | 'contracts' | 'payments' | 'outreach' | 'knowledge' | 'conversations' | 'email-conversion' | 'reports' | 'ai-agents'>('campaigns');
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [totalInfluencers, setTotalInfluencers] = useState(0);
@@ -35,8 +36,8 @@ const Dashboard = () => {
   // Handle URL parameters for tab and campaign selection
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['campaigns', 'discover', 'contracts', 'payments', 'reports', 'outreach', 'email-conversion', 'conversations', 'knowledge'].includes(tab)) {
-      setActiveTab(tab as any);
+    if (tab && ['campaigns', 'discover', 'contracts', 'payments', 'reports', 'outreach', 'email-conversion', 'conversations', 'knowledge', 'ai-agents'].includes(tab)) {
+      setActiveTab(tab as 'campaigns' | 'discover' | 'contracts' | 'payments' | 'outreach' | 'knowledge' | 'conversations' | 'email-conversion' | 'reports' | 'ai-agents');
     }
   }, [searchParams]);
 
@@ -128,16 +129,19 @@ const Dashboard = () => {
       });
 
       // Listen for conversation start
-      widget.addEventListener('elevenlabs-convai:call', (event: any) => {
+      widget.addEventListener('elevenlabs-convai:call', (event: CustomEvent) => {
         console.log('Starting conversation');
         
         // Configure client tools and initial conversation
-        event.detail.config.clientTools = {
-          testConversation: ({ message }) => {
-            console.log('Test conversation message:', message);
-            return { success: true };
-          }
-        };
+        const eventDetail = event.detail as { config?: { clientTools?: Record<string, unknown> } };
+        if (eventDetail && eventDetail.config) {
+          eventDetail.config.clientTools = {
+            testConversation: ({ message }: { message: string }) => {
+              console.log('Test conversation message:', message);
+              return { success: true };
+            }
+          };
+        }
 
         // Send initial greeting after widget loads
         setTimeout(() => {
@@ -195,6 +199,7 @@ const Dashboard = () => {
     { id: 'email-conversion', label: 'Email Conversion', icon: Mail, description: 'Track email automation & contracts' },
     { id: 'conversations', label: 'Conversations', icon: MessageCircle, description: 'AI conversation history' },
     { id: 'knowledge', label: 'Knowledge Base', icon: Database, description: 'Manage AI knowledge' },
+    { id: 'ai-agents', label: 'AI Agents', icon: Bot, description: 'Execute and monitor AI agents' },
   ];
 
   if (isLoading) {
@@ -357,13 +362,14 @@ const Dashboard = () => {
           {activeTab === 'email-conversion' && <EmailConversionManager />}
           {activeTab === 'conversations' && <ConversationsManager />}
           {activeTab === 'knowledge' && <KnowledgeBaseManager />}
+          {activeTab === 'ai-agents' && <AIAgentManager />}
         </div>
       </div>
 
       {/* ElevenLabs AI Assistant Widget */}
       <elevenlabs-convai
         ref={widgetRef}
-        agent-id="agent_01jwkpad6te50bmvfd8ax6xvqk"
+        agent-id="agent_01jxv6e90xfdg8zzvbkvmnngxr"
         variant="expanded"
         action-text="Need help with campaigns?"
         className="fixed bottom-4 left-4 z-50"

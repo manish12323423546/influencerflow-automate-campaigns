@@ -1,4 +1,3 @@
-
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -68,16 +67,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    // Set up auth state listener
+    // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
 
-    // Check for existing session
+    // Check for existing session with a small delay to ensure proper initialization
     const initializeAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        await handleAuthStateChange('INITIAL_SESSION', session);
+        // Small delay to allow Supabase to fully initialize (addresses GitHub issue #23)
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting session:', error);
+          // Try one more time after another small delay
+          await new Promise(resolve => setTimeout(resolve, 200));
+          const { data: { session: retrySession } } = await supabase.auth.getSession();
+          await handleAuthStateChange('INITIAL_SESSION', retrySession);
+        } else {
+          await handleAuthStateChange('INITIAL_SESSION', session);
+        }
       } catch (error) {
-        console.error('Error getting session:', error);
+        console.error('Error initializing auth:', error);
         if (mounted) {
           setLoading(false);
         }
