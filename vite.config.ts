@@ -44,6 +44,27 @@ export default defineConfig(({ mode }) => {
       minify: !process.env.TAURI_DEBUG ? 'esbuild' : false,
       // produce sourcemaps for debug builds
       sourcemap: !!process.env.TAURI_DEBUG,
+      // Configure chunking
+      rollupOptions: {
+        output: {
+          manualChunks: (id) => {
+            // Vendor chunk for node_modules
+            if (id.includes('node_modules')) {
+              if (id.includes('@radix-ui')) {
+                return 'vendor-ui';
+              }
+              if (id.includes('react') || 
+                  id.includes('@tanstack') || 
+                  id.includes('@supabase')) {
+                return 'vendor-core';
+              }
+              return 'vendor';
+            }
+          }
+        },
+      },
+      // Increase chunk size warning limit
+      chunkSizeWarningLimit: 1000,
     },
   };
 });
