@@ -42,8 +42,8 @@ serve(async (req) => {
         range_start: requestBody.reportData.range_start,
         range_end: requestBody.reportData.range_end,
         filters_json: requestBody.reportData.filters_json || {},
-        // Use a placeholder ID for anonymous users
-        id: "anonymous-" + new Date().getTime(),
+        // Use a proper UUID for anonymous users
+        id: crypto.randomUUID(),
         // Add other required fields with default values
         brand_user_id: "anonymous",
         status: "processing",
