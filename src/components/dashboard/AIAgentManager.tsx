@@ -40,22 +40,12 @@ const AIAgentManager: React.FC = () => {
     log('info', 'AI Agent Manager initialized');
     log('debug', 'Backend URL configured (HARDCODED)', { url: BACKEND_URL });
     
-    // Log all environment variables that might affect CopilotKit
-    log('debug', 'Environment check', {
-      NODE_ENV: process.env.NODE_ENV,
-      NEXT_PUBLIC_LANGGRAPH_BACKEND_URL: process.env.NEXT_PUBLIC_LANGGRAPH_BACKEND_URL,
-      LANGGRAPH_API_URL: process.env.LANGGRAPH_API_URL,
-      allEnvKeys: Object.keys(process.env).filter(key => 
-        key.includes('LANGGRAPH') || key.includes('COPILOT') || key.includes('BACKEND')
-      ).map(key => `${key}=${process.env[key]}`)
-    });
-
     const checkConnection = async () => {
       try {
         log('info', 'Starting connection check...');
         setConnectionStatus('connecting');
         
-        // First check if backend is reachable
+        // Check if backend is reachable
         log('debug', 'Checking backend health endpoint', { endpoint: `${BACKEND_URL}/health` });
         
         const healthResponse = await fetch(`${BACKEND_URL}/health`, {
@@ -72,37 +62,45 @@ const AIAgentManager: React.FC = () => {
         if (healthResponse.ok) {
           log('info', '✅ Backend health check passed');
           
-          // Check if CopilotKit endpoint is available
-          log('debug', 'Checking CopilotKit info endpoint', { endpoint: `${BACKEND_URL}/info` });
+          // Check CopilotKit endpoint directly
+          log('debug', 'Checking CopilotKit endpoint', { endpoint: `${BACKEND_URL}/copilotkit` });
           
-          const infoResponse = await fetch(`${BACKEND_URL}/info`, {
+          const copilotResponse = await fetch(`${BACKEND_URL}/copilotkit`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' },
           });
           
-          log('debug', 'Info endpoint response', { 
-            status: infoResponse.status, 
-            ok: infoResponse.ok,
-            statusText: infoResponse.statusText 
+          log('debug', 'CopilotKit endpoint response', { 
+            status: copilotResponse.status, 
+            ok: copilotResponse.ok,
+            statusText: copilotResponse.statusText 
           });
           
-          if (infoResponse.ok) {
-            const info = await infoResponse.json();
-            log('debug', 'Info endpoint data received', info);
+          if (copilotResponse.ok || copilotResponse.status === 200) {
+            log('info', '✅ CopilotKit endpoint confirmed - Connection successful!');
+            setConnectionStatus('connected');
+          } else {
+            log('warn', '⚠️ CopilotKit endpoint returned non-200, checking info endpoint');
             
-            if (info.copilotkit_available) {
-              log('info', '✅ CopilotKit integration confirmed - Connection successful!');
-              setConnectionStatus('connected');
+            // Fallback: check info endpoint
+            const infoResponse = await fetch(`${BACKEND_URL}/info`, {
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' },
+            });
+            
+            if (infoResponse.ok) {
+              const info = await infoResponse.json();
+              if (info.copilotkit_available) {
+                log('info', '✅ CopilotKit available via info endpoint');
+                setConnectionStatus('connected');
+              } else {
+                log('error', '❌ CopilotKit not available', info);
+                setConnectionStatus('error');
+              }
             } else {
-              log('error', '❌ CopilotKit not available on backend', info);
+              log('error', '❌ Both CopilotKit and info endpoints failed');
               setConnectionStatus('error');
             }
-          } else {
-            log('error', '❌ Info endpoint failed', { 
-              status: infoResponse.status,
-              statusText: infoResponse.statusText 
-            });
-            setConnectionStatus('error');
           }
         } else {
           log('error', '❌ Backend health check failed', { 
@@ -148,14 +146,14 @@ const AIAgentManager: React.FC = () => {
     log('info', `🔄 Connection status changed: ${connectionStatus.toUpperCase()}`);
   }, [connectionStatus]);
 
-  // Force log the runtime URL being used by CopilotKit
+  // CopilotKit configuration logging
   useEffect(() => {
-    log('warn', '🚨 COPILOTKIT RUNTIME URL FORCED TO: /api/copilotkit');
-    log('warn', '🚨 This should connect to hardcoded localhost:8000 in route.ts');
-    log('debug', 'CopilotKit configuration', {
+    log('info', 'CopilotKit configuration initialized');
+    log('debug', 'CopilotKit settings', {
       runtimeUrl: '/api/copilotkit',
       agent: 'campaign_agent',
-      backendEndpoint: `${BACKEND_URL}/copilotkit`
+      backendEndpoint: `${BACKEND_URL}/copilotkit`,
+      expectedFlow: 'Frontend → /api/copilotkit → localhost:8000/copilotkit'
     });
   }, []);
 
@@ -200,14 +198,13 @@ const AIAgentManager: React.FC = () => {
         </div>
       </Alert>
 
-      {/* Force No Remote URL Warning */}
-      <Alert className="border-red-500 bg-red-50">
-        <AlertCircle className="h-4 w-4 text-red-600" />
-        <AlertDescription className="text-red-800">
-          <strong>🚨 FORCED LOCAL ONLY:</strong> This AI Agent is hardcoded to use localhost:8000 only. 
-          If you see any remote URLs in console, there's a configuration override happening.
+      {/* Configuration Info */}
+      <Alert className="border-blue-500 bg-blue-50">
+        <Settings className="h-4 w-4 text-blue-600" />
+        <AlertDescription className="text-blue-800">
+          <strong>Configuration:</strong> This AI Agent connects to your local LangGraph system at localhost:8000.
           <br />
-          <strong>Runtime URL:</strong> /api/copilotkit → localhost:8000/copilotkit
+          <strong>Connection Flow:</strong> Frontend → /api/copilotkit → localhost:8000/copilotkit
         </AlertDescription>
       </Alert>
 
@@ -221,11 +218,11 @@ const AIAgentManager: React.FC = () => {
             <CardHeader className="bg-gradient-to-r from-coral/10 to-purple-500/10">
               <CardTitle className="flex items-center text-xl">
                 <MessageSquare className="w-6 h-6 mr-3 text-coral" />
-                AI Campaign Assistant (LOCAL ONLY)
+                AI Campaign Assistant (LOCAL)
                 <Bot className="w-5 h-5 ml-2 text-purple-600" />
               </CardTitle>
               <p className="text-sm text-gray-600 mt-2">
-                Powered by Local LangGraph Multi-Agent System (localhost:8000) • Campaign planning, execution, and analysis
+                Connected to Local LangGraph Multi-Agent System (localhost:8000) • Campaign planning, execution, and analysis
               </p>
             </CardHeader>
             <CardContent className="p-0">
@@ -233,8 +230,8 @@ const AIAgentManager: React.FC = () => {
                 <CopilotChat 
                   className="h-full"
                   labels={{
-                    title: "AI Campaign Assistant (Local)",
-                    initial: "Hi! I'm your AI campaign assistant powered by your LOCAL LangGraph system at localhost:8000. I can help you with:\n\n• 🎯 Campaign planning and strategy\n• 👥 Influencer discovery and analysis\n• 📝 Contract creation and management\n• 📧 Email automation and outreach\n• 📞 Phone call scheduling and management\n• 📊 Performance analysis and ROI tracking\n• 💰 Budget planning and optimization\n\nHow can I assist you with your campaign today?",
+                    title: "AI Campaign Assistant",
+                    initial: "Hi! I'm your AI campaign assistant connected to your local LangGraph system. I can help you with:\n\n• 🎯 Campaign planning and strategy\n• 👥 Influencer discovery and analysis\n• 📝 Contract creation and management\n• 📧 Email automation and outreach\n• 📞 Phone call scheduling and management\n• 📊 Performance analysis and ROI tracking\n• 💰 Budget planning and optimization\n\nHow can I assist you with your campaign today?",
                     placeholder: "Ask about campaigns, influencers, contracts, or analytics...",
                   }}
                 />
@@ -291,30 +288,24 @@ const AIAgentManager: React.FC = () => {
         </Card>
       )}
 
-      {/* Enhanced Integration Info with Debug Panel */}
+      {/* Integration Details */}
       <Card className="bg-gray-50 border-gray-200">
         <CardHeader>
           <CardTitle className="text-sm text-gray-700 flex items-center justify-between">
-            Local Integration Details (FORCED)
+            Integration Details
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={() => {
                 log('info', '🔍 Debug info requested by user');
                 console.group('🔍 AI Agent Debug Information');
-                console.log('Backend URL (Hardcoded):', BACKEND_URL);
+                console.log('Backend URL:', BACKEND_URL);
                 console.log('Connection Status:', connectionStatus);
                 console.log('Runtime URL:', '/api/copilotkit');
-                console.log('Expected Backend Endpoint:', `${BACKEND_URL}/copilotkit`);
+                console.log('Backend Endpoint:', `${BACKEND_URL}/copilotkit`);
                 console.log('Current Time:', new Date().toISOString());
                 console.log('User Agent:', navigator.userAgent);
                 console.log('Window Location:', window.location.href);
-                console.log('Environment Variables:', Object.keys(process.env).filter(key => 
-                  key.includes('LANGGRAPH') || key.includes('COPILOT') || key.includes('BACKEND')
-                ).reduce((acc, key) => {
-                  acc[key] = process.env[key];
-                  return acc;
-                }, {} as Record<string, string | undefined>));
                 console.groupEnd();
               }}
               className="text-xs"
@@ -329,8 +320,8 @@ const AIAgentManager: React.FC = () => {
             <code className="bg-gray-200 px-2 py-1 rounded text-xs">/api/copilotkit</code>
           </div>
           <div className="flex justify-between">
-            <span>Backend Endpoint (FORCED):</span>
-            <code className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs">{BACKEND_URL}/copilotkit</code>
+            <span>Backend Endpoint:</span>
+            <code className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">{BACKEND_URL}/copilotkit</code>
           </div>
           <div className="flex justify-between">
             <span>Agent:</span>
@@ -351,10 +342,6 @@ const AIAgentManager: React.FC = () => {
             </span>
           </div>
           <div className="flex justify-between">
-            <span>Configuration:</span>
-            <code className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs">HARDCODED - NO OVERRIDES</code>
-          </div>
-          <div className="flex justify-between">
             <span>Logs:</span>
             <code className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">Check Browser Console (F12)</code>
           </div>
@@ -364,26 +351,22 @@ const AIAgentManager: React.FC = () => {
       {/* Advanced Debug Tool */}
       <DebugCopilotKit />
 
-      {/* Console Logging Instructions */}
+      {/* Debug Information */}
       <Card className="bg-blue-50 border-blue-200">
         <CardHeader>
-          <CardTitle className="text-sm text-blue-700">🔍 Debug Logging Active</CardTitle>
+          <CardTitle className="text-sm text-blue-700">🔍 Debug Information</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-blue-600">
-          <p className="mb-2">Comprehensive logging is active. Open your browser console (F12) to view:</p>
+          <p className="mb-2">Debug logging is active. Open your browser console (F12) to view:</p>
           <ul className="text-xs space-y-1 list-disc list-inside">
-            <li>Connection status changes and API calls</li>
-            <li>Backend health and CopilotKit availability checks</li>
-            <li>Environment variable inspection</li>
+            <li>Connection status and API calls</li>
+            <li>Backend health and CopilotKit endpoint checks</li>
             <li>CopilotKit runtime configuration</li>
             <li>Error details and troubleshooting information</li>
             <li>Performance and timing data</li>
           </ul>
           <p className="mt-2 text-xs">
-            Look for logs prefixed with <code className="bg-blue-100 px-1 rounded">[AI-Agent]</code> and <code className="bg-red-100 px-1 rounded">[CopilotKit-API]</code>
-          </p>
-          <p className="mt-2 text-xs font-bold">
-            🚨 If you see ANY remote URLs in the logs, that indicates a configuration override problem!
+            Look for logs prefixed with <code className="bg-blue-100 px-1 rounded">[AI-Agent]</code> and <code className="bg-green-100 px-1 rounded">[CopilotKit-API]</code>
           </p>
         </CardContent>
       </Card>

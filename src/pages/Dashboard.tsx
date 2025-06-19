@@ -16,6 +16,7 @@ import OutreachManager from '@/components/dashboard/OutreachManager';
 import KnowledgeBaseManager from '@/components/dashboard/KnowledgeBaseManager';
 import EmailConversionManager from '@/components/dashboard/EmailConversionManager';
 import ReportsManager from '@/components/dashboard/ReportsManager';
+import DirectAIAgent from '@/components/dashboard/DirectAIAgent';
 import AIAgentManager from '@/components/dashboard/AIAgentManager';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -362,7 +363,30 @@ const Dashboard = () => {
           {activeTab === 'email-conversion' && <EmailConversionManager />}
           {activeTab === 'conversations' && <ConversationsManager />}
           {activeTab === 'knowledge' && <KnowledgeBaseManager />}
-          {activeTab === 'ai-agents' && <AIAgentManager />}
+          {activeTab === 'ai-agents' && (
+            <div className="space-y-8">
+              {/* Local LangGraph AI Agent Manager Section */}
+              <div className="space-y-4">
+                <div className="flex items-center space-x-3">
+                  <Bot className="h-6 w-6 text-coral" />
+                  <h2 className="text-xl font-semibold text-gray-900">Local LangGraph AI Assistant</h2>
+                </div>
+                <AIAgentManager />
+              </div>
+              
+              {/* Separator */}
+              <div className="border-t border-gray-200 my-8"></div>
+              
+              {/* Direct AI Agent Section */}
+              <div className="space-y-4">
+                <div className="flex items-center space-x-3">
+                  <MessageSquare className="h-6 w-6 text-purple-600" />
+                  <h2 className="text-xl font-semibold text-gray-900">Direct AI Assistant</h2>
+                </div>
+                <DirectAIAgent />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

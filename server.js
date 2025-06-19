@@ -20,12 +20,16 @@ app.use(bodyParser.json());
 // Create the CopilotKit runtime with external endpoint
 const serviceAdapter = new ExperimentalEmptyAdapter();
 
+// Force the local endpoint configuration
+const LOCAL_BACKEND_URL = "http://localhost:8000/copilotkit/";
+
+console.log(`🔧 FORCING CopilotKit to use LOCAL BACKEND: ${LOCAL_BACKEND_URL}`);
+console.log(`🚨 If you see any references to 'project-x-c0ml.onrender.com', there's a configuration issue!`);
+
 const runtime = new CopilotRuntime({
   remoteEndpoints: [
-    // Connect to your external LangGraph deployment
-    // Note: Using /copilotkit/ (with trailing slash) as per API response
     { 
-      url: "http://localhost:8000/copilotkit/"
+      url: LOCAL_BACKEND_URL
     },
   ],
 });
@@ -44,10 +48,11 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     message: 'CopilotKit proxy server running',
-    external_api: 'http://localhost:8000/copilotkit/',
+    forced_local_backend: LOCAL_BACKEND_URL,
     local_langgraph: process.env.LANGGRAPH_API_URL || 'http://localhost:8000',
-    integration_type: 'Self-hosted FastAPI LangGraph',
-    copilotkit_version: require('./package.json').dependencies['@copilotkit/runtime']
+    integration_type: 'Self-hosted FastAPI LangGraph + LOCAL BACKEND ONLY',
+    copilotkit_version: require('./package.json').dependencies['@copilotkit/runtime'],
+    warning: 'If you see any remote URLs, clear your browser cache!'
   });
 });
 
@@ -64,8 +69,8 @@ if (process.env.NODE_ENV === 'production') {
 app.listen(port, () => {
   console.log(`🚀 CopilotKit Proxy Server running on port ${port}`);
   console.log(`📡 CopilotKit API available at http://localhost:${port}/api/copilotkit`);
-  console.log(`🔗 External LangGraph API: http://localhost:8000/copilotkit/`);
-  console.log(`🏠 Local LangGraph API: ${process.env.LANGGRAPH_API_URL || 'http://localhost:8000'}`);
+  console.log(`🏠 FORCED Local Backend: ${LOCAL_BACKEND_URL}`);
   console.log(`💚 Health check: http://localhost:${port}/health`);
   console.log(`📚 Integration: Self-hosted FastAPI LangGraph + CopilotKit`);
+  console.log(`🚨 IMPORTANT: Browser cache may need clearing if you see remote URL errors!`);
 }); 
