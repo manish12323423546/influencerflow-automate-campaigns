@@ -12,6 +12,15 @@ export default defineConfig(({ mode }) => {
     host: "::",
     port: mode === 'development' ? 8080 : 1420,
     strictPort: mode !== 'development',
+    // Add proxy configuration for CopilotKit API
+    proxy: {
+      '/api/copilotkit': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false,
+        ws: true, // Enable WebSocket proxying
+      },
+    },
   };
 
   return {

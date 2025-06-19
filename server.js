@@ -1,42 +1,54 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const { CopilotRuntime, LangGraphAgent } = require('@copilotkit/runtime');
+const {
+  CopilotRuntime,
+  ExperimentalEmptyAdapter,
+  copilotRuntimeNodeHttpEndpoint,
+} = require('@copilotkit/runtime');
 const path = require('path');
 require('dotenv').config();
 
 const app = express();
-const port = process.env.PORT || 3001;
+// Use a specific port for CopilotKit proxy (not conflicting with LangGraph on 8000)
+const port = 3001;
 
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
 
-// Create the CopilotRuntime instance
+// Create the CopilotKit runtime with external endpoint
+const serviceAdapter = new ExperimentalEmptyAdapter();
+
 const runtime = new CopilotRuntime({
-  agents: { 
-    'campaign_agent': new LangGraphAgent({
-      deploymentUrl: process.env.LANGGRAPH_API_URL || 'http://localhost:8000',
-      graphId: 'campaign_agent',
-      langsmithApiKey: process.env.LANGSMITH_API_KEY,
-    }),
-  },
+  remoteEndpoints: [
+    // Connect to your external LangGraph deployment
+    // Note: Using /copilotkit/ (with trailing slash) as per API response
+    { 
+      url: "http://localhost:8000/copilotkit/"
+    },
+  ],
 });
 
-// CopilotKit API endpoint
-app.post('/api/copilotkit', async (req, res) => {
-  try {
-    console.log('Received request to /api/copilotkit');
-    
-    // Process the request with the CopilotRuntime
-    const result = await runtime.process(req.body);
-    
-    // Send the response back to the client
-    res.json(result);
-  } catch (error) {
-    console.error('Error processing CopilotKit request:', error);
-    res.status(500).json({ error: error.message });
-  }
+// CopilotKit API endpoint using the new runtime approach
+const copilotKitEndpoint = copilotRuntimeNodeHttpEndpoint({
+  runtime,
+  serviceAdapter,
+  endpoint: "/api/copilotkit",
+});
+
+app.use("/api/copilotkit", copilotKitEndpoint);
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    message: 'CopilotKit proxy server running',
+    external_api: 'http://localhost:8000/copilotkit/',
+    local_langgraph: process.env.LANGGRAPH_API_URL || 'http://localhost:8000',
+    integration_type: 'Self-hosted FastAPI LangGraph',
+    copilotkit_version: require('./package.json').dependencies['@copilotkit/runtime']
+  });
 });
 
 // Serve static files in production
@@ -50,6 +62,10 @@ if (process.env.NODE_ENV === 'production') {
 
 // Start the server
 app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-  console.log(`CopilotKit API available at http://localhost:${port}/api/copilotkit`);
+  console.log(`🚀 CopilotKit Proxy Server running on port ${port}`);
+  console.log(`📡 CopilotKit API available at http://localhost:${port}/api/copilotkit`);
+  console.log(`🔗 External LangGraph API: http://localhost:8000/copilotkit/`);
+  console.log(`🏠 Local LangGraph API: ${process.env.LANGGRAPH_API_URL || 'http://localhost:8000'}`);
+  console.log(`💚 Health check: http://localhost:${port}/health`);
+  console.log(`📚 Integration: Self-hosted FastAPI LangGraph + CopilotKit`);
 }); 
