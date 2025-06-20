@@ -35,6 +35,17 @@ const AutoConnectCall = ({
   meetingId,
   onCallEnd,
 }: Props) => {
+  console.log('🏁 AutoConnectCall Component Initialized:', {
+    userName,
+    assistantId,
+    assistantName,
+    callTimeLimit,
+    meetingId,
+    hasOnCallEnd: !!onCallEnd,
+    timestamp: new Date().toISOString(),
+    component: 'AutoConnectCall'
+  });
+
   const { toast } = useToast();
   const navigate = useNavigate();
   const [callStatus, setCallStatus] = useState(CallStatus.CONNECTING);
@@ -53,9 +64,26 @@ const AutoConnectCall = ({
 
   // Simple audio setup for speech detection
   const setupAudio = async () => {
+    console.log('🎤 Setting up Audio for AutoConnectCall:', {
+      meetingId,
+      assistantName,
+      timestamp: new Date().toISOString()
+    });
+    
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       refs.current.audioStream = stream;
+      
+      console.log('✅ Audio Stream Acquired:', {
+        hasAudioTracks: stream.getAudioTracks().length > 0,
+        audioTracks: stream.getAudioTracks().map(track => ({
+          id: track.id,
+          label: track.label,
+          enabled: track.enabled,
+          kind: track.kind
+        })),
+        timestamp: new Date().toISOString()
+      });
 
       // Setup basic volume detection for user speaking indicator
       const audioContext = new AudioContext();
@@ -65,30 +93,51 @@ const AutoConnectCall = ({
       microphone.connect(analyzer);
       analyzer.fftSize = 256;
       
+      console.log('🔊 Audio Analysis Setup Complete:', {
+        sampleRate: audioContext.sampleRate,
+        state: audioContext.state,
+        fftSize: analyzer.fftSize,
+        timestamp: new Date().toISOString()
+      });
+      
       const dataArray = new Uint8Array(analyzer.frequencyBinCount);
       
-      const detectSpeech = () => {
-        analyzer.getByteFrequencyData(dataArray);
-        const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
-        
-        if (average > 50) { // Threshold for speech detection
-          setUserIsSpeaking(true);
+              const detectSpeech = () => {
+          analyzer.getByteFrequencyData(dataArray);
+          const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
           
-          // Clear existing timeout
-          if (refs.current.userSpeakingTimeout) {
-            clearTimeout(refs.current.userSpeakingTimeout);
+          if (average > 50) { // Threshold for speech detection
+            console.log('🗣️ USER SPEAKING DETECTED (AutoConnect):', {
+              event: 'userSpeechDetected',
+              average: average,
+              threshold: 50,
+              meetingId,
+              assistantName,
+              timestamp: new Date().toISOString()
+            });
+            
+            setUserIsSpeaking(true);
+            
+            // Clear existing timeout
+            if (refs.current.userSpeakingTimeout) {
+              clearTimeout(refs.current.userSpeakingTimeout);
+            }
+            
+            // Set new timeout to stop speaking indicator
+            refs.current.userSpeakingTimeout = setTimeout(() => {
+              console.log('🤐 USER STOPPED SPEAKING (AutoConnect):', {
+                event: 'userSpeechEnded',
+                meetingId,
+                timestamp: new Date().toISOString()
+              });
+              setUserIsSpeaking(false);
+            }, 1000);
           }
           
-          // Set new timeout to stop speaking indicator
-          refs.current.userSpeakingTimeout = setTimeout(() => {
-            setUserIsSpeaking(false);
-          }, 1000);
-        }
-        
-        if (callStatus === CallStatus.ACTIVE) {
-          requestAnimationFrame(detectSpeech);
-        }
-      };
+          if (callStatus === CallStatus.ACTIVE) {
+            requestAnimationFrame(detectSpeech);
+          }
+        };
       
       detectSpeech();
     } catch (error) {
@@ -121,10 +170,26 @@ const AutoConnectCall = ({
 
   // Stop call function
   const stopCall = async () => {
+    console.log('🛑 STOPPING CALL (AutoConnect):', {
+      event: 'stopCall',
+      assistantId,
+      assistantName,
+      meetingId,
+      timeRemaining,
+      hasOnCallEnd: !!onCallEnd,
+      timestamp: new Date().toISOString()
+    });
+    
     try {
+      console.log('📞 Calling VAPI.stop()...');
       await vapi.stop();
+      console.log('✅ VAPI.stop() completed successfully');
+      
       setCallStatus(CallStatus.FINISHED);
+      console.log('📊 Call Status Updated to FINISHED');
+      
       cleanup();
+      console.log('🧹 Cleanup completed');
       
       toast({
         title: "Call ended",
@@ -132,19 +197,48 @@ const AutoConnectCall = ({
       });
       
       if (onCallEnd) {
+        console.log('📞 Calling onCallEnd callback');
         onCallEnd();
       }
     } catch (error) {
-      console.error("Error stopping call:", error);
+      console.error('❌ ERROR STOPPING CALL (AutoConnect):', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        assistantId,
+        meetingId,
+        timestamp: new Date().toISOString(),
+        stack: error instanceof Error ? error.stack : undefined
+      });
     }
   };
 
   // Toggle microphone
   const toggleMic = () => {
+    console.log('🎤 USER TOGGLING MICROPHONE (AutoConnect):', {
+      event: 'toggleMic',
+      meetingId,
+      assistantName,
+      currentMutedState: isMicMuted,
+      newMutedState: !isMicMuted,
+      hasAudioStream: !!refs.current.audioStream,
+      timestamp: new Date().toISOString()
+    });
+    
     setIsMicMuted(!isMicMuted);
     
     if (refs.current.audioStream) {
-      refs.current.audioStream.getAudioTracks().forEach(track => {
+      const audioTracks = refs.current.audioStream.getAudioTracks();
+      console.log('🎬 Updating Audio Tracks (AutoConnect):', {
+        trackCount: audioTracks.length,
+        tracks: audioTracks.map(track => ({
+          id: track.id,
+          label: track.label,
+          enabled: track.enabled,
+          newEnabled: isMicMuted // Will be opposite after state update
+        })),
+        timestamp: new Date().toISOString()
+      });
+      
+      audioTracks.forEach(track => {
         track.enabled = isMicMuted; // Will be opposite after state update
       });
     }
@@ -170,22 +264,48 @@ const AutoConnectCall = ({
   // Auto-start call when component mounts
   useEffect(() => {
     const startCall = async () => {
+      console.log('🚀 AUTO-STARTING CALL (AutoConnect):', {
+        event: 'startCall',
+        assistantId,
+        assistantName,
+        meetingId,
+        userName,
+        callTimeLimit,
+        timestamp: new Date().toISOString()
+      });
+      
       try {
-        console.log("🚀 Starting call with assistant:", assistantId);
+        console.log("🔍 Validating Assistant ID:", {
+          assistantId,
+          isValid: !!(assistantId && assistantId.length >= 10),
+          length: assistantId?.length || 0,
+          timestamp: new Date().toISOString()
+        });
         
         // Validate that we have a proper assistant ID
         if (!assistantId || assistantId.length < 10) {
           throw new Error("Invalid assistant ID provided");
         }
         
+        console.log("📞 Calling VAPI.start()...");
         await vapi.start(assistantId);
+        
+        console.log("✅ VAPI.start() completed successfully");
         
         toast({
           title: "Connecting to AI Assistant",
           description: `Starting conversation with ${assistantName}`,
         });
       } catch (error) {
-        console.error("Failed to start call:", error);
+        console.error('❌ FAILED TO START CALL (AutoConnect):', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          assistantId,
+          assistantName,
+          meetingId,
+          timestamp: new Date().toISOString(),
+          stack: error instanceof Error ? error.stack : undefined
+        });
+        
         setCallStatus(CallStatus.FINISHED);
         
         toast({
@@ -215,52 +335,137 @@ const AutoConnectCall = ({
   useEffect(() => {
     // Call event handlers
     const onCallStart = async () => {
-      console.log("Call started");
+      console.log('🚀 AI AGENT CALL STARTED (AutoConnect):', {
+        event: 'onCallStart',
+        assistantId,
+        assistantName,
+        meetingId,
+        callTimeLimit,
+        userName,
+        timestamp: new Date().toISOString()
+      });
+      
       setCallStatus(CallStatus.ACTIVE);
+      console.log('📊 Call Status Updated to ACTIVE');
+      
       setupAudio();
 
       // Add initial transcript message
-      setTranscript(prev => [...prev, `[${new Date().toLocaleTimeString()}] Connected to ${assistantName}`]);
+      const initialMessage = `[${new Date().toLocaleTimeString()}] Connected to ${assistantName}`;
+      setTranscript(prev => {
+        const newTranscript = [...prev, initialMessage];
+        console.log('📝 Transcript Updated:', {
+          message: initialMessage,
+          totalMessages: newTranscript.length,
+          timestamp: new Date().toISOString()
+        });
+        return newTranscript;
+      });
 
       // Start countdown timer from specified limit
+      console.log('⏰ Starting Call Countdown Timer:', {
+        timeLimit: callTimeLimit,
+        timestamp: new Date().toISOString()
+      });
+      
       setTimeRemaining(callTimeLimit);
       refs.current.countdownTimer = setInterval(() => {
         setTimeRemaining((prev) => {
-          if (prev <= 1) {
+          const newTime = prev - 1;
+          
+          // Log every 30 seconds
+          if (newTime % 30 === 0) {
+            console.log('⏱️ Call Time Remaining:', {
+              timeRemaining: newTime,
+              formattedTime: formatTime(newTime),
+              timestamp: new Date().toISOString()
+            });
+          }
+          
+          if (newTime <= 1) {
+            console.log('⏰ Call Time Limit Reached - Stopping Call');
             if (refs.current.countdownTimer) {
               clearInterval(refs.current.countdownTimer);
             }
             stopCall();
             return 0;
           }
-          return prev - 1;
+          return newTime;
         });
       }, 1000);
     };
 
     const onCallEnd = () => {
-      console.log("Call ended");
+      console.log('🔚 AI AGENT CALL ENDED (AutoConnect):', {
+        event: 'onCallEnd',
+        assistantId,
+        assistantName,
+        meetingId,
+        finalTimeRemaining: timeRemaining,
+        timestamp: new Date().toISOString()
+      });
+      
       setCallStatus(CallStatus.FINISHED);
+      console.log('📊 Call Status Updated to FINISHED');
       cleanup();
     };
 
     const onSpeechStart = () => {
+      console.log('🗣️ AI AGENT STARTED SPEAKING (AutoConnect):', {
+        event: 'onSpeechStart',
+        assistantName,
+        meetingId,
+        timestamp: new Date().toISOString()
+      });
       setAssistantIsSpeaking(true);
     };
 
     const onSpeechEnd = () => {
+      console.log('🤐 AI AGENT STOPPED SPEAKING (AutoConnect):', {
+        event: 'onSpeechEnd',
+        assistantName,
+        meetingId,
+        timestamp: new Date().toISOString()
+      });
       setAssistantIsSpeaking(false);
     };
 
     const onMessage = (message: any) => {
+      console.log('💬 AI AGENT MESSAGE RECEIVED (AutoConnect):', {
+        event: 'onMessage',
+        message: message?.message || 'No message content',
+        fullMessage: message,
+        assistantName,
+        meetingId,
+        timestamp: new Date().toISOString()
+      });
+      
       if (message && message.message) {
         const timestamp = new Date().toLocaleTimeString();
-        setTranscript(prev => [...prev, `[${timestamp}] AI: ${message.message}`]);
+        const formattedMessage = `[${timestamp}] AI: ${message.message}`;
+        setTranscript(prev => {
+          const newTranscript = [...prev, formattedMessage];
+          console.log('📝 Transcript Updated with AI Message:', {
+            message: formattedMessage,
+            totalMessages: newTranscript.length,
+            timestamp: new Date().toISOString()
+          });
+          return newTranscript;
+        });
       }
     };
 
     const onError = (error: Error) => {
-      console.error("VAPI error:", error);
+      console.error('❌ VAPI ERROR (AutoConnect):', {
+        event: 'onError',
+        error: error.message,
+        assistantId,
+        assistantName,
+        meetingId,
+        timestamp: new Date().toISOString(),
+        stack: error.stack
+      });
+      
       setCallStatus(CallStatus.FINISHED);
       cleanup();
       
