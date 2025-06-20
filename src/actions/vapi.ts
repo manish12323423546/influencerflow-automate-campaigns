@@ -1,6 +1,17 @@
 "use server";
 
-import { randomUUID } from "crypto";
+// UUID generator that works in both client and server environments
+const generateUUID = (): string => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback UUID generation
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
 
 // AI Agent Prompts
 const aiAgentPrompt = `You are a professional brand representative AI assistant. You help with:
@@ -17,7 +28,7 @@ const mockVapiServer = {
   assistants: {
     create: async (config: any) => {
       console.log('🎭 Mock VAPI: Creating assistant with config:', config);
-      return { id: randomUUID(), ...config };
+      return { id: generateUUID(), ...config };
     },
     update: async (id: string, config: any) => {
       console.log('🎭 Mock VAPI: Updating assistant:', id, config);
@@ -36,7 +47,7 @@ export const createAssistant = async (name: string, userId: string, useDefaultAg
 
   try {
     // Generate our own UUID since VAPI might not return one consistently
-    const assistantId = randomUUID();
+    const assistantId = generateUUID();
     console.log("🆔 Generated assistant ID:", assistantId);
     
     const firstMessage = useDefaultAgent 
