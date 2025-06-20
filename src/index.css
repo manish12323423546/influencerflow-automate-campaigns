@@ -130,3 +130,29 @@
   animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   animation-delay: 400ms;
 }
+
+/* ElevenLabs Widget Positioning Fix */
+elevenlabs-convai {
+  position: fixed !important;
+  right: 1rem !important;
+  left: unset !important;
+  bottom: 1rem !important;
+  max-width: 95vw !important;
+  width: 380px !important;
+  min-width: 320px !important;
+  box-sizing: border-box !important;
+  overflow: visible !important;
+  z-index: 9999 !important;
+  transform: none !important;
+}
+
+/* Ensure widget content stays right-aligned */
+elevenlabs-convai * {
+  box-sizing: border-box;
+}
+
+/* Override any internal positioning that might cause left drift */
+elevenlabs-convai > * {
+  margin-left: auto !important;
+  margin-right: 0 !important;
+}

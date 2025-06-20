@@ -133,7 +133,6 @@ const Dashboard = () => {
         // Listen for conversation start
         const onCall = (event: CustomEvent) => {
           console.log('🚀 Starting conversation, setting isWidgetOpen to true');
-          console.log('🎯 UI Banner should now move 400px from right edge');
           setIsWidgetOpen(true);
           
           // Configure client tools and initial conversation
@@ -159,7 +158,6 @@ const Dashboard = () => {
         // Listen for conversation end
         const onEnd = () => {
           console.log('🛑 Conversation ended, setting isWidgetOpen to false');
-          console.log('🎯 UI Banner should now return to original position');
           setIsWidgetOpen(false);
         };
 
@@ -228,9 +226,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
       {/* Header */}
-      <header className={`bg-white border-b border-gray-200 shadow-sm transition-all duration-500 ease-in-out ${
-        isWidgetOpen ? 'transform -translate-x-[400px]' : ''
-      }`}>
+      <header className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
@@ -251,9 +247,7 @@ const Dashboard = () => {
         </div>
       </header>
 
-      <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-all duration-500 ease-in-out ${
-        isWidgetOpen ? 'transform -translate-x-[400px]' : ''
-      }`}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Background decoration */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,98,67,0.05),transparent_50%)] pointer-events-none"></div>
         {/* KPI Cards at the top */}
@@ -387,8 +381,14 @@ const Dashboard = () => {
         action-text="Need help with campaigns?"
         className="fixed bottom-4 right-4 z-50"
         style={{
-          width: isWidgetOpen ? '380px' : 'auto',
-          transition: 'all 0.5s ease-in-out'
+          width: 380,
+          maxWidth: '95vw',
+          minWidth: 320,
+          right: '1rem',
+          left: 'unset',
+          bottom: '1rem',
+          position: 'fixed',
+          zIndex: 9999
         }}
       />
     </div>
