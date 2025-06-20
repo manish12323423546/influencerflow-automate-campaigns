@@ -1,30 +1,15 @@
 "use server";
 
-import { randomUUID } from "crypto";
+import { vapiServer } from "@/lib/vapi/vapiServer";
+import { randomUUID } from 'crypto';
 
-// AI Agent Prompts
-const aiAgentPrompt = `You are a professional brand representative AI assistant. You help with:
-- Brand partnerships and collaborations  
+const DEFAULT_AI_PROMPT = `You are a professional brand representative AI assistant. You help with:
+- Brand partnerships and collaborations
 - Campaign planning and strategy
 - Influencer relationship management
 - Contract negotiations
 - Performance analytics
-
 Be friendly, professional, and knowledgeable about marketing trends.`;
-
-// Mock VAPI server for demo purposes
-const mockVapiServer = {
-  assistants: {
-    create: async (config: any) => {
-      console.log('🎭 Mock VAPI: Creating assistant with config:', config);
-      return { id: randomUUID(), ...config };
-    },
-    update: async (id: string, config: any) => {
-      console.log('🎭 Mock VAPI: Updating assistant:', id, config);
-      return { id, ...config };
-    }
-  }
-};
 
 export const createAssistant = async (name: string, userId: string, useDefaultAgent: boolean = true) => {
   console.log("🎯 Starting createAssistant server action:", {
@@ -35,15 +20,15 @@ export const createAssistant = async (name: string, userId: string, useDefaultAg
   });
 
   try {
-    // Generate our own UUID since VAPI might not return one consistently
+    // Generate our own ID since VAPI might not return one
     const assistantId = randomUUID();
     console.log("🆔 Generated assistant ID:", assistantId);
     
     const firstMessage = useDefaultAgent 
-      ? `Hey! This is ${name} from our brand partnerships team. I've been checking out your content and I'm really excited to chat with you about an amazing campaign opportunity we have. Are you ready to hear about something that could be a perfect fit for your audience?`
+      ? `Hey! This is ${name} from our brand partnerships team. I've been checking out your content and I'm really excited to chat with you about an amazing collaboration opportunity we have. Are you ready to hear about something that could be a perfect fit for your audience?`
       : `Hello! I'm ${name}, your AI assistant. How can I help you today?`;
 
-    const systemPrompt = useDefaultAgent ? aiAgentPrompt : "";
+    const systemPrompt = useDefaultAgent ? DEFAULT_AI_PROMPT : "";
 
     console.log("🤖 Preparing assistant configuration:", {
       assistantId,
@@ -53,8 +38,7 @@ export const createAssistant = async (name: string, userId: string, useDefaultAg
     });
 
     console.log("🌐 Creating assistant in VAPI...");
-    // For now, using mock server - in production, replace with real VAPI server
-    await mockVapiServer.assistants.create({
+    await vapiServer.assistants.create({
       name: name,
       firstMessage: firstMessage,
       model: {
@@ -70,30 +54,25 @@ export const createAssistant = async (name: string, userId: string, useDefaultAg
       },
       serverMessages: [],
     });
+    
     console.log("✅ VAPI assistant created successfully");
 
-    console.log("💾 Storing assistant in local storage...");
-    // Store in localStorage since we don't have a database
+    // Create the agent object to return - use the same ID for both local and VAPI
     const aiAgent = {
-      id: assistantId,
-      name: name,
+      id: assistantId, // Use same ID for VAPI calls
       model: "gpt-4o",
-      provider: "openai", 
+      provider: "openai",
       prompt: systemPrompt,
+      name: name,
       firstMessage: firstMessage,
-      createdAt: new Date().toISOString(),
-      isActive: true
+      userId: userId,
+      isActive: true,
+      createdAt: new Date().toISOString()
     };
 
-    // Store in localStorage
-    if (typeof window !== 'undefined') {
-      const existingAgents = JSON.parse(localStorage.getItem('meeting_ai_agents') || '[]');
-      existingAgents.push(aiAgent);
-      localStorage.setItem('meeting_ai_agents', JSON.stringify(existingAgents));
-    }
-
-    console.log("✅ Assistant stored successfully:", {
+    console.log("✅ Assistant record prepared successfully:", {
       assistantId: aiAgent.id,
+      vapiId: aiAgent.vapiId,
       name: aiAgent.name,
       timestamp: new Date().toISOString()
     });
@@ -123,16 +102,10 @@ export const updateAssistant = async (
   firstMessage: string,
   systemPrompt: string
 ) => {
-  console.log("🔄 Starting updateAssistant:", {
-    assistantId,
-    hasFirstMessage: !!firstMessage,
-    hasSystemPrompt: !!systemPrompt,
-    timestamp: new Date().toISOString()
-  });
-
   try {
-    console.log("🌐 Updating assistant in VAPI...");
-    await mockVapiServer.assistants.update(assistantId, {
+    console.log("🔄 Updating assistant:", assistantId);
+    
+    const updateAssistant = await vapiServer.assistants.update(assistantId, {
       firstMessage: firstMessage,
       model: {
         model: "gpt-4o",
@@ -143,52 +116,27 @@ export const updateAssistant = async (
             content: systemPrompt,
           },
         ],
-        temperature: 0.7,
       },
       serverMessages: [],
     });
-    console.log("✅ VAPI assistant updated successfully");
+    console.log("Assistant updated:", updateAssistant);
 
     // Update in localStorage
-    if (typeof window !== 'undefined') {
-      const existingAgents = JSON.parse(localStorage.getItem('meeting_ai_agents') || '[]');
-      const agentIndex = existingAgents.findIndex((agent: any) => agent.id === assistantId);
-      
-      if (agentIndex !== -1) {
-        existingAgents[agentIndex] = {
-          ...existingAgents[agentIndex],
-          firstMessage: firstMessage,
-          prompt: systemPrompt,
-          updatedAt: new Date().toISOString()
-        };
-        localStorage.setItem('meeting_ai_agents', JSON.stringify(existingAgents));
-        
-        console.log("✅ Assistant updated in storage:", {
-          assistantId,
-          timestamp: new Date().toISOString()
-        });
-
-        return {
-          success: true,
-          status: 200,
-          data: existingAgents[agentIndex],
-        };
-      } else {
-        throw new Error("Assistant not found in storage");
-      }
-    }
+    const existingAgents = JSON.parse(localStorage.getItem('meeting_ai_agents') || '[]');
+    const updatedAgents = existingAgents.map((agent: any) => 
+      agent.id === assistantId 
+        ? { ...agent, firstMessage, prompt: systemPrompt }
+        : agent
+    );
+    localStorage.setItem('meeting_ai_agents', JSON.stringify(updatedAgents));
 
     return {
-      success: false,
-      status: 404,
-      message: "Assistant not found",
+      success: true,
+      status: 200,
+      data: updateAssistant,
     };
   } catch (error) {
-    console.error("🔴 Error updating assistant:", {
-      error: error instanceof Error ? error.message : "Unknown error",
-      assistantId,
-      timestamp: new Date().toISOString()
-    });
+    console.error("Error updating agent:", error);
     return {
       success: false,
       status: 500,

@@ -152,8 +152,26 @@ const CreateAssistantModal = ({ isOpen, onClose, onAgentCreated }: {
       });
 
       // Create agent object for local state
+      // Validate that we have a proper UUID from VAPI
+      const assistantId = result.data.id;
+      
+      // Simple UUID validation without dynamic import
+      const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(assistantId);
+      
+      console.log('🔍 Assistant ID Validation:', {
+        assistantId: assistantId,
+        isValidUUID,
+        fullData: result.data,
+        dataKeys: Object.keys(result.data),
+        timestamp: new Date().toISOString()
+      });
+      
+      if (!isValidUUID) {
+        throw new Error(`Invalid UUID received from VAPI: ${assistantId} - not a valid UUID format`);
+      }
+      
       const newAgent: AIAgent = {
-        id: result.data.id, // Use the assistant ID for calls
+        id: assistantId, // Use the same ID for VAPI calls
         name: result.data.name,
         model: result.data.model,
         provider: result.data.provider,
@@ -469,9 +487,9 @@ const AutoConnectCall = ({ assistantId, assistantName, onCallEnd }: {
       }
 
       // Import VAPI client
-      const { vapi } = await import('@/lib/vapi/vapiClient');
-      setVapiClientRef(vapi);
-      return vapi;
+      const { vapiClient } = await import('@/lib/vapi/vapiClient');
+      setVapiClientRef(vapiClient);
+      return vapiClient;
     } catch (error) {
       console.error('Failed to load VAPI client:', error);
       
@@ -974,9 +992,73 @@ const MeetingAIAgent: React.FC = () => {
     const storedAgents = localStorage.getItem(STORAGE_KEYS.AI_AGENTS);
     if (storedAgents) {
       try {
-        setAIAgents(JSON.parse(storedAgents));
+        const agents = JSON.parse(storedAgents);
+        
+        // Validate that all stored agents have proper UUID format
+        const validAgents = agents.filter((agent: AIAgent) => {
+          const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(agent.id);
+          if (!isValidUUID) {
+            console.warn('🗑️ Removing invalid agent with bad UUID:', {
+              agentId: agent.id,
+              agentName: agent.name,
+              idLength: agent.id.length,
+              timestamp: new Date().toISOString()
+            });
+          }
+          return isValidUUID;
+        });
+        
+        // If we filtered out any agents, update localStorage
+        if (validAgents.length !== agents.length) {
+          console.log('🧹 Cleaned up invalid agents from localStorage:', {
+            original: agents.length,
+            valid: validAgents.length,
+            removed: agents.length - validAgents.length
+          });
+          localStorage.setItem(STORAGE_KEYS.AI_AGENTS, JSON.stringify(validAgents));
+        }
+        
+        setAIAgents(validAgents);
+        
+        // Also clean up any meetings that reference invalid agent IDs
+        const storedMeetings = localStorage.getItem(STORAGE_KEYS.MEETINGS);
+        if (storedMeetings) {
+          try {
+            const meetings = JSON.parse(storedMeetings);
+            const validAgentIds = new Set(validAgents.map(agent => agent.id));
+            
+            const validMeetings = meetings.filter((meeting: Meeting) => {
+              const hasValidAgent = validAgentIds.has(meeting.aiAgentId);
+              if (!hasValidAgent) {
+                console.warn('🗑️ Removing meeting with invalid agent reference:', {
+                  meetingId: meeting.id,
+                  meetingTitle: meeting.title,
+                  invalidAgentId: meeting.aiAgentId,
+                  timestamp: new Date().toISOString()
+                });
+              }
+              return hasValidAgent;
+            });
+            
+            if (validMeetings.length !== meetings.length) {
+              console.log('🧹 Cleaned up invalid meetings from localStorage:', {
+                original: meetings.length,
+                valid: validMeetings.length,
+                removed: meetings.length - validMeetings.length
+              });
+              localStorage.setItem(STORAGE_KEYS.MEETINGS, JSON.stringify(validMeetings));
+            }
+          } catch (error) {
+            console.error('Failed to clean up meetings:', error);
+            localStorage.removeItem(STORAGE_KEYS.MEETINGS);
+          }
+        }
+        
       } catch (error) {
         console.error('Failed to load AI agents:', error);
+        // Clear corrupted data
+        localStorage.removeItem(STORAGE_KEYS.AI_AGENTS);
+        localStorage.removeItem(STORAGE_KEYS.MEETINGS);
       }
     }
   }, []);
@@ -1022,19 +1104,19 @@ const MeetingAIAgent: React.FC = () => {
           console.log(`🔄 Creating demo agent: ${config.name}`);
           const result = await createAssistant(config.name, 'demo-user', config.useDefaultAgent);
           
-                     if (result.success) {
-             const agent = {
-               id: result.data.id,
-               name: result.data.name,
-               model: result.data.model,
-               provider: result.data.provider,
-               prompt: result.data.prompt,
-               firstMessage: result.data.firstMessage,
-               createdAt: result.data.createdAt,
-               isActive: result.data.isActive
-             };
-             demoAgents.push(agent);
-             console.log('✅ Demo agent created:', agent.name, 'with assistant ID:', agent.id);
+          if (result.success) {
+            const agent = {
+              id: result.data.id,
+              name: result.data.name,
+              model: result.data.model,
+              provider: result.data.provider,
+              prompt: result.data.prompt,
+              firstMessage: result.data.firstMessage,
+              createdAt: result.data.createdAt,
+              isActive: result.data.isActive
+            };
+            demoAgents.push(agent);
+            console.log('✅ Demo agent created:', agent.name, 'with VAPI ID:', agent.id);
           } else {
             console.error('❌ Failed to create demo agent:', config.name, result.message);
           }
@@ -1063,10 +1145,20 @@ const MeetingAIAgent: React.FC = () => {
         variant: "destructive",
       });
       
-      // Fallback to original demo data if VAPI creation fails - with proper UUIDs
+      // Fallback to original demo data if VAPI creation fails
+      // Generate proper UUIDs for fallback agents using browser-compatible function
+      const generateBrowserUUID = () => {
+        // Browser-compatible UUID v4 generation
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          const r = Math.random() * 16 | 0;
+          const v = c === 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
+      };
+      
       const fallbackAgents: AIAgent[] = [
         {
-          id: uuidv4(), // Generate proper UUID for demo agent
+          id: generateBrowserUUID(), // Generate proper UUID
           name: 'Demo Brand Representative',
           model: 'gpt-4o',
           provider: 'openai',
@@ -1076,26 +1168,21 @@ const MeetingAIAgent: React.FC = () => {
           isActive: true
         },
         {
-          id: uuidv4(), // Generate proper UUID for demo agent
+          id: generateBrowserUUID(), // Generate proper UUID
           name: 'Demo Sales Agent',
           model: 'gpt-4o',
           provider: 'openai',
           prompt: DEFAULT_PROMPTS.SALES_AGENT,
-          firstMessage: 'Hello! I\'m your sales assistant. I\'m excited to help you understand our services and guide you through our offerings!',
-          createdAt: new Date().toISOString(),
-          isActive: true
-        },
-        {
-          id: uuidv4(), // Generate proper UUID for demo agent
-          name: 'Demo Customer Support',
-          model: 'gpt-4o',
-          provider: 'openai',
-          prompt: DEFAULT_PROMPTS.CUSTOMER_SUPPORT,
-          firstMessage: 'Hi there! I\'m your customer support assistant. How can I assist you today?',
+          firstMessage: 'Hello! I\'m your demo sales assistant. How can I help you today?',
           createdAt: new Date().toISOString(),
           isActive: true
         }
       ];
+      
+      console.log('🎭 Created fallback demo agents with proper UUIDs:', {
+        agents: fallbackAgents.map(a => ({ id: a.id, name: a.name, idLength: a.id.length })),
+        timestamp: new Date().toISOString()
+      });
       
       setAIAgents(fallbackAgents);
       localStorage.setItem(STORAGE_KEYS.AI_AGENTS, JSON.stringify(fallbackAgents));

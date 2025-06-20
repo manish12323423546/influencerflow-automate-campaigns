@@ -88,7 +88,7 @@ export const LiveMeetingView = ({ meeting, onEndMeeting }: LiveMeetingViewProps)
         
         // Try to load VAPI client with better error handling
         const vapiModule = await import('@/lib/vapi/vapiClient');
-        const vapiInstance = vapiModule.vapi || vapiModule.default;
+        const vapiInstance = vapiModule.vapiClient || vapiModule.default;
         
         if (!vapiInstance) {
           throw new Error('VAPI client not found in module');
@@ -167,25 +167,50 @@ export const LiveMeetingView = ({ meeting, onEndMeeting }: LiveMeetingViewProps)
 
   // Auto-connect AI agent when meeting starts and agent is configured
   useEffect(() => {
-    if (meeting.aiAgentId && vapiClientRef.current && !aiAgentState.isConnected && !isLoading) {
-      console.log('🚀 Auto-connecting AI agent to meeting:', {
-        meetingId: meeting.id,
-        aiAgentId: meeting.aiAgentId,
-        aiAgentName: meeting.aiAgentName,
-        timestamp: new Date().toISOString()
-      });
-      
-      // Auto-connect after a short delay to ensure everything is ready
-      const autoConnectTimer = setTimeout(() => {
-        connectAIAgent();
-      }, 2000);
-
-      return () => {
-        if (autoConnectTimer) {
-          clearTimeout(autoConnectTimer);
+    const validateAndConnect = async () => {
+      if (meeting.aiAgentId && vapiClientRef.current && !aiAgentState.isConnected && !isLoading) {
+        // Validate the assistant ID format before attempting connection
+        const { debugAssistantId } = await import('@/utils/uuid-validator');
+        const validation = debugAssistantId(meeting.aiAgentId, 'Meeting Auto-Connect');
+        
+        console.log('🚀 Auto-connecting AI agent to meeting:', {
+          meetingId: meeting.id,
+          aiAgentId: meeting.aiAgentId,
+          aiAgentName: meeting.aiAgentName,
+          validation,
+          timestamp: new Date().toISOString()
+        });
+        
+        if (!validation.valid) {
+          console.error('❌ Invalid assistant ID format, cannot connect:', {
+            aiAgentId: meeting.aiAgentId,
+            reason: validation.reason,
+            expected: 'Valid UUID format (e.g., 12345678-1234-5678-9abc-123456789abc)',
+            timestamp: new Date().toISOString()
+          });
+          
+          toast({
+            title: "Invalid Assistant ID",
+            description: `Assistant ID "${meeting.aiAgentId}" is not a valid UUID: ${validation.reason}`,
+            variant: "destructive",
+          });
+          return;
         }
-      };
-    }
+        
+        // Auto-connect after a short delay to ensure everything is ready
+        const autoConnectTimer = setTimeout(() => {
+          connectAIAgent();
+        }, 2000);
+
+        return () => {
+          if (autoConnectTimer) {
+            clearTimeout(autoConnectTimer);
+          }
+        };
+      }
+    };
+
+    validateAndConnect();
   }, [meeting.aiAgentId, vapiClientRef.current, aiAgentState.isConnected, isLoading]);
 
   // Start meeting timer
@@ -334,8 +359,27 @@ export const LiveMeetingView = ({ meeting, onEndMeeting }: LiveMeetingViewProps)
     try {
       console.log('🤖 Connecting AI agent:', {
         aiAgentId: meeting.aiAgentId,
+        aiAgentName: meeting.aiAgentName,
         timestamp: new Date().toISOString()
       });
+      
+      // Check VAPI environment before attempting connection
+      const vapiModule = await import('@/lib/vapi/vapiClient');
+      const isDemoMode = vapiModule.isDemoMode?.() || false;
+      
+      console.log('🔧 VAPI Environment Check:', {
+        isDemoMode,
+        hasPublicKey: !!(import.meta.env?.VITE_VAPI_PUBLIC_KEY || process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY),
+        keyLength: (import.meta.env?.VITE_VAPI_PUBLIC_KEY || process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY || '')?.length,
+        timestamp: new Date().toISOString()
+      });
+      
+      if (isDemoMode) {
+        console.log('🎭 Running in demo mode - simulating AI agent connection');
+        // In demo mode, simulate the connection
+        setTimeout(() => handleAICallStart(), 1000);
+        return;
+      }
       
       await vapiClientRef.current.start(meeting.aiAgentId);
       
@@ -344,19 +388,60 @@ export const LiveMeetingView = ({ meeting, onEndMeeting }: LiveMeetingViewProps)
         title: "AI Agent Connected",
         description: `${meeting.aiAgentName} has joined the meeting`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('🔴 Failed to connect AI agent:', {
         error: error instanceof Error ? error.message : 'Unknown error',
+        errorDetails: error,
         aiAgentId: meeting.aiAgentId,
         timestamp: new Date().toISOString()
       });
       
-      handleAIError(error);
-      toast({
-        title: "Connection Failed",
-        description: "Could not connect to AI agent",
-        variant: "destructive",
+      // Parse VAPI error response for better debugging
+      let errorMessage = "Could not connect to AI agent";
+      
+      if (error?.error?.message) {
+        if (Array.isArray(error.error.message)) {
+          errorMessage = error.error.message.join(', ');
+        } else {
+          errorMessage = error.error.message;
+        }
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      console.error('🔍 Detailed error analysis:', {
+        errorType: typeof error,
+        hasErrorProperty: !!error?.error,
+        errorMessage,
+        statusCode: error?.error?.statusCode || error?.status,
+        fullError: error,
+        timestamp: new Date().toISOString()
       });
+      
+      // Check for common VAPI issues
+      if (errorMessage.includes('Authenticate') || errorMessage.includes('Unauthorized')) {
+        console.error('🔑 Authentication Error: Please check your VAPI API keys');
+        toast({
+          title: "Authentication Error",
+          description: "Please check your VAPI API keys in the .env file",
+          variant: "destructive",
+        });
+      } else if (errorMessage.includes('Does Not Exist') || errorMessage.includes('assistantId')) {
+        console.error('🤖 Assistant Error: Assistant ID may be invalid');
+        toast({
+          title: "Assistant Not Found",
+          description: `Assistant ID ${meeting.aiAgentId} does not exist in VAPI`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Connection Failed",
+          description: errorMessage || "Could not connect to AI agent",
+          variant: "destructive",
+        });
+      }
+      
+      handleAIError(error);
     }
   };
 

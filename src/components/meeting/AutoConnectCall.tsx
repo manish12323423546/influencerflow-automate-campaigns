@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "react-router-dom";
 
 // Simple call status enum
 const CallStatus = {
@@ -36,7 +36,7 @@ const AutoConnectCall = ({
   onCallEnd,
 }: Props) => {
   const { toast } = useToast();
-  const navigate = useNavigate();
+  const router = useRouter();
   const [callStatus, setCallStatus] = useState(CallStatus.CONNECTING);
   const [assistantIsSpeaking, setAssistantIsSpeaking] = useState(false);
   const [userIsSpeaking, setUserIsSpeaking] = useState(false);
@@ -157,7 +157,7 @@ const AutoConnectCall = ({
 
   // Go back to dashboard
   const goToDashboard = () => {
-    navigate('/dashboard?tab=meeting-ai');
+    router.push('/dashboard?tab=meeting-ai');
   };
 
   // Format time
@@ -172,12 +172,6 @@ const AutoConnectCall = ({
     const startCall = async () => {
       try {
         console.log("🚀 Starting call with assistant:", assistantId);
-        
-        // Validate that we have a proper assistant ID
-        if (!assistantId || assistantId.length < 10) {
-          throw new Error("Invalid assistant ID provided");
-        }
-        
         await vapi.start(assistantId);
         
         toast({
@@ -189,8 +183,8 @@ const AutoConnectCall = ({
         setCallStatus(CallStatus.FINISHED);
         
         toast({
-          title: "Connection failed", 
-          description: error instanceof Error ? error.message : "Could not connect to AI assistant",
+          title: "Connection failed",
+          description: "Could not connect to AI assistant",
           variant: "destructive",
         });
       }
@@ -202,11 +196,7 @@ const AutoConnectCall = ({
     return () => {
       cleanup();
       if (callStatus === CallStatus.ACTIVE) {
-        try {
-          vapi.stop();
-        } catch (error) {
-          console.error("Error stopping VAPI on cleanup:", error);
-        }
+        vapi.stop().catch(console.error);
       }
     };
   }, []); // Empty dependency array means this runs once on mount
@@ -227,9 +217,7 @@ const AutoConnectCall = ({
       refs.current.countdownTimer = setInterval(() => {
         setTimeRemaining((prev) => {
           if (prev <= 1) {
-            if (refs.current.countdownTimer) {
-              clearInterval(refs.current.countdownTimer);
-            }
+            clearInterval(refs.current.countdownTimer);
             stopCall();
             return 0;
           }

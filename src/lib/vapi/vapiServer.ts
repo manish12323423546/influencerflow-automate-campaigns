@@ -22,11 +22,6 @@ if (!key || !process.env.VAPI_ORG_ID) {
     timestamp: new Date().toISOString()
   });
   console.log("Using demo mode - real VAPI integration will be used when proper keys are provided");
-  
-  // In demo mode, don't try to create real assistants
-  if (typeof window === 'undefined') { // Server-side
-    throw new Error("VAPI credentials not configured - cannot create real assistants");
-  }
 }
 
 // Define token options
@@ -56,11 +51,22 @@ try {
   });
   
   // Create a mock server for demo purposes
+  const { v4: uuidv4 } = require('uuid');
+  
   vapiServer = {
     assistants: {
       create: async (assistant: any) => {
         console.log("🎭 Demo mode: Creating assistant", assistant);
-        return { id: `demo_assistant_${Date.now()}`, ...assistant };
+        const demoAssistantId = uuidv4(); // Generate proper UUID
+        console.log("🎭 Demo mode: Generated UUID:", demoAssistantId);
+        return { 
+          id: demoAssistantId, 
+          name: assistant.name,
+          firstMessage: assistant.firstMessage,
+          model: assistant.model,
+          createdAt: new Date().toISOString(),
+          ...assistant 
+        };
       },
       update: async (id: string, data: any) => {
         console.log("🎭 Demo mode: Updating assistant", id, data);
