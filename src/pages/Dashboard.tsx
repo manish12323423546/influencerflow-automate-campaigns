@@ -131,28 +131,9 @@ const Dashboard = () => {
         };
         
         // Listen for conversation start
-        const onCall = (event: CustomEvent) => {
+        const onCall = () => {
           console.log('🚀 Starting conversation, setting isWidgetOpen to true');
           setIsWidgetOpen(true);
-          
-          // Configure client tools and initial conversation
-          const eventDetail = event.detail as { config?: { clientTools?: Record<string, unknown> } };
-          if (eventDetail && eventDetail.config) {
-            eventDetail.config.clientTools = {
-              testConversation: ({ message }: { message: string }) => {
-                console.log('Test conversation message:', message);
-                return { success: true };
-              }
-            };
-          }
-
-          // Send initial greeting after widget loads
-          setTimeout(() => {
-            const message = "Hi! I'm your campaign assistant. I can help you manage campaigns, find creators, and more. Would you like to try a test conversation?";
-            widget.dispatchEvent(new CustomEvent('elevenlabs-convai:message', { 
-              detail: { message } 
-            }));
-          }, 1000);
         };
 
         // Listen for conversation end
@@ -374,23 +355,10 @@ const Dashboard = () => {
       />
 
       {/* ElevenLabs AI Assistant Widget */}
-      <elevenlabs-convai
-        ref={widgetRef}
-        agent-id="agent_01jxv6e90xfdg8zzvbkvmnngxr"
-        variant="expanded"
-        action-text="Need help with campaigns?"
-        className="fixed bottom-4 right-4 z-50"
-        style={{
-          width: 380,
-          maxWidth: '95vw',
-          minWidth: 320,
-          right: '1rem',
-          left: 'unset',
-          bottom: '1rem',
-          position: 'fixed',
-          zIndex: 9999
-        }}
-      />
+      <elevenlabs-convai 
+        agent-id="agent_01jy6xqhsmfndsrfr0rp54d5qz"
+      ></elevenlabs-convai>
+      <script src="https://unpkg.com/@elevenlabs/convai-widget-embed" async type="text/javascript"></script>
     </div>
   );
 };
