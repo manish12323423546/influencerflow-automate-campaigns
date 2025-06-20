@@ -44,6 +44,22 @@ export default defineConfig(({ mode }) => {
     define: {
       'process.env': {},
     },
+    // Add optimizeDeps configuration to fix the 504 error
+    optimizeDeps: {
+      include: [
+        '@vapi-ai/web',
+        'react',
+        'react-dom',
+        '@supabase/supabase-js',
+        '@radix-ui/react-dialog',
+        '@radix-ui/react-slider',
+        'framer-motion',
+        'lucide-react'
+      ],
+      exclude: [],
+      // Force re-optimization when dependencies change
+      force: mode === 'development',
+    },
     // prevent vite from obscuring rust errors
     clearScreen: false,
     build: {
@@ -66,6 +82,9 @@ export default defineConfig(({ mode }) => {
                   id.includes('@tanstack') || 
                   id.includes('@supabase')) {
                 return 'vendor-core';
+              }
+              if (id.includes('@vapi-ai')) {
+                return 'vendor-vapi';
               }
               return 'vendor';
             }

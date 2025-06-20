@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Users, TrendingUp, DollarSign, Target, Activity, Plus,
-  FileText, CreditCard, Search, Headphones, Database, MessageCircle, Mail
+  FileText, CreditCard, Search, Headphones, Database, MessageCircle, Mail, Bot
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import CampaignsManager from '@/components/dashboard/CampaignsManager';
@@ -14,6 +14,7 @@ import PaymentsManager from '@/components/dashboard/PaymentsManager';
 import ConversationsManager from '@/components/dashboard/ConversationsManager';
 import KnowledgeBaseManager from '@/components/dashboard/KnowledgeBaseManager';
 import EmailConversionManager from '@/components/dashboard/EmailConversionManager';
+import MeetingAIAgent from '@/components/dashboard/MeetingAIAgent';
 import VoiceAgentBanner from '@/components/VoiceAgentBanner';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -23,7 +24,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'campaigns' | 'discover' | 'contracts' | 'payments' | 'knowledge' | 'conversations' | 'email-conversion'>('campaigns');
+  const [activeTab, setActiveTab] = useState<'campaigns' | 'discover' | 'contracts' | 'payments' | 'knowledge' | 'conversations' | 'email-conversion' | 'meeting-ai'>('campaigns');
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [totalInfluencers, setTotalInfluencers] = useState(0);
@@ -35,8 +36,8 @@ const Dashboard = () => {
   // Handle URL parameters for tab and campaign selection
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['campaigns', 'discover', 'contracts', 'payments', 'email-conversion', 'conversations', 'knowledge'].includes(tab)) {
-      setActiveTab(tab as 'campaigns' | 'discover' | 'contracts' | 'payments' | 'knowledge' | 'conversations' | 'email-conversion');
+    if (tab && ['campaigns', 'discover', 'contracts', 'payments', 'email-conversion', 'conversations', 'knowledge', 'meeting-ai'].includes(tab)) {
+      setActiveTab(tab as 'campaigns' | 'discover' | 'contracts' | 'payments' | 'knowledge' | 'conversations' | 'email-conversion' | 'meeting-ai');
     }
   }, [searchParams]);
 
@@ -191,6 +192,7 @@ const Dashboard = () => {
     { id: 'email-conversion', label: 'Email Conversion', icon: Mail, description: 'Track email automation & contracts' },
     { id: 'conversations', label: 'Conversations', icon: MessageCircle, description: 'AI conversation history' },
     { id: 'knowledge', label: 'Knowledge Base', icon: Database, description: 'Manage AI knowledge' },
+    { id: 'meeting-ai', label: 'Meeting AI Agent', icon: Bot, description: 'Create AI agents & meetings' },
   ];
 
   if (isLoading) {
@@ -345,6 +347,7 @@ const Dashboard = () => {
           {activeTab === 'email-conversion' && <EmailConversionManager />}
           {activeTab === 'conversations' && <ConversationsManager />}
           {activeTab === 'knowledge' && <KnowledgeBaseManager />}
+          {activeTab === 'meeting-ai' && <MeetingAIAgent />}
         </div>
       </div>
 
