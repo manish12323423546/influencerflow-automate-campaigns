@@ -540,7 +540,7 @@ const Influencers = () => {
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-snow/70">Avg CPE</span>
                           <span className="text-sm font-medium text-snow">
-                            ${influencer.avg_cpe.toFixed(2)}
+                            ₹{influencer.avg_cpe.toFixed(2)}
                           </span>
                         </div>
                         

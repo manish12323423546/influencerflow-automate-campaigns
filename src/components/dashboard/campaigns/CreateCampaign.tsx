@@ -669,7 +669,7 @@ const CreateCampaign = () => {
                 <div>
                   <p className="text-sm text-gray-600">Total Budget</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    ${formData.budget ? parseFloat(formData.budget).toLocaleString() : '0'}
+                    ₹{formData.budget ? parseFloat(formData.budget).toLocaleString() : '0'}
                   </p>
                 </div>
                 <Button

@@ -243,11 +243,11 @@ Created Time: ${new Date(campaign.created_at).toLocaleTimeString()}
 Last Updated: ${new Date(campaign.updated_at).toLocaleDateString()}
 Last Updated Time: ${new Date(campaign.updated_at).toLocaleTimeString()}
 Campaign Performance Metrics:
-- Total Budget: $${campaign.budget.toLocaleString()}
-- Budget Utilized: $${campaign.spent.toLocaleString()}
+- Total Budget: ₹${campaign.budget.toLocaleString()}
+- Budget Utilized: ₹${campaign.spent.toLocaleString()}
 - Budget Utilization Rate: ${((campaign.spent / campaign.budget) * 100).toFixed(2)}%
-- Cost Per Influencer: $${campaign.influencer_count > 0 ? (campaign.spent / campaign.influencer_count).toFixed(2) : '0'}
-- Average Reach Per Dollar: ${campaign.spent > 0 ? (campaign.reach / campaign.spent).toFixed(2) : campaign.reach}
+- Cost Per Influencer: ₹${campaign.influencer_count > 0 ? (campaign.spent / campaign.influencer_count).toFixed(2) : '0'}
+- Average Reach Per Rupee: ${campaign.spent > 0 ? (campaign.reach / campaign.spent).toFixed(2) : campaign.reach}
 - Engagement Rate: ${campaign.engagement_rate}%
 Campaign Status Analysis:
 - Current Status: ${campaign.status}

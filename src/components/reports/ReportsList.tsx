@@ -79,10 +79,10 @@ const ReportsList = () => {
         `Impressions,${report.total_impressions.toLocaleString()}`,
         `Clicks,${report.total_clicks.toLocaleString()}`,
         `Conversions,${report.total_conversions.toLocaleString()}`,
-        `Spend,$${report.total_spend.toLocaleString()}`,
+        `Spend,₹${report.total_spend.toLocaleString()}`,
         `CTR,${((report.total_clicks / report.total_impressions) * 100).toFixed(2)}%`,
         `CVR,${((report.total_conversions / report.total_clicks) * 100).toFixed(2)}%`,
-        `CPA,$${(report.total_spend / report.total_conversions).toFixed(2)}`
+        `CPA,₹${(report.total_spend / report.total_conversions).toFixed(2)}`
       ].join('\n');
       
       // Create and download the CSV file

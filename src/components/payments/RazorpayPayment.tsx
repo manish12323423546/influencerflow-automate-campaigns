@@ -266,7 +266,6 @@ const RazorpayPayment = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="INR">INR (₹)</SelectItem>
-                <SelectItem value="USD">USD ($)</SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -147,7 +147,7 @@ export const HistoryDrawer = ({ open, onOpenChange, influencerId }: HistoryDrawe
                             <DollarSign className="h-4 w-4 mr-2 text-green-500" />
                             <span className="text-snow/70">Fee:</span>
                             <span className="text-snow ml-1 font-medium">
-                              ${collab.fee.toLocaleString()}
+                              ₹{collab.fee.toLocaleString()}
                             </span>
                           </div>
                           <div className="flex items-center text-sm">

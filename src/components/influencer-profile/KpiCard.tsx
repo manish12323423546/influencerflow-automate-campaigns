@@ -51,7 +51,7 @@ export const KpiCard = ({ title, value, format, change, period }: KpiCardProps) 
       case 'percentage':
         return `${val.toFixed(1)}%`;
       case 'currency':
-        return `$${val.toFixed(2)}`;
+        return `₹${val.toFixed(2)}`;
       case 'decimal':
         return val.toFixed(1);
       default:

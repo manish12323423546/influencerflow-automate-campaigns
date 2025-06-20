@@ -184,7 +184,7 @@ const CreatorCampaignDetail = () => {
               </Badge>
               <div className="text-right">
                 <p className="text-sm text-snow/60">Total Payment</p>
-                <p className="text-lg font-semibold text-snow">${campaign.rate.toLocaleString()}</p>
+                <p className="text-lg font-semibold text-snow">₹{campaign.rate.toLocaleString()}</p>
               </div>
             </div>
           </div>
@@ -390,7 +390,7 @@ const CreatorCampaignDetail = () => {
                 <div className="space-y-3">
                   <div>
                     <p className="text-sm text-snow/60">Campaign Fee</p>
-                    <p className="text-lg font-semibold text-snow">${campaign.rate.toLocaleString()}</p>
+                    <p className="text-lg font-semibold text-snow">₹{campaign.rate.toLocaleString()}</p>
                   </div>
                   
                   <div>

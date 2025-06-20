@@ -139,7 +139,7 @@ export const InfluencerDrawer = ({ influencer, open, onOpenChange }: InfluencerD
                     </div>
                     <div>
                       <p className="text-sm text-snow/60">Avg CPE</p>
-                      <p className="text-2xl font-bold text-snow">${influencer.avg_cpe.toFixed(2)}</p>
+                      <p className="text-2xl font-bold text-snow">₹{influencer.avg_cpe.toFixed(2)}</p>
                     </div>
                     <div>
                       <p className="text-sm text-snow/60">Engagement Rate</p>

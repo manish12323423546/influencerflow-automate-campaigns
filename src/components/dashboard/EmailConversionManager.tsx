@@ -122,7 +122,7 @@ const EmailConversionManager = () => {
 
   const formatCurrency = (amount?: number, currency?: string) => {
     if (!amount) return 'N/A';
-    return `${currency || '$'}${amount.toLocaleString()}`;
+    return `${currency || '₹'}${amount.toLocaleString()}`;
   };
 
   const formatDate = (dateString?: string) => {
@@ -746,7 +746,7 @@ const EmailConversionManager = () => {
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-600">Currency</label>
-                      <span>{selectedEmail.currency || 'USD'}</span>
+                      <span>{selectedEmail.currency || 'INR'}</span>
                     </div>
                   </div>
 

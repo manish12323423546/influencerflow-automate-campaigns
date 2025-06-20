@@ -231,7 +231,7 @@ const CampaignOpportunities = () => {
                         <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2">
                           <span className="text-xs sm:text-sm text-gray-500 flex items-center">
                             <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                            ${opportunity.rate.toLocaleString()}
+                            ₹{opportunity.rate.toLocaleString()}
                           </span>
                           <span className="text-xs sm:text-sm text-gray-500 flex items-center">
                             <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />

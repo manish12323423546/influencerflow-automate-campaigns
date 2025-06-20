@@ -190,7 +190,7 @@ const MyCampaigns = () => {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
         <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-300">
           <h3 className="text-gray-600 text-xs sm:text-sm font-medium mb-2">Total Earnings</h3>
-          <p className="text-2xl sm:text-3xl font-bold text-gray-900">${getTotalEarnings().toLocaleString()}</p>
+          <p className="text-2xl sm:text-3xl font-bold text-gray-900">₹{getTotalEarnings().toLocaleString()}</p>
           <p className="text-green-500 text-xs sm:text-sm mt-1">From {campaigns.length} campaigns</p>
         </div>
         <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow duration-300">
@@ -249,7 +249,7 @@ const MyCampaigns = () => {
                         <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2">
                           <span className="text-xs sm:text-sm text-gray-500 flex items-center">
                             <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                            ${campaign.rate.toLocaleString()}
+                            ₹{campaign.rate.toLocaleString()}
                           </span>
                           <span className="text-xs sm:text-sm text-gray-500 flex items-center">
                             <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />

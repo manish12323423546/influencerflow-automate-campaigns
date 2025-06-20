@@ -106,7 +106,7 @@ export const MilestoneManager: React.FC = () => {
               <CardContent className="space-y-2">
                 <div className="flex items-center space-x-2">
                   <DollarSign className="w-4 h-4 text-muted-foreground" />
-                  <span>Amount: ${milestone.amount.toFixed(2)}</span>
+                  <span>Amount: ₹{milestone.amount.toFixed(2)}</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Calendar className="w-4 h-4 text-muted-foreground" />

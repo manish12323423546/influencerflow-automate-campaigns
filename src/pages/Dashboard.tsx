@@ -3,8 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  Users, TrendingUp, DollarSign, Target, Bell, Activity, Settings, Plus,
-  BarChart3, FileText, CreditCard, Search, Headphones, Database, MessageSquare, MessageCircle, Mail, Bot
+  Users, TrendingUp, DollarSign, Target, Activity, Plus,
+  FileText, CreditCard, Search, Headphones, Database, MessageCircle, Mail
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import CampaignsManager from '@/components/dashboard/CampaignsManager';
@@ -12,12 +12,9 @@ import DiscoverCreators from '@/components/dashboard/DiscoverCreators';
 import ContractsManager from '@/components/dashboard/ContractsManager';
 import PaymentsManager from '@/components/dashboard/PaymentsManager';
 import ConversationsManager from '@/components/dashboard/ConversationsManager';
-import OutreachManager from '@/components/dashboard/OutreachManager';
 import KnowledgeBaseManager from '@/components/dashboard/KnowledgeBaseManager';
 import EmailConversionManager from '@/components/dashboard/EmailConversionManager';
-import ReportsManager from '@/components/dashboard/ReportsManager';
-import DirectAIAgent from '@/components/dashboard/DirectAIAgent';
-import AIAgentManager from '@/components/dashboard/AIAgentManager';
+import VoiceAgentBanner from '@/components/VoiceAgentBanner';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { Campaign } from '@/types/campaign';
@@ -26,19 +23,20 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'campaigns' | 'discover' | 'contracts' | 'payments' | 'outreach' | 'knowledge' | 'conversations' | 'email-conversion' | 'reports' | 'ai-agents'>('campaigns');
+  const [activeTab, setActiveTab] = useState<'campaigns' | 'discover' | 'contracts' | 'payments' | 'knowledge' | 'conversations' | 'email-conversion'>('campaigns');
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [totalInfluencers, setTotalInfluencers] = useState(0);
   const [totalContracts, setTotalContracts] = useState(0);
   const [totalPayments, setTotalPayments] = useState(0);
+  const [isWidgetOpen, setIsWidgetOpen] = useState(false);
   const widgetRef = useRef<HTMLElement>(null);
 
   // Handle URL parameters for tab and campaign selection
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['campaigns', 'discover', 'contracts', 'payments', 'reports', 'outreach', 'email-conversion', 'conversations', 'knowledge', 'ai-agents'].includes(tab)) {
-      setActiveTab(tab as 'campaigns' | 'discover' | 'contracts' | 'payments' | 'outreach' | 'knowledge' | 'conversations' | 'email-conversion' | 'reports' | 'ai-agents');
+    if (tab && ['campaigns', 'discover', 'contracts', 'payments', 'email-conversion', 'conversations', 'knowledge'].includes(tab)) {
+      setActiveTab(tab as 'campaigns' | 'discover' | 'contracts' | 'payments' | 'knowledge' | 'conversations' | 'email-conversion');
     }
   }, [searchParams]);
 
@@ -121,51 +119,67 @@ const Dashboard = () => {
   }, [toast]);
 
   useEffect(() => {
-    const widget = document.querySelector('elevenlabs-convai');
-    
-    if (widget) {
-      // Listen for widget initialization
-      widget.addEventListener('elevenlabs-convai:ready', () => {
-        console.log('Widget is ready');
-      });
-
-      // Listen for conversation start
-      widget.addEventListener('elevenlabs-convai:call', (event: CustomEvent) => {
-        console.log('Starting conversation');
-        
-        // Configure client tools and initial conversation
-        const eventDetail = event.detail as { config?: { clientTools?: Record<string, unknown> } };
-        if (eventDetail && eventDetail.config) {
-          eventDetail.config.clientTools = {
-            testConversation: ({ message }: { message: string }) => {
-              console.log('Test conversation message:', message);
-              return { success: true };
-            }
-          };
-        }
-
-        // Send initial greeting after widget loads
-        setTimeout(() => {
-          const message = "Hi! I'm your campaign assistant. I can help you manage campaigns, find creators, and more. Would you like to try a test conversation?";
-          widget.dispatchEvent(new CustomEvent('elevenlabs-convai:message', { 
-            detail: { message } 
-          }));
-        }, 1000);
-      });
-
-      // Listen for conversation end
-      widget.addEventListener('elevenlabs-convai:end', () => {
-        console.log('Conversation ended');
-      });
-    }
-
-    return () => {
+    const setupWidgetListeners = () => {
+      const widget = document.querySelector('elevenlabs-convai');
+      
       if (widget) {
-        widget.removeEventListener('elevenlabs-convai:ready', () => {});
-        widget.removeEventListener('elevenlabs-convai:call', () => {});
-        widget.removeEventListener('elevenlabs-convai:end', () => {});
+        console.log('🎯 Widget found, setting up listeners');
+        
+        // Listen for widget initialization
+        const onReady = () => {
+          console.log('✅ Widget is ready');
+        };
+        
+        // Listen for conversation start
+        const onCall = (event: CustomEvent) => {
+          console.log('🚀 Starting conversation, setting isWidgetOpen to true');
+          console.log('🎯 UI Banner should now move 400px from right edge');
+          setIsWidgetOpen(true);
+          
+          // Configure client tools and initial conversation
+          const eventDetail = event.detail as { config?: { clientTools?: Record<string, unknown> } };
+          if (eventDetail && eventDetail.config) {
+            eventDetail.config.clientTools = {
+              testConversation: ({ message }: { message: string }) => {
+                console.log('Test conversation message:', message);
+                return { success: true };
+              }
+            };
+          }
+
+          // Send initial greeting after widget loads
+          setTimeout(() => {
+            const message = "Hi! I'm your campaign assistant. I can help you manage campaigns, find creators, and more. Would you like to try a test conversation?";
+            widget.dispatchEvent(new CustomEvent('elevenlabs-convai:message', { 
+              detail: { message } 
+            }));
+          }, 1000);
+        };
+
+        // Listen for conversation end
+        const onEnd = () => {
+          console.log('🛑 Conversation ended, setting isWidgetOpen to false');
+          console.log('🎯 UI Banner should now return to original position');
+          setIsWidgetOpen(false);
+        };
+
+        widget.addEventListener('elevenlabs-convai:ready', onReady);
+        widget.addEventListener('elevenlabs-convai:call', onCall);
+        widget.addEventListener('elevenlabs-convai:end', onEnd);
+
+        return () => {
+          widget.removeEventListener('elevenlabs-convai:ready', onReady);
+          widget.removeEventListener('elevenlabs-convai:call', onCall);
+          widget.removeEventListener('elevenlabs-convai:end', onEnd);
+        };
+      } else {
+        console.log('⏳ Widget not found, retrying in 1 second...');
+        setTimeout(setupWidgetListeners, 1000);
       }
     };
+
+    // Try to setup listeners immediately and also retry
+    setupWidgetListeners();
   }, []);
 
   // Calculate KPI data from real campaigns
@@ -195,12 +209,9 @@ const Dashboard = () => {
     { id: 'discover', label: 'Discover Creators', icon: Users, description: 'Find perfect influencers' },
     { id: 'contracts', label: 'Contracts', icon: FileText, description: 'Manage contracts' },
     { id: 'payments', label: 'Payments', icon: CreditCard, description: 'Handle payments' },
-    { id: 'reports', label: 'Reports', icon: BarChart3, description: 'Generate and view reports' },
-    { id: 'outreach', label: 'Outreach', icon: MessageSquare, description: 'Manage influencer outreach' },
     { id: 'email-conversion', label: 'Email Conversion', icon: Mail, description: 'Track email automation & contracts' },
     { id: 'conversations', label: 'Conversations', icon: MessageCircle, description: 'AI conversation history' },
     { id: 'knowledge', label: 'Knowledge Base', icon: Database, description: 'Manage AI knowledge' },
-    { id: 'ai-agents', label: 'AI Agents', icon: Bot, description: 'Execute and monitor AI agents' },
   ];
 
   if (isLoading) {
@@ -217,7 +228,9 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 shadow-sm">
+      <header className={`bg-white border-b border-gray-200 shadow-sm transition-all duration-500 ease-in-out ${
+        isWidgetOpen ? 'transform -translate-x-[400px]' : ''
+      }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
@@ -227,24 +240,20 @@ const Dashboard = () => {
             </div>
 
             <div className="flex items-center space-x-4">
-              <Bell className="h-6 w-6 text-gray-600 hover:text-coral cursor-pointer transition-colors" />
-              <Link to="/settings">
-                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-coral hover:bg-gray-100">
-                  <Settings className="h-4 w-4" />
-                </Button>
-              </Link>
-              <Link to="/creator-dashboard">
-                <Button className="bg-coral hover:bg-coral/90 text-white shadow-md hover:shadow-lg transition-all duration-300">
-                  <Users className="mr-2 h-4 w-4" />
-                  Switch to Creator
-                </Button>
-              </Link>
+              {/* Debug indicator for widget state */}
+              {isWidgetOpen && (
+                <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                  🎤 AI Assistant Active
+                </div>
+              )}
             </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-all duration-500 ease-in-out ${
+        isWidgetOpen ? 'transform -translate-x-[400px]' : ''
+      }`}>
         {/* Background decoration */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,98,67,0.05),transparent_50%)] pointer-events-none"></div>
         {/* KPI Cards at the top */}
@@ -266,7 +275,7 @@ const Dashboard = () => {
               <DollarSign className="h-4 w-4 text-coral" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900">${kpiData.avgCPE.toFixed(2)}</div>
+              <div className="text-2xl font-bold text-gray-900">₹{kpiData.avgCPE.toFixed(2)}</div>
               <p className="text-xs text-gray-500">{formatDelta(kpiData.avgCPEChange)} vs prev month</p>
             </CardContent>
           </Card>
@@ -288,7 +297,7 @@ const Dashboard = () => {
               <DollarSign className="h-4 w-4 text-coral" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900">${kpiData.totalBudget.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-gray-900">₹{kpiData.totalBudget.toLocaleString()}</div>
               <p className="text-xs text-gray-500">Across all campaigns</p>
             </CardContent>
           </Card>
@@ -299,7 +308,7 @@ const Dashboard = () => {
               <Activity className="h-4 w-4 text-coral" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900">${kpiData.totalSpent.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-gray-900">₹{kpiData.totalSpent.toLocaleString()}</div>
               <p className="text-xs text-gray-500">Campaign expenses</p>
             </CardContent>
           </Card>
@@ -358,37 +367,17 @@ const Dashboard = () => {
           {activeTab === 'discover' && <DiscoverCreators />}
           {activeTab === 'contracts' && <ContractsManager />}
           {activeTab === 'payments' && <PaymentsManager />}
-          {activeTab === 'reports' && <ReportsManager preSelectedCampaign={searchParams.get('campaign')} />}
-          {activeTab === 'outreach' && <OutreachManager />}
           {activeTab === 'email-conversion' && <EmailConversionManager />}
           {activeTab === 'conversations' && <ConversationsManager />}
           {activeTab === 'knowledge' && <KnowledgeBaseManager />}
-          {activeTab === 'ai-agents' && (
-            <div className="space-y-8">
-              {/* Local LangGraph AI Agent Manager Section */}
-              <div className="space-y-4">
-                <div className="flex items-center space-x-3">
-                  <Bot className="h-6 w-6 text-coral" />
-                  <h2 className="text-xl font-semibold text-gray-900">Local LangGraph AI Assistant</h2>
-                </div>
-                <AIAgentManager />
-              </div>
-              
-              {/* Separator */}
-              <div className="border-t border-gray-200 my-8"></div>
-              
-              {/* Direct AI Agent Section */}
-              <div className="space-y-4">
-                <div className="flex items-center space-x-3">
-                  <MessageSquare className="h-6 w-6 text-purple-600" />
-                  <h2 className="text-xl font-semibold text-gray-900">Direct AI Assistant</h2>
-                </div>
-                <DirectAIAgent />
-              </div>
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Voice Agent Tutorial Banner */}
+      <VoiceAgentBanner 
+        isWidgetOpen={isWidgetOpen}
+        onClose={() => console.log('Banner closed')}
+      />
 
       {/* ElevenLabs AI Assistant Widget */}
       <elevenlabs-convai
@@ -396,7 +385,11 @@ const Dashboard = () => {
         agent-id="agent_01jxv6e90xfdg8zzvbkvmnngxr"
         variant="expanded"
         action-text="Need help with campaigns?"
-        className="fixed bottom-4 left-4 z-50"
+        className="fixed bottom-4 right-4 z-50"
+        style={{
+          width: isWidgetOpen ? '380px' : 'auto',
+          transition: 'all 0.5s ease-in-out'
+        }}
       />
     </div>
   );
