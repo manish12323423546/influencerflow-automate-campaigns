@@ -89,7 +89,7 @@
     "@types/react-dom": "latest",
     "@vitejs/plugin-react": "^4.2.1",
     "@vitejs/plugin-react-swc": "^3.10.2",
-    "autoprefixer": "^10.4.19",
+    "autoprefixer": "^10.4.20",
     "concurrently": "^8.2.2",
     "lovable-tagger": "^1.1.8",
     "postcss": "^8.4.35",
