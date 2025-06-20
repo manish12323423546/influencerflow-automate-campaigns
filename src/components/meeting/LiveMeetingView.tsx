@@ -86,20 +86,29 @@ export const LiveMeetingView = ({ meeting, onEndMeeting }: LiveMeetingViewProps)
   const [userIsSpeaking, setUserIsSpeaking] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [meetingDuration, setMeetingDuration] = useState(0);
+  const [conversation, setConversation] = useState<Array<{type: 'user' | 'assistant', message: string, timestamp: number}>>([]);
   
   // Single ref object for all refs to prevent recreating
   const refs = useRef({
     video: null as HTMLVideoElement | null,
+    audioStream: null as MediaStream | null,
     audioContext: null as AudioContext | null,
     analyser: null as AnalyserNode | null,
+    vapiClient: null as any,
     callTimer: null as NodeJS.Timeout | null,
     meetingTimer: null as NodeJS.Timeout | null,
-    vapiClient: null as any,
-    audioStream: null as MediaStream | null,
     userSpeakingTimeout: null as NodeJS.Timeout | null,
     controlsTimeout: null as NodeJS.Timeout | null,
-    initialized: false
+    chatContainer: null as HTMLDivElement | null,
+    initialized: false,
   });
+
+  // Auto-scroll chat to bottom when new messages arrive
+  useEffect(() => {
+    if (refs.current.chatContainer) {
+      refs.current.chatContainer.scrollTop = refs.current.chatContainer.scrollHeight;
+    }
+  }, [conversation]);
 
   // Cleanup function
   const cleanup = () => {
@@ -242,7 +251,8 @@ export const LiveMeetingView = ({ meeting, onEndMeeting }: LiveMeetingViewProps)
       
       toast({
         title: "AI Agent Connected",
-        description: `${meeting.aiAgentName} has joined the meeting`,
+        description: `${meeting.aiAgentName} is ready for conversation`,
+        duration: 4000,
       });
     };
 
@@ -280,6 +290,41 @@ export const LiveMeetingView = ({ meeting, onEndMeeting }: LiveMeetingViewProps)
       console.log('💬 AI AGENT MESSAGE:', message);
       if (message?.message) {
         setAiAgentState(prev => ({ ...prev, lastMessage: message.message }));
+        
+        // Add AI message to conversation
+        setConversation(prev => [...prev, {
+          type: 'assistant',
+          message: message.message,
+          timestamp: Date.now()
+        }]);
+      }
+    };
+
+    const onUserSpeech = (speechData: any) => {
+      console.log('🎤 USER SPEECH:', speechData);
+      if (speechData?.message) {
+        // Add user message to conversation
+        setConversation(prev => [...prev, {
+          type: 'user',
+          message: speechData.message,
+          timestamp: Date.now()
+        }]);
+        
+        // Auto-open chat panel on first user speech
+        if (!showChat) {
+          setShowChat(true);
+        }
+        
+        // Show user speech in UI
+        toast({
+          title: "You said:",
+          description: speechData.message,
+          duration: 2000,
+        });
+        
+        // Update state to show user is participating
+        setUserIsSpeaking(true);
+        setTimeout(() => setUserIsSpeaking(false), 2000);
       }
     };
 
@@ -298,6 +343,7 @@ export const LiveMeetingView = ({ meeting, onEndMeeting }: LiveMeetingViewProps)
     refs.current.vapiClient.on('speech-start', onSpeechStart);
     refs.current.vapiClient.on('speech-end', onSpeechEnd);
     refs.current.vapiClient.on('message', onMessage);
+    refs.current.vapiClient.on('user-speech', onUserSpeech);
     refs.current.vapiClient.on('error', onError);
   };
 
@@ -625,13 +671,32 @@ export const LiveMeetingView = ({ meeting, onEndMeeting }: LiveMeetingViewProps)
                   <span className="text-green-400">
                     {formatTime(aiAgentState.callDuration)}
                   </span>
+                  {aiAgentState.isSpeaking && (
+                    <span className="animate-pulse">🗣️</span>
+                  )}
                 </div>
                 
                 {/* Connection Status */}
-                <div className="absolute top-4 right-4">
+                <div className="absolute top-4 right-4 flex flex-col space-y-2">
                   <Badge variant="secondary" className="bg-green-500/20 text-green-300 border-green-500/30">
                     Connected
                   </Badge>
+                  
+                  {/* Listening Indicator */}
+                  {aiAgentState.isConnected && !aiAgentState.isSpeaking && (
+                    <Badge variant="secondary" className="bg-blue-500/20 text-blue-300 border-blue-500/30 animate-pulse">
+                      <Mic className="w-3 h-3 mr-1" />
+                      Listening
+                    </Badge>
+                  )}
+                  
+                  {/* AI Speaking Indicator */}
+                  {aiAgentState.isSpeaking && (
+                    <Badge variant="secondary" className="bg-orange-500/20 text-orange-300 border-orange-500/30">
+                      <Volume2 className="w-3 h-3 mr-1" />
+                      Speaking
+                    </Badge>
+                  )}
                 </div>
               </div>
             </div>
@@ -641,17 +706,65 @@ export const LiveMeetingView = ({ meeting, onEndMeeting }: LiveMeetingViewProps)
         {/* Chat Panel */}
         {showChat && (
           <div className="w-1/4 bg-gray-900 border-l border-gray-600 flex flex-col">
-            <div className="p-4 border-b border-gray-600">
-              <h3 className="text-white font-medium">Meeting Chat</h3>
-              <p className="text-gray-400 text-sm">
-                Chat with {meeting.aiAgentName}
-              </p>
-            </div>
-            <div className="flex-1 p-4 text-white">
-              <div className="text-center text-gray-400 mt-8">
-                <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Chat messages will appear here</p>
+            <div className="p-4 border-b border-gray-600 flex items-center justify-between">
+              <div>
+                <h3 className="text-white font-medium">Meeting Chat</h3>
+                <p className="text-gray-400 text-sm">
+                  Conversation with {meeting.aiAgentName}
+                </p>
               </div>
+              {conversation.length > 0 && (
+                <Button
+                  onClick={() => setConversation([])}
+                  size="sm"
+                  variant="ghost"
+                  className="text-gray-400 hover:text-white"
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+            <div className="flex-1 p-4 overflow-y-auto space-y-3" ref={(el) => { refs.current.chatContainer = el; }}>
+              {conversation.length === 0 ? (
+                <div className="text-center text-gray-400 mt-8">
+                  <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  {aiAgentState.isConnected ? (
+                    <>
+                      <p className="text-sm font-medium text-green-400">🎧 AI is listening</p>
+                      <p className="text-xs mt-1">Start talking - your voice will be converted to text</p>
+                      <p className="text-xs mt-1 text-blue-300">Try saying: "Hello" or "Tell me about campaigns"</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm">Connect to AI agent to start conversation</p>
+                      <p className="text-xs mt-1">Click the robot icon below to connect</p>
+                    </>
+                  )}
+                </div>
+              ) : (
+                conversation.map((msg, index) => (
+                  <div key={index} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[80%] rounded-lg p-3 ${
+                      msg.type === 'user' 
+                        ? 'bg-blue-600 text-white' 
+                        : 'bg-gray-700 text-gray-100'
+                    }`}>
+                      <div className="flex items-start space-x-2">
+                        {msg.type === 'assistant' && <Bot className="w-4 h-4 mt-0.5 text-blue-400" />}
+                        {msg.type === 'user' && <Mic className="w-4 h-4 mt-0.5 text-blue-200" />}
+                        <div className="flex-1">
+                          <p className="text-sm">{msg.message}</p>
+                          <p className={`text-xs mt-1 ${
+                            msg.type === 'user' ? 'text-blue-200' : 'text-gray-400'
+                          }`}>
+                            {new Date(msg.timestamp).toLocaleTimeString()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}

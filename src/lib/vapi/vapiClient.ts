@@ -21,23 +21,226 @@ const isDemoMode = () => {
          vapiKey.length < 10; // Real VAPI keys are longer
 };
 
-// Enhanced Demo VAPI client with ElevenLabs v3 integration
+// Enhanced Demo VAPI client with ElevenLabs v3 integration and Speech Recognition
 class DemoVapi {
   private eventListeners: Map<string, Function[]> = new Map();
   private isCallActive: boolean = false;
   private callStartTime: number = 0;
-  private elevenLabsService: any;
-  private currentAudio: HTMLAudioElement | null = null;
+  private elevenLabsService: any = null;
+  private currentUtterance: SpeechSynthesisUtterance | null = null;
+  private speechRecognition: any = null;
+  private isListening: boolean = false;
+  private conversationHistory: Array<{role: 'user' | 'assistant', content: string}> = [];
   private isSpeaking: boolean = false;
+  private currentAssistantId: string = '';
 
   constructor() {
-    // Initialize ElevenLabs service
-    this.elevenLabsService = getElevenLabsService();
+    this.initializeSpeechRecognition();
+    this.setupElevenLabs();
+  }
+
+  private initializeSpeechRecognition() {
+    // Initialize Web Speech Recognition
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     
-    if (this.elevenLabsService) {
-      console.log('✅ Demo VAPI: ElevenLabs v3 service initialized successfully');
+    if (SpeechRecognition) {
+      this.speechRecognition = new SpeechRecognition();
+      this.speechRecognition.continuous = true;
+      this.speechRecognition.interimResults = true;
+      this.speechRecognition.lang = 'en-US';
+      
+      this.speechRecognition.onstart = () => {
+        console.log('🎧 Speech recognition started');
+        this.isListening = true;
+      };
+      
+      this.speechRecognition.onresult = (event: any) => {
+        let finalTranscript = '';
+        let interimTranscript = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript;
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+        
+        if (finalTranscript.trim()) {
+          console.log('🗣️ User said:', finalTranscript);
+          this.handleUserSpeech(finalTranscript.trim());
+        }
+      };
+      
+      this.speechRecognition.onerror = (event: any) => {
+        console.error('🚨 Speech recognition error:', event.error);
+        if (event.error === 'no-speech') {
+          // Restart listening after a pause
+          setTimeout(() => {
+            if (this.isCallActive && !this.isSpeaking) {
+              this.startListening();
+            }
+          }, 1000);
+        }
+      };
+      
+      this.speechRecognition.onend = () => {
+        console.log('🔇 Speech recognition ended');
+        this.isListening = false;
+        
+        // Auto-restart if call is still active and AI is not speaking
+        if (this.isCallActive && !this.isSpeaking) {
+          setTimeout(() => {
+            this.startListening();
+          }, 500);
+        }
+      };
     } else {
+      console.warn('🚨 Speech recognition not supported in this browser');
+    }
+  }
+
+  private async setupElevenLabs() {
+    try {
+      this.elevenLabsService = getElevenLabsService();
+      console.log('🎭 Demo VAPI: ElevenLabs service configured');
+    } catch (error) {
       console.log('🎭 Demo VAPI: ElevenLabs not configured, falling back to browser speech synthesis');
+    }
+  }
+
+  private async handleUserSpeech(userText: string) {
+    if (!this.isCallActive || this.isSpeaking) return;
+    
+    // Add user message to conversation history
+    this.conversationHistory.push({ role: 'user', content: userText });
+    
+    // Emit user message event
+    this.emit('user-speech', { 
+      message: userText, 
+      timestamp: Date.now() - this.callStartTime,
+      type: 'user-speech'
+    });
+    
+    // Generate AI response
+    const aiResponse = await this.generateAIResponse(userText);
+    
+    if (aiResponse) {
+      // Add AI response to conversation history
+      this.conversationHistory.push({ role: 'assistant', content: aiResponse });
+      
+      // Stop listening while AI speaks
+      this.stopListening();
+      
+      // Emit speech start
+      this.emit('speech-start', {});
+      
+      // Speak AI response
+      await this.speakMessage(aiResponse);
+      
+      // Emit message
+      this.emit('message', { 
+        message: aiResponse, 
+        timestamp: Date.now() - this.callStartTime,
+        synthesizer: this.elevenLabsService ? 'elevenlabs' : 'browser-tts'
+      });
+    }
+  }
+
+  private async generateAIResponse(userInput: string): Promise<string> {
+    // Simple AI response logic based on user input
+    const input = userInput.toLowerCase();
+    
+    // Context-aware responses based on conversation history
+    const responses = [
+      // Campaign-related responses
+      {
+        keywords: ['campaign', 'marketing', 'strategy', 'promote'],
+        responses: [
+          "Great question about campaigns! I can help you create effective marketing strategies. What type of campaign are you planning?",
+          "For successful campaigns, I recommend focusing on your target audience first. Tell me more about who you're trying to reach.",
+          "Campaign strategy is crucial for success. Are you looking to increase brand awareness, generate leads, or drive sales?"
+        ]
+      },
+      
+      // Influencer-related responses
+      {
+        keywords: ['influencer', 'creator', 'collaboration', 'partnership'],
+        responses: [
+          "Influencer partnerships can be very powerful! What industry or niche are you targeting for your influencer campaigns?",
+          "I can help you find the right creators for your brand. What's your budget range and campaign goals?",
+          "Creator collaborations work best when there's authentic alignment. What values does your brand represent?"
+        ]
+      },
+      
+      // Budget and ROI responses
+      {
+        keywords: ['budget', 'cost', 'price', 'roi', 'return'],
+        responses: [
+          "Budget planning is essential for campaign success. What's your target ROI, and what's your available budget range?",
+          "Let's discuss your budget allocation. How much are you planning to invest in this campaign?",
+          "ROI tracking helps optimize campaigns. What metrics are most important for measuring your success?"
+        ]
+      },
+      
+      // General conversation
+      {
+        keywords: ['hello', 'hi', 'hey', 'start', 'begin'],
+        responses: [
+          "Hello! I'm excited to help you with your campaign strategy. What specific goals do you have in mind?",
+          "Hi there! I'm here to assist with your marketing campaigns. What type of project are you working on?",
+          "Great to connect! Let's dive into your campaign needs. What's your main objective?"
+        ]
+      },
+      
+      // Questions and help
+      {
+        keywords: ['help', 'how', 'what', 'why', 'when', 'where'],
+        responses: [
+          "I'm here to help! Can you tell me more specifically what you'd like assistance with?",
+          "That's a great question. Let me provide some guidance based on your specific situation.",
+          "I'd be happy to explain that further. What aspect would you like me to focus on?"
+        ]
+      }
+    ];
+
+    // Find matching response category
+    for (const category of responses) {
+      if (category.keywords.some(keyword => input.includes(keyword))) {
+        const randomResponse = category.responses[Math.floor(Math.random() * category.responses.length)];
+        return randomResponse;
+      }
+    }
+
+    // Default responses for unmatched input
+    const defaultResponses = [
+      "That's interesting! Can you tell me more about what you're looking to achieve?",
+      "I understand. How can I best assist you with your campaign objectives?",
+      "Thanks for sharing that. What specific outcomes are you hoping for?",
+      "Good point! Let's explore how we can make that work for your brand.",
+      "I see what you mean. What's the next step you'd like to take?",
+      "That's a great perspective. How does that fit into your overall strategy?"
+    ];
+
+    return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
+  }
+
+  private startListening() {
+    if (this.speechRecognition && !this.isListening && !this.isSpeaking) {
+      try {
+        this.speechRecognition.start();
+        console.log('🎧 Started listening for user speech');
+      } catch (error) {
+        console.log('🎧 Speech recognition already active');
+      }
+    }
+  }
+
+  private stopListening() {
+    if (this.speechRecognition && this.isListening) {
+      this.speechRecognition.stop();
+      console.log('🔇 Stopped listening for user speech');
     }
   }
 
@@ -51,18 +254,46 @@ class DemoVapi {
     
     this.isCallActive = true;
     this.callStartTime = Date.now();
+    this.currentAssistantId = assistantId;
+    this.conversationHistory = [];
     
-    // Simulate connection delay
-    setTimeout(() => {
-      this.emit('call-start', { assistantId });
-      
-      // Simulate AI greeting after connection with ElevenLabs
-      setTimeout(() => {
-        this.speakMessage("Hello! I'm your AI assistant powered by ElevenLabs voice technology. I'm ready to help you with your campaign needs. What would you like to discuss today?");
-      }, 1000);
-    }, 1000);
+    // Start with AI greeting
+    setTimeout(async () => {
+      if (this.isCallActive) {
+        this.emit('call-start', { assistantId });
+        
+        // AI greeting message
+        const greeting = this.getPersonalizedGreeting(assistantId);
+        
+        this.emit('speech-start', {});
+        await this.speakMessage(greeting);
+        this.emit('message', { 
+          message: greeting, 
+          timestamp: Date.now() - this.callStartTime,
+          synthesizer: this.elevenLabsService ? 'elevenlabs' : 'browser-tts'
+        });
+        
+        // Start listening for user speech after greeting
+        setTimeout(() => {
+          if (this.isCallActive) {
+            this.startListening();
+          }
+        }, 1000);
+      }
+    }, 2000);
     
     return { success: true };
+  }
+
+  private getPersonalizedGreeting(assistantId: string): string {
+    const greetings = [
+      "Hello! I'm your AI assistant powered by ElevenLabs voice technology. I'm ready to help you with your campaign needs. What would you like to discuss today?",
+      "Hi there! I'm excited to work with you on your marketing campaigns. What specific goals do you have in mind?",
+      "Welcome! I'm here to help you create successful influencer campaigns. What type of project are you planning?",
+      "Great to connect! I'm your campaign strategy assistant. How can I help you achieve your marketing objectives today?"
+    ];
+    
+    return greetings[Math.floor(Math.random() * greetings.length)];
   }
 
   stop() {
@@ -106,7 +337,7 @@ class DemoVapi {
         });
 
         // Play the audio
-        this.currentAudio = await this.elevenLabsService.playAudio(
+        this.currentUtterance = await this.elevenLabsService.playAudio(
           audioData,
           () => {
             console.log('🗣️ ElevenLabs: AI started speaking');
@@ -115,23 +346,23 @@ class DemoVapi {
           () => {
             console.log('🤐 ElevenLabs: AI finished speaking');
             this.isSpeaking = false;
-            this.currentAudio = null;
+            this.currentUtterance = null;
             this.emit('speech-end');
             this.emit('message', { 
               message: message,
               timestamp: Date.now() - this.callStartTime,
-              synthesizer: 'elevenlabs-v3'
+              synthesizer: 'elevenlabs'
             });
           },
           (error) => {
             console.error('🔴 ElevenLabs: Audio playback error:', error);
             this.isSpeaking = false;
-            this.currentAudio = null;
+            this.currentUtterance = null;
             this.emit('speech-end');
             this.emit('message', { 
               message: message,
               timestamp: Date.now() - this.callStartTime,
-              synthesizer: 'elevenlabs-v3',
+              synthesizer: 'elevenlabs',
               error: error.message
             });
           }
@@ -214,17 +445,25 @@ class DemoVapi {
   }
 
   private stopSpeaking() {
-    if (this.currentAudio) {
-      this.currentAudio.pause();
-      this.currentAudio.currentTime = 0;
-      this.currentAudio = null;
+    // Stop ElevenLabs audio if playing
+    if (this.elevenLabsService && this.elevenLabsService.stopCurrentAudio) {
+      this.elevenLabsService.stopCurrentAudio();
     }
     
+    // Stop browser speech synthesis
     if (window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
     
     this.isSpeaking = false;
+    this.currentUtterance = null;
+    
+    // Resume listening after stopping speech
+    setTimeout(() => {
+      if (this.isCallActive && !this.isSpeaking) {
+        this.startListening();
+      }
+    }, 500);
   }
 
   on(event: string, callback: Function) {
@@ -277,7 +516,7 @@ class DemoVapi {
       duration: this.isCallActive ? Date.now() - this.callStartTime : 0,
       startTime: this.callStartTime,
       isSpeaking: this.isSpeaking,
-      synthesizer: this.elevenLabsService ? 'elevenlabs-v3' : 'browser-tts'
+      synthesizer: this.elevenLabsService ? 'elevenlabs' : 'browser-tts'
     };
   }
 
