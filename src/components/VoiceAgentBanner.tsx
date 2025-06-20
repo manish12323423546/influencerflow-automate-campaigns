@@ -40,50 +40,58 @@ const VoiceAgentBanner: React.FC<VoiceAgentBannerProps> = ({
       <div className="flex items-center gap-2 mb-3">
         <span className="text-2xl">🚀</span>
         <h3 className="text-lg font-semibold text-dark-text font-space">
-          Talk to Your AI Campaign Assistant
+          Talk to Your AI Campaign Assistants
         </h3>
       </div>
 
       {/* Description */}
       <p className="text-sm text-medium-text mb-4">
-        Get help with your influencer campaigns using natural voice conversations. Try these examples:
+        Choose your AI assistant for different campaign needs. Click the widgets and start speaking!
       </p>
 
-      {/* Agent Examples */}
-      <div className="space-y-3">
-        <div className="flex items-start gap-2">
-          <span className="text-green-500 text-sm mt-0.5">✅</span>
-          <div>
-            <p className="text-xs text-medium-text mt-0.5">
-              "Find me tech influencers in Bangalore with over 100K followers"
-            </p>
+      {/* Agent Types */}
+      <div className="space-y-4">
+        {/* CEO Agent */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-200">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xl">👔</span>
+            <h4 className="font-semibold text-dark-text text-sm">CEO Agent (Bottom Right)</h4>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-start gap-2">
+              <span className="text-blue-500 text-sm mt-0.5">✅</span>
+              <p className="text-xs text-medium-text">
+                "Create a strategic campaign brief for our Q2 launch"
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-blue-500 text-sm mt-0.5">✅</span>
+              <p className="text-xs text-medium-text">
+                "Show me performance metrics across all campaigns"
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-start gap-2">
-          <span className="text-green-500 text-sm mt-0.5">✅</span>
-          <div>
-            <p className="text-xs text-medium-text mt-0.5">
-              "Create a campaign brief for a sustainable fashion brand launch"
-            </p>
+        {/* Negotiation Agent */}
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-3 border border-green-200">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xl">🤝</span>
+            <h4 className="font-semibold text-dark-text text-sm">Negotiation Agent (Top Right)</h4>
           </div>
-        </div>
-
-        <div className="flex items-start gap-2">
-          <span className="text-green-500 text-sm mt-0.5">✅</span>
-          <div>
-            <p className="text-xs text-medium-text mt-0.5">
-              "Show me the performance metrics of my active campaigns"
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-start gap-2">
-          <span className="text-green-500 text-sm mt-0.5">✅</span>
-          <div>
-            <p className="text-xs text-medium-text mt-0.5">
-              "Help me draft an outreach message for a potential collaboration"
-            </p>
+          <div className="space-y-2">
+            <div className="flex items-start gap-2">
+              <span className="text-green-500 text-sm mt-0.5">✅</span>
+              <p className="text-xs text-medium-text">
+                "Help me negotiate rates with this influencer"
+              </p>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-green-500 text-sm mt-0.5">✅</span>
+              <p className="text-xs text-medium-text">
+                "Draft an outreach message for potential collaboration"
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -92,10 +100,10 @@ const VoiceAgentBanner: React.FC<VoiceAgentBannerProps> = ({
       <div className="bg-gradient-to-r from-coral/10 to-orange-400/10 rounded-lg p-3 mt-4">
         <div className="flex items-center gap-2 mb-2">
           <Mic className="w-4 h-4 text-coral" />
-          <span className="font-medium text-dark-text text-sm">Click the widget and start speaking!</span>
+          <span className="font-medium text-dark-text text-sm">Choose Your Agent & Start Speaking!</span>
         </div>
         <p className="text-xs text-medium-text">
-          <strong>Tip:</strong> Speak naturally and be specific about what you need help with.
+          <strong>Tip:</strong> Select the right agent for your task - CEO for strategy, Negotiation for deals.
         </p>
       </div>
     </div>

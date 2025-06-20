@@ -119,6 +119,55 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [toast]);
 
+  // Load ElevenLabs script dynamically
+  useEffect(() => {
+    const loadElevenLabsScript = () => {
+      // Check if script is already loaded
+      const existingScript = document.querySelector('script[src="https://unpkg.com/@elevenlabs/convai-widget-embed"]');
+      if (existingScript) {
+        console.log('🎯 ElevenLabs script already loaded');
+        return;
+      }
+
+      console.log('📦 Loading ElevenLabs ConvAI script...');
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/@elevenlabs/convai-widget-embed';
+      script.async = true;
+      script.type = 'text/javascript';
+      
+      script.onload = () => {
+        console.log('✅ ElevenLabs script loaded successfully');
+        
+        // Wait a bit for the widget to initialize, then force re-render
+        setTimeout(() => {
+          console.log('🔄 Attempting to initialize widgets...');
+          const leftWidget = document.querySelector('#elevenlabs-widget-left elevenlabs-convai');
+          const rightWidget = document.querySelector('elevenlabs-convai[agent-id="agent_01jy6xqhsmfndsrfr0rp54d5qz"]');
+          
+          if (leftWidget) {
+            console.log('✅ Left widget found');
+          } else {
+            console.log('❌ Left widget not found');
+          }
+          
+          if (rightWidget) {
+            console.log('✅ Right widget found');
+          } else {
+            console.log('❌ Right widget not found');
+          }
+        }, 2000);
+      };
+      
+      script.onerror = () => {
+        console.error('❌ Failed to load ElevenLabs script');
+      };
+
+      document.head.appendChild(script);
+    };
+
+    loadElevenLabsScript();
+  }, []);
+
   useEffect(() => {
     const setupWidgetListeners = () => {
       const widget = document.querySelector('elevenlabs-convai');
@@ -357,11 +406,33 @@ const Dashboard = () => {
         onClose={() => console.log('Banner closed')}
       />
 
-      {/* ElevenLabs AI Assistant Widget */}
-      <elevenlabs-convai 
-        agent-id="agent_01jy6xqhsmfndsrfr0rp54d5qz"
-      ></elevenlabs-convai>
-      <script src="https://unpkg.com/@elevenlabs/convai-widget-embed" async type="text/javascript"></script>
+      {/* ElevenLabs AI Assistant Widget - Bottom Left */}
+      <div 
+        id="elevenlabs-widget-left"
+        className="fixed bottom-5 left-5 z-[9999] w-16 h-16"
+        style={{ 
+          position: 'fixed',
+          bottom: '20px', 
+          left: '20px', 
+          zIndex: 9999,
+          pointerEvents: 'auto',
+          minWidth: '60px',
+          minHeight: '60px'
+        }}
+      >
+        <elevenlabs-convai 
+          agent-id="agent_01jy6yks53en78yqrr186qxywa"
+          data-widget="left"
+        ></elevenlabs-convai>
+      </div>
+
+      {/* ElevenLabs AI Assistant Widget - Bottom Right (existing) */}
+      <div id="elevenlabs-widget-right" className="fixed bottom-5 right-5 z-[9998]">
+        <elevenlabs-convai 
+          agent-id="agent_01jy6xqhsmfndsrfr0rp54d5qz"
+          data-widget="right"
+        ></elevenlabs-convai>
+      </div>
     </div>
   );
 };
