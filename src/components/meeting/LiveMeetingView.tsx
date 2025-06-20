@@ -552,6 +552,29 @@ export const LiveMeetingView = ({ meeting, onEndMeeting }: LiveMeetingViewProps)
     }
   };
 
+  // Restart AI listening
+  const restartListening = () => {
+    if (!refs.current.vapiClient || !aiAgentState.isConnected) {
+      toast({
+        title: "AI Agent Not Connected",
+        description: "Please connect to the AI agent first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log('🔄 Manually restarting AI listening...');
+    
+    if (refs.current.vapiClient.restartListening) {
+      refs.current.vapiClient.restartListening();
+      
+      toast({
+        title: "Listening Restarted",
+        description: "AI is now ready to listen again",
+      });
+    }
+  };
+
   // Format time utility
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -639,8 +662,21 @@ export const LiveMeetingView = ({ meeting, onEndMeeting }: LiveMeetingViewProps)
               )}
               
               {/* User Info Overlay */}
-              <div className="absolute bottom-4 left-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm">
-                You {mediaState.isMuted && <MicOff className="w-3 h-3 inline ml-1" />}
+              <div className="absolute bottom-4 left-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm flex items-center space-x-2">
+                <span>You</span>
+                {mediaState.isMuted ? (
+                  <MicOff className="w-3 h-3 text-red-400" />
+                ) : userIsSpeaking ? (
+                  <div className="flex items-center space-x-1">
+                    <Mic className="w-3 h-3 text-green-400 animate-pulse" />
+                    <span className="text-green-400 text-xs">Speaking</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-1">
+                    <Mic className="w-3 h-3 text-blue-400" />
+                    <span className="text-blue-400 text-xs">Ready</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -649,13 +685,46 @@ export const LiveMeetingView = ({ meeting, onEndMeeting }: LiveMeetingViewProps)
           {aiAgentState.isConnected && (
             <div className="absolute bottom-0 left-0 right-0 h-1/3 border-t border-gray-600">
               <div className="relative w-full h-full bg-gradient-to-br from-blue-900 to-indigo-900 rounded-lg overflow-hidden">
+                {/* Speaking animation rings */}
+                {aiAgentState.isSpeaking && (
+                  <>
+                    <div className="absolute inset-0 rounded-lg border-4 border-blue-500 animate-ping opacity-30" style={{ margin: "-12px" }} />
+                    <div className="absolute inset-0 rounded-lg border-4 border-blue-400 animate-ping opacity-20" style={{ margin: "-24px", animationDelay: "0.3s" }} />
+                    <div className="absolute inset-0 rounded-lg border-4 border-blue-300 animate-ping opacity-10" style={{ margin: "-36px", animationDelay: "0.6s" }} />
+                  </>
+                )}
+
                 {/* AI Agent Avatar */}
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className={cn(
-                    "w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center transition-all duration-300",
-                    aiAgentState.isSpeaking && "scale-110 bg-blue-400"
-                  )}>
-                    <Bot className="w-10 h-10 text-white" />
+                  <div className="relative">
+                    {/* Speaking animation rings around avatar */}
+                    {aiAgentState.isSpeaking && (
+                      <>
+                        <div className="absolute inset-0 rounded-full border-4 border-blue-500 animate-ping opacity-30" style={{ margin: "-12px" }} />
+                        <div className="absolute inset-0 rounded-full border-4 border-blue-400 animate-ping opacity-20" style={{ margin: "-24px", animationDelay: "0.3s" }} />
+                        <div className="absolute inset-0 rounded-full border-4 border-blue-300 animate-ping opacity-10" style={{ margin: "-36px", animationDelay: "0.6s" }} />
+                      </>
+                    )}
+
+                    {/* Main Avatar */}
+                    <div className={cn(
+                      "w-20 h-20 rounded-full border-4 flex items-center justify-center transition-all duration-300",
+                      aiAgentState.isSpeaking 
+                        ? "border-blue-500 bg-blue-500/20 scale-110" 
+                        : "border-blue-400 bg-blue-400/10"
+                    )}>
+                      <Bot className={cn(
+                        "w-10 h-10 transition-colors duration-300",
+                        aiAgentState.isSpeaking ? "text-blue-600" : "text-blue-500"
+                      )} />
+                    </div>
+
+                    {/* Speaking indicator */}
+                    {aiAgentState.isSpeaking && (
+                      <div className="absolute -bottom-2 -right-2 bg-blue-500 text-white p-1.5 rounded-full animate-pulse">
+                        <Mic className="w-4 h-4" />
+                      </div>
+                    )}
                   </div>
                 </div>
                 
@@ -676,9 +745,13 @@ export const LiveMeetingView = ({ meeting, onEndMeeting }: LiveMeetingViewProps)
                   )}
                 </div>
                 
-                {/* Connection Status */}
+                {/* Enhanced Status Indicators */}
                 <div className="absolute top-4 right-4 flex flex-col space-y-2">
                   <Badge variant="secondary" className="bg-green-500/20 text-green-300 border-green-500/30">
+                    <div className={cn(
+                      "w-2 h-2 rounded-full mr-2",
+                      "bg-green-500 animate-pulse"
+                    )} />
                     Connected
                   </Badge>
                   
@@ -686,17 +759,28 @@ export const LiveMeetingView = ({ meeting, onEndMeeting }: LiveMeetingViewProps)
                   {aiAgentState.isConnected && !aiAgentState.isSpeaking && (
                     <Badge variant="secondary" className="bg-blue-500/20 text-blue-300 border-blue-500/30 animate-pulse">
                       <Mic className="w-3 h-3 mr-1" />
-                      Listening
+                      Listening...
                     </Badge>
                   )}
                   
                   {/* AI Speaking Indicator */}
                   {aiAgentState.isSpeaking && (
-                    <Badge variant="secondary" className="bg-orange-500/20 text-orange-300 border-orange-500/30">
+                    <Badge variant="secondary" className="bg-orange-500/20 text-orange-300 border-orange-500/30 animate-bounce">
                       <Volume2 className="w-3 h-3 mr-1" />
-                      Speaking
+                      Speaking...
                     </Badge>
                   )}
+                </div>
+
+                {/* Status message at bottom center */}
+                <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-center py-2">
+                  <div className="text-sm font-medium">
+                    {aiAgentState.isSpeaking ? (
+                      <span className="text-orange-300 animate-pulse">🗣️ AI is speaking...</span>
+                    ) : (
+                      <span className="text-blue-300 animate-pulse">🎧 AI is listening...</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -706,13 +790,30 @@ export const LiveMeetingView = ({ meeting, onEndMeeting }: LiveMeetingViewProps)
         {/* Chat Panel */}
         {showChat && (
           <div className="w-1/4 bg-gray-900 border-l border-gray-600 flex flex-col">
-            <div className="p-4 border-b border-gray-600 flex items-center justify-between">
-              <div>
-                <h3 className="text-white font-medium">Meeting Chat</h3>
-                <p className="text-gray-400 text-sm">
-                  Conversation with {meeting.aiAgentName}
-                </p>
-              </div>
+                      <div className="p-4 border-b border-gray-600 flex items-center justify-between">
+            <div>
+              <h3 className="text-white font-medium flex items-center space-x-2">
+                <span>Meeting Chat</span>
+                {aiAgentState.isConnected && (
+                  <div className="flex items-center space-x-1">
+                    {aiAgentState.isSpeaking ? (
+                      <Badge variant="secondary" className="bg-orange-500/20 text-orange-300 border-orange-500/30 text-xs">
+                        <Volume2 className="w-3 h-3 mr-1" />
+                        Speaking
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="bg-blue-500/20 text-blue-300 border-blue-500/30 text-xs animate-pulse">
+                        <Mic className="w-3 h-3 mr-1" />
+                        Listening
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </h3>
+              <p className="text-gray-400 text-sm">
+                Conversation with {meeting.aiAgentName}
+              </p>
+            </div>
               {conversation.length > 0 && (
                 <Button
                   onClick={() => setConversation([])}
@@ -729,11 +830,28 @@ export const LiveMeetingView = ({ meeting, onEndMeeting }: LiveMeetingViewProps)
                 <div className="text-center text-gray-400 mt-8">
                   <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
                   {aiAgentState.isConnected ? (
-                    <>
-                      <p className="text-sm font-medium text-green-400">🎧 AI is listening</p>
-                      <p className="text-xs mt-1">Start talking - your voice will be converted to text</p>
-                      <p className="text-xs mt-1 text-blue-300">Try saying: "Hello" or "Tell me about campaigns"</p>
-                    </>
+                    <div className="space-y-2">
+                      {aiAgentState.isSpeaking ? (
+                        <>
+                          <p className="text-sm font-medium text-orange-400 animate-pulse">🗣️ AI is speaking...</p>
+                          <p className="text-xs">Listen to the AI response</p>
+                        </>
+                      ) : (
+                        <div className="space-y-3">
+                          <p className="text-sm font-medium text-blue-400 animate-pulse">🎧 AI is listening...</p>
+                          <p className="text-xs">Start talking - your voice will be converted to text</p>
+                          <p className="text-xs mt-1 text-blue-300">Try saying: "Hello" or "Tell me about campaigns"</p>
+                          <Button 
+                            onClick={restartListening}
+                            size="sm" 
+                            variant="outline" 
+                            className="mt-2 text-xs"
+                          >
+                            🔄 Restart Listening
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <>
                       <p className="text-sm">Connect to AI agent to start conversation</p>
@@ -832,9 +950,23 @@ export const LiveMeetingView = ({ meeting, onEndMeeting }: LiveMeetingViewProps)
             size="lg"
             variant="outline"
             className="rounded-full w-12 h-12 p-0"
+            title="Test AI Response"
           >
             <Volume2 className="w-5 h-5" />
           </Button>
+
+          {/* Restart Listening */}
+          {aiAgentState.isConnected && (
+            <Button
+              onClick={restartListening}
+              size="lg"
+              variant="outline"
+              className="rounded-full w-12 h-12 p-0"
+              title="Restart AI Listening"
+            >
+              🔄
+            </Button>
+          )}
         </div>
       </div>
     </div>

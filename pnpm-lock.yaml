@@ -170,6 +170,9 @@ importers:
       input-otp:
         specifier: ^1.4.2
         version: 1.4.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      jsonwebtoken:
+        specifier: ^9.0.2
+        version: 9.0.2
       langchain:
         specifier: ^0.3.27
         version: 0.3.27(@langchain/aws@0.1.11(@langchain/core@0.3.57(openai@4.104.0(ws@8.18.2)(zod@3.25.46))))(@langchain/core@0.3.57(openai@4.104.0(ws@8.18.2)(zod@3.25.46)))(axios@1.9.0)(openai@4.104.0(ws@8.18.2)(zod@3.25.46))(ws@8.18.2)
@@ -240,6 +243,9 @@ importers:
       '@playwright/test':
         specifier: latest
         version: 1.53.1
+      '@types/jsonwebtoken':
+        specifier: ^9.0.5
+        version: 9.0.10
       '@types/node':
         specifier: ^20.11.16
         version: 20.17.57
@@ -256,7 +262,7 @@ importers:
         specifier: ^3.10.2
         version: 3.10.2(vite@5.4.19(@types/node@20.17.57))
       autoprefixer:
-        specifier: ^11.1.0
+        specifier: ^10.4.19
         version: 10.4.21(postcss@8.5.4)
       concurrently:
         specifier: ^8.2.2

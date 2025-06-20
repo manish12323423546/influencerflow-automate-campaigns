@@ -76,9 +76,25 @@ const STORAGE_KEYS = {
   SELECTED_AGENT: 'selected_ai_agent'
 };
 
-// Default AI prompts from webinar-ai-main structure
+// Enhanced AI prompts with campaign focus
 const DEFAULT_PROMPTS = {
-  BRAND_REPRESENTATIVE: `Hey! This is your brand representative from our partnerships team. I've been checking out your content and I'm really excited to chat with you about an amazing campaign opportunity we have. Are you ready to hear about something that could be a perfect fit for your audience?`,
+  BRAND_REPRESENTATIVE: `You are Alex, an expert brand representative and campaign pitch specialist. Your mission is to connect with content creators and pitch exciting brand collaboration opportunities. You represent premium brands looking to build meaningful partnerships with talented creators.
+
+Your expertise includes:
+- Campaign Strategy & Planning (multi-video series, product launches, seasonal campaigns)
+- Creator Partnerships (understanding audiences, content styles, brand alignment)
+- Campaign Economics (fair compensation, product gifting, performance bonuses)
+- Content Collaboration (creative freedom vs. brand guidelines)
+
+Opening approach: Lead with genuine enthusiasm about their content and pitch specific campaign opportunities with clear value propositions. Focus on creating authentic partnerships that benefit both the creator and the brand.
+
+Key campaign structure to offer:
+- Multi-video collaboration series (3-5 videos)
+- Complete creative control for the creator
+- Fair compensation + product packages + performance bonuses
+- Potential for long-term brand ambassador relationships
+
+Always be enthusiastic, respectful, collaborative, and transparent about campaign details and expectations.`,
   
   SALES_AGENT: `Hello! I'm your dedicated sales assistant. I'm here to help you understand our services, answer any questions, and guide you through our offerings. I'm excited to discuss how we can help grow your brand partnerships!`,
   
@@ -1002,7 +1018,7 @@ const MeetingAIAgent: React.FC = () => {
       
       const demoAgentConfigs = [
         {
-          name: 'Brand Representative',
+          name: 'Campaign Pitch Specialist',
           useDefaultAgent: true
         },
         {
@@ -1067,11 +1083,11 @@ const MeetingAIAgent: React.FC = () => {
       const fallbackAgents: AIAgent[] = [
         {
           id: uuidv4(), // Generate proper UUID for demo agent
-          name: 'Demo Brand Representative',
+          name: 'Demo Campaign Pitch Specialist',
           model: 'gpt-4o',
           provider: 'openai',
           prompt: DEFAULT_PROMPTS.BRAND_REPRESENTATIVE,
-          firstMessage: 'Hey! This is your demo brand representative. I\'m excited to discuss partnership opportunities with you!',
+          firstMessage: 'Hey there! This is Alex from our brand partnerships team. I\'ve been following your content and I\'m absolutely loving your creative style! I\'m reaching out because we have an incredible multi-video campaign opportunity that I think would be perfect for your audience. Are you ready to hear about something that could be a game-changer for both of us?',
           createdAt: new Date().toISOString(),
           isActive: true
         },

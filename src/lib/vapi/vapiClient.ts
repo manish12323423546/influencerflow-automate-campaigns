@@ -75,13 +75,19 @@ class DemoVapi {
       
       this.speechRecognition.onerror = (event: any) => {
         console.error('🚨 Speech recognition error:', event.error);
-        if (event.error === 'no-speech') {
-          // Restart listening after a pause
+        this.isListening = false;
+        
+        // Handle different error types
+        if (event.error === 'no-speech' || event.error === 'network' || event.error === 'aborted') {
+          // Restart listening after a pause for recoverable errors
+          console.log('🔄 Recoverable speech error, restarting...');
           setTimeout(() => {
-            if (this.isCallActive && !this.isSpeaking) {
+            if (this.isCallActive && !this.isSpeaking && !this.isListening) {
               this.startListening();
             }
-          }, 1000);
+          }, 2000);
+        } else {
+          console.warn('🚨 Non-recoverable speech recognition error:', event.error);
         }
       };
       
@@ -91,9 +97,12 @@ class DemoVapi {
         
         // Auto-restart if call is still active and AI is not speaking
         if (this.isCallActive && !this.isSpeaking) {
+          console.log('🔄 Speech recognition ended, restarting...');
           setTimeout(() => {
-            this.startListening();
-          }, 500);
+            if (this.isCallActive && !this.isSpeaking && !this.isListening) {
+              this.startListening();
+            }
+          }, 1000);
         }
       };
     } else {
@@ -227,12 +236,23 @@ class DemoVapi {
   }
 
   private startListening() {
-    if (this.speechRecognition && !this.isListening && !this.isSpeaking) {
+    if (this.speechRecognition && !this.isListening && !this.isSpeaking && this.isCallActive) {
       try {
         this.speechRecognition.start();
         console.log('🎧 Started listening for user speech');
       } catch (error) {
-        console.log('🎧 Speech recognition already active');
+        console.log('🎧 Speech recognition already active or failed to start:', error);
+        // Try again after a short delay if it failed
+        setTimeout(() => {
+          if (this.isCallActive && !this.isSpeaking && !this.isListening) {
+            try {
+              this.speechRecognition.start();
+              console.log('🎧 Retry: Started listening for user speech');
+            } catch (retryError) {
+              console.warn('🎧 Failed to restart speech recognition:', retryError);
+            }
+          }
+        }, 2000);
       }
     }
   }
@@ -353,6 +373,14 @@ class DemoVapi {
               timestamp: Date.now() - this.callStartTime,
               synthesizer: 'elevenlabs'
             });
+            
+            // Restart listening after AI finishes speaking
+            setTimeout(() => {
+              if (this.isCallActive && !this.isSpeaking) {
+                console.log('🔄 Auto-restarting speech recognition after AI response');
+                this.startListening();
+              }
+            }, 1000);
           },
           (error) => {
             console.error('🔴 ElevenLabs: Audio playback error:', error);
@@ -430,6 +458,15 @@ class DemoVapi {
           timestamp: Date.now() - this.callStartTime,
           synthesizer: 'browser-tts'
         });
+        
+        // Restart listening after AI finishes speaking
+        setTimeout(() => {
+          if (this.isCallActive && !this.isSpeaking) {
+            console.log('🔄 Auto-restarting speech recognition after AI response');
+            this.startListening();
+          }
+        }, 1000);
+        
         resolve();
       };
       
@@ -516,8 +553,20 @@ class DemoVapi {
       duration: this.isCallActive ? Date.now() - this.callStartTime : 0,
       startTime: this.callStartTime,
       isSpeaking: this.isSpeaking,
+      isListening: this.isListening,
       synthesizer: this.elevenLabsService ? 'elevenlabs' : 'browser-tts'
     };
+  }
+
+  // Manual restart of speech recognition
+  restartListening() {
+    console.log('🔄 Manual restart of speech recognition requested');
+    if (this.isCallActive && !this.isSpeaking) {
+      this.stopListening();
+      setTimeout(() => {
+        this.startListening();
+      }, 500);
+    }
   }
 
   private emit(event: string, data: any = {}) {
