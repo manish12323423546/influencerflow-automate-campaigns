@@ -144,7 +144,7 @@ const CreateAssistantModal = ({ isOpen, onClose, onAgentCreated }: {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('🚀 Starting AI agent creation process...', {
+    console.log('🚀 Starting ElevenLabs Conversational AI agent creation process...', {
       agentName: name,
       useDefaultAgent,
       timestamp: new Date().toISOString()
@@ -158,21 +158,22 @@ const CreateAssistantModal = ({ isOpen, onClose, onAgentCreated }: {
       const result = await createAssistant(name, 'demo-user', useDefaultAgent);
       
       if (!result.success) {
-        throw new Error(result.message || 'Failed to create assistant');
+        throw new Error(result.message || 'Failed to create ElevenLabs Conversational AI agent');
       }
 
-      console.log('✅ Assistant created successfully via VAPI:', {
-        assistantId: result.data.id,
-        assistantName: name,
+      console.log('✅ ElevenLabs Conversational AI agent created successfully:', {
+        agentId: result.data.id,
+        agentName: name,
+        service: 'ElevenLabs Conversational AI',
         timestamp: new Date().toISOString()
       });
 
       // Create agent object for local state
       const newAgent: AIAgent = {
-        id: result.data.id, // Use the assistant ID for calls
+        id: result.data.id, // Use the agent ID for calls
         name: result.data.name,
         model: result.data.model,
-        provider: result.data.provider,
+        provider: result.data.provider || 'elevenlabs',
         prompt: result.data.prompt,
         firstMessage: result.data.firstMessage,
         createdAt: result.data.createdAt,
@@ -189,7 +190,7 @@ const CreateAssistantModal = ({ isOpen, onClose, onAgentCreated }: {
       onClose();
       toast({
         title: "Success",
-        description: "Assistant created successfully",
+        description: "ElevenLabs Conversational AI agent created successfully",
       });
     } catch (error) {
       console.error('🔴 Error in handleSubmit:', {
@@ -198,7 +199,7 @@ const CreateAssistantModal = ({ isOpen, onClose, onAgentCreated }: {
       });
       toast({
         title: "Error",
-        description: "Failed to create assistant",
+        description: "Failed to create ElevenLabs Conversational AI agent",
         variant: "destructive",
       });
     } finally {
@@ -210,7 +211,7 @@ const CreateAssistantModal = ({ isOpen, onClose, onAgentCreated }: {
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
       <div className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-md p-6 border shadow-xl">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold">Create Assistant</h2>
+          <h2 className="text-xl font-semibold">Create ElevenLabs AI Agent</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="h-5 w-5" />
           </button>
@@ -218,15 +219,15 @@ const CreateAssistantModal = ({ isOpen, onClose, onAgentCreated }: {
 
         <form onSubmit={handleSubmit}>
           <div className="mb-6">
-            <label className="block font-medium mb-2">Assistant Name</label>
+            <label className="block font-medium mb-2">Agent Name</label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Enter assistant name"
+              placeholder="Enter agent name"
               required
             />
             <p className="text-xs text-gray-500 mt-2">
-              This name will be used to identify your assistant.
+              This name will be used to identify your ElevenLabs Conversational AI agent.
             </p>
           </div>
 
@@ -250,7 +251,7 @@ const CreateAssistantModal = ({ isOpen, onClose, onAgentCreated }: {
                   Creating...
                 </>
               ) : (
-                'Create Assistant'
+                'Create AI Agent'
               )}
             </Button>
           </div>
@@ -280,11 +281,11 @@ const AiAgentSidebar = ({ aiAgents, onAgentSelect, selectedAgent, onCreateAgent 
           className="w-full flex items-center gap-2 mb-4"
           onClick={onCreateAgent}
         >
-          <Plus className="h-4 w-4" /> Create Assistant
+          <Plus className="h-4 w-4" /> Create AI Agent
         </Button>
         <div className="relative">
           <Input
-            placeholder="Search Assistants"
+            placeholder="Search AI Agents"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -352,13 +353,13 @@ const ModelConfiguration = ({ agent, onUpdate }: {
       onUpdate(updatedAgent);
       toast({
         title: "Success",
-        description: "Assistant updated successfully",
+        description: "ElevenLabs AI agent updated successfully",
       });
     } catch (error) {
-      console.error('Error updating assistant:', error);
+      console.error('Error updating ElevenLabs AI agent:', error);
       toast({
         title: "Error",
-        description: "Failed to update assistant",
+        description: "Failed to update ElevenLabs AI agent",
         variant: "destructive",
       });
     } finally {
@@ -377,12 +378,12 @@ const ModelConfiguration = ({ agent, onUpdate }: {
               Updating...
             </>
           ) : (
-            'Update Assistant'
+            'Update AI Agent'
           )}
         </Button>
       </div>
       <p className="text-gray-600 dark:text-gray-400 mb-6">
-        Configure the behavior of the assistant.
+        Configure the behavior of your ElevenLabs Conversational AI agent.
       </p>
 
       <div className="mb-6">
@@ -441,7 +442,7 @@ const ModelSection = ({ selectedAgent, onUpdate }: {
         <div className="flex justify-center items-center h-[500px] w-full">
           <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-6 w-full">
             <p className="text-gray-600 dark:text-gray-400 text-center">
-              No assistant selected. Please select an assistant to configure the model settings.
+              No ElevenLabs AI agent selected. Please select an agent to configure the model settings.
             </p>
           </div>
         </div>
@@ -1010,7 +1011,7 @@ const MeetingAIAgent: React.FC = () => {
   };
 
   const loadDemoData = async () => {
-    console.log('🎭 Loading demo data with real VAPI assistants...');
+    console.log('🎭 Loading demo data with ElevenLabs Conversational AI agents...');
     
     try {
       // Import the createAssistant action
@@ -1035,7 +1036,7 @@ const MeetingAIAgent: React.FC = () => {
       
       for (const config of demoAgentConfigs) {
         try {
-          console.log(`🔄 Creating demo agent: ${config.name}`);
+          console.log(`🔄 Creating demo ElevenLabs AI agent: ${config.name}`);
           const result = await createAssistant(config.name, 'demo-user', config.useDefaultAgent);
           
                      if (result.success) {
@@ -1050,12 +1051,12 @@ const MeetingAIAgent: React.FC = () => {
                isActive: result.data.isActive
              };
              demoAgents.push(agent);
-             console.log('✅ Demo agent created:', agent.name, 'with assistant ID:', agent.id);
+             console.log('✅ Demo ElevenLabs AI agent created:', agent.name, 'with agent ID:', agent.id);
           } else {
-            console.error('❌ Failed to create demo agent:', config.name, result.message);
+            console.error('❌ Failed to create demo ElevenLabs AI agent:', config.name, result.message);
           }
         } catch (error) {
-          console.error('❌ Error creating demo agent:', config.name, error);
+          console.error('❌ Error creating demo ElevenLabs AI agent:', config.name, error);
         }
       }
 
@@ -1066,10 +1067,10 @@ const MeetingAIAgent: React.FC = () => {
         
         toast({
           title: "Success",
-          description: `Demo data loaded successfully (${demoAgents.length} agents created with real VAPI IDs)`,
+          description: `Demo data loaded successfully (${demoAgents.length} ElevenLabs AI agents created)`,
         });
       } else {
-        throw new Error('No demo agents were created successfully');
+        throw new Error('No demo ElevenLabs AI agents were created successfully');
       }
     } catch (error) {
       console.error('🔴 Error loading demo data:', error);
@@ -1079,13 +1080,13 @@ const MeetingAIAgent: React.FC = () => {
         variant: "destructive",
       });
       
-      // Fallback to original demo data if VAPI creation fails - with proper UUIDs
+      // Fallback to original demo data if ElevenLabs creation fails - with proper UUIDs
       const fallbackAgents: AIAgent[] = [
         {
           id: uuidv4(), // Generate proper UUID for demo agent
           name: 'Demo Campaign Pitch Specialist',
           model: 'gpt-4o',
-          provider: 'openai',
+          provider: 'elevenlabs',
           prompt: DEFAULT_PROMPTS.BRAND_REPRESENTATIVE,
           firstMessage: 'Hey there! This is Alex from our brand partnerships team. I\'ve been following your content and I\'m absolutely loving your creative style! I\'m reaching out because we have an incredible multi-video campaign opportunity that I think would be perfect for your audience. Are you ready to hear about something that could be a game-changer for both of us?',
           createdAt: new Date().toISOString(),
@@ -1095,7 +1096,7 @@ const MeetingAIAgent: React.FC = () => {
           id: uuidv4(), // Generate proper UUID for demo agent
           name: 'Demo Sales Agent',
           model: 'gpt-4o',
-          provider: 'openai',
+          provider: 'elevenlabs',
           prompt: DEFAULT_PROMPTS.SALES_AGENT,
           firstMessage: 'Hello! I\'m your sales assistant. I\'m excited to help you understand our services and guide you through our offerings!',
           createdAt: new Date().toISOString(),
@@ -1105,7 +1106,7 @@ const MeetingAIAgent: React.FC = () => {
           id: uuidv4(), // Generate proper UUID for demo agent
           name: 'Demo Customer Support',
           model: 'gpt-4o',
-          provider: 'openai',
+          provider: 'elevenlabs',
           prompt: DEFAULT_PROMPTS.CUSTOMER_SUPPORT,
           firstMessage: 'Hi there! I\'m your customer support assistant. How can I assist you today?',
           createdAt: new Date().toISOString(),
@@ -1143,7 +1144,7 @@ const MeetingAIAgent: React.FC = () => {
                 : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
             )}
           >
-            AI Agents
+            ElevenLabs AI Agents
           </button>
           <button
             onClick={() => setActiveTab('meetings')}
