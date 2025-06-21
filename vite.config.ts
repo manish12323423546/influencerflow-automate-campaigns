@@ -1,7 +1,6 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
-import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -28,16 +27,6 @@ export default defineConfig(({ mode }) => {
     server,
     plugins: [
       react(),
-      nodePolyfills({
-        // Whether to polyfill specific globals.
-        globals: {
-          Buffer: true,
-          global: true,
-          process: true,
-        },
-        // Whether to polyfill Node.js built-in modules.
-        protocolImports: true,
-      }),
       // Only load componentTagger in development mode and handle ESM import properly
       ...(mode === 'development' ? [
         (async () => {
@@ -49,44 +38,27 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
-        // Add Node.js polyfill aliases for better compatibility
-        util: 'util',
-        buffer: 'buffer',
-        process: 'process/browser',
       },
     },
     envPrefix: ['VITE_', 'TAURI_'],
     define: {
-      'process.env': JSON.stringify(process.env),
-      global: 'globalThis',
-      'process.platform': JSON.stringify('browser'), 
-      'process.version': JSON.stringify(''),
+      'process.env': {},
     },
-    // Add optimizeDeps configuration to fix the 504 error and Node.js polyfill issues
+    // Add optimizeDeps configuration to fix the 504 error
     optimizeDeps: {
       include: [
         '@vapi-ai/web',
-        '@vapi-ai/server-sdk',
         'react',
         'react-dom',
         '@supabase/supabase-js',
         '@radix-ui/react-dialog',
         '@radix-ui/react-slider',
         'framer-motion',
-        'lucide-react',
-        'util',
-        'buffer',
-        'process'
+        'lucide-react'
       ],
       exclude: [],
       // Force re-optimization when dependencies change
       force: mode === 'development',
-      esbuildOptions: {
-        // Node.js global polyfills for esbuild
-        define: {
-          global: 'globalThis'
-        }
-      }
     },
     // prevent vite from obscuring rust errors
     clearScreen: false,
@@ -96,7 +68,7 @@ export default defineConfig(({ mode }) => {
       // don't minify for debug builds
       minify: !process.env.TAURI_DEBUG ? 'esbuild' : false,
       // produce sourcemaps for debug builds
-      sourcemap: true,
+      sourcemap: !!process.env.TAURI_DEBUG,
       // Configure chunking
       rollupOptions: {
         output: {
