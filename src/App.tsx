@@ -48,7 +48,7 @@ const App = () => (
             <BrowserRouter>
               <ErrorBoundary>
                 <Suspense fallback={<Loading />}>
-                  <Routes>
+                  <Routes future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                     <Route path="/" element={<Index />} />
                     <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
                     <Route path="/creator-dashboard" element={<ErrorBoundary><CreatorDashboard /></ErrorBoundary>} />
